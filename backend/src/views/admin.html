@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portal Central — Admin</title>
+  <?!= include('views/adminStyles') ?>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">Portal Central · Admin</div>
+    <div class="env">Fase 0 · stub</div>
+  </header>
+
+  <main class="container">
+    <h1>Panel administrativo</h1>
+    <p class="muted">
+      El panel completo se implementa en <strong>Fase 4</strong>:
+      login, listado de solicitudes pendientes, aprobación/rechazo y envío de credenciales.
+    </p>
+    <div class="card">
+      <h2>Estado del backend</h2>
+      <p>Si ves esta página, <code>doGet?page=admin</code> está sirviendo HTML correctamente.</p>
+      <p>Para probar la API: <code>GET ?ping=1</code> debe devolver JSON con <code>{"ok":true}</code>.</p>
+    </div>
+  </main>
+
+  <?!= include('views/adminScript') ?>
+</body>
+</html>

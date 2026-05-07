@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply font-sans bg-cream text-jungle;
+  }
+  h1, h2, h3 {
+    @apply font-display uppercase tracking-tight;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-3
+           font-semibold text-jungle bg-cta-lime
+           transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-cta;
+  }
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-3
+           font-semibold text-white bg-jungle
+           transition-transform duration-200 hover:-translate-y-0.5;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-3
+           font-semibold text-jungle border-[1.5px] border-jungle bg-transparent
+           transition-colors duration-200 hover:bg-jungle hover:text-lime;
+  }
+  .btn-whatsapp {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3
+           font-semibold text-white bg-whatsapp
+           transition-transform duration-200 hover:scale-[1.02];
+  }
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-pill px-4 py-1.5
+           text-sm font-medium bg-offwhite text-jungle border border-jungle/10;
+  }
+  .container-x {
+    @apply mx-auto max-w-[1280px] px-6 md:px-20;
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "portal-central",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portal central de accesos a plataformas medicas (monorepo: backend Apps Script + frontend Vite)",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "push:backend": "npm --prefix backend run push",
+    "deploy:backend": "npm --prefix backend run deploy"
+  }
+}

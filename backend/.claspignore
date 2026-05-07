@@ -1,0 +1,13 @@
+# Solo subir lo necesario a Apps Script
+**/**
+!appsscript.json
+!src/**/*.ts
+!src/**/*.html
+node_modules/**
+tests/**
+package.json
+package-lock.json
+tsconfig.json
+.clasp.json
+.claspignore
+README.md

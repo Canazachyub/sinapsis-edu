@@ -1,0 +1,6 @@
+{
+  "scriptId": "PEGAR_AQUI_EL_SCRIPT_ID_TRAS_CLASP_CREATE",
+  "rootDir": "./src",
+  "scriptExtensions": [".ts"],
+  "htmlExtensions": [".html"]
+}

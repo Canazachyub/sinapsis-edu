@@ -1,0 +1,21 @@
+{
+  "name": "portal-central-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend Apps Script (TypeScript) del Portal Central. Se sube via clasp.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "login": "clasp login",
+    "create": "clasp create --type webapp --title PortalCentral_Backend --rootDir ./src",
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "deploy": "clasp deploy --description \"deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)\"",
+    "logs": "clasp logs --watch",
+    "open": "clasp open"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2",
+    "@types/google-apps-script": "^1.0.83",
+    "typescript": "^5.4.5"
+  }
+}
