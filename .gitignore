@@ -40,3 +40,11 @@ coverage/
 
 # vite
 .vite/
+
+# tsc -b composite outputs (emitidos por tsconfig.node.json)
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+frontend/tailwind.config.js
+frontend/tailwind.config.d.ts
+frontend/postcss.config.d.ts
