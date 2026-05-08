@@ -1,21 +1,23 @@
 /**
  * main.ts — Único punto de entrada de Apps Script.
- * Maneja doGet (sirve admin HTML + ping) y doPost (toda la API JSON).
  *
- * NOTA: Apps Script transpila todos los .ts al mismo scope global.
- * Las funciones doGet/doPost deben estar en este archivo y exportadas
- * con el nombre exacto que Apps Script espera (no renombrar).
+ * Maneja:
+ *  - doGet:  ?ping=1 (status JSON), ?page=admin (HTML), default (JSON info).
+ *  - doPost: toda la API JSON (ping y acciones).
+ *
+ * Las funciones top-level que aparecen aquí son las que se pueden ejecutar
+ * desde el editor de Apps Script (Run dropdown):
+ *   setup, inicializarSheets, healthcheck.
+ *
+ * Sin import/export — Apps Script + clasp usan scope global.
  */
-
-import { ApiRequest } from './types';
-import { dispatchAdmin, dispatchPublic, ping } from './api';
-import { fail } from './utils';
-import { log } from './services';
 
 // ─── doGet ───────────────────────────────────────────────────
 
-function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextOutput | GoogleAppsScript.HTML.HtmlOutput {
-  const params = e?.parameter ?? {};
+function doGet(
+  e: GoogleAppsScript.Events.DoGet,
+): GoogleAppsScript.Content.TextOutput | GoogleAppsScript.HTML.HtmlOutput {
+  const params = (e && e.parameter) ? e.parameter : {};
 
   if (params.ping === '1') {
     return jsonResponse(ping());
@@ -30,7 +32,9 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextO
 
   return jsonResponse({
     ok: true,
-    message: 'Portal Central backend. Usa POST para la API o ?page=admin para el panel.',
+    message:
+      'Portal Central backend. Usa POST con {"action":"ping"} para JSON, ' +
+      '?ping=1 vía GET, o ?page=admin para el panel.',
   });
 }
 
@@ -39,26 +43,26 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.Content.TextO
 function doPost(e: GoogleAppsScript.Events.DoPost): GoogleAppsScript.Content.TextOutput {
   let req: ApiRequest;
   try {
-    const raw = e?.postData?.contents ?? '{}';
+    const raw = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
     req = JSON.parse(raw) as ApiRequest;
-  } catch (err) {
+  } catch (_) {
     return jsonResponse(fail('JSON inválido en el body'));
   }
 
-  if (!req?.action) {
+  if (!req || !req.action) {
     return jsonResponse(fail('Falta el campo "action"'));
   }
 
   try {
-    const isAdmin = String(req.action).startsWith('admin.');
-    const action = isAdmin ? String(req.action).slice('admin.'.length) : String(req.action);
-    const response = isAdmin
-      ? dispatchAdmin({ ...req, action })
-      : dispatchPublic({ ...req, action });
+    const fullAction = String(req.action);
+    const isAdmin = fullAction.indexOf('admin.') === 0;
+    const action = isAdmin ? fullAction.substring('admin.'.length) : fullAction;
+    const innerReq: ApiRequest = Object.assign({}, req, { action });
+    const response = isAdmin ? dispatchAdmin(innerReq) : dispatchPublic(innerReq);
     return jsonResponse(response);
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: req.action, nivel: 'error', detalle });
+    log({ accion: String(req.action), nivel: 'error', detalle });
     return jsonResponse(fail('Error interno', 'Ocurrió un problema. Intenta de nuevo.'));
   }
 }
@@ -71,7 +75,49 @@ function jsonResponse(payload: unknown): GoogleAppsScript.Content.TextOutput {
   );
 }
 
-/** Apps Script lo usa para incluir vistas HTML parciales (`<?!= include('...') ?>`). */
+/**
+ * Permite incluir HTMLs parciales: `<?!= include('views/adminStyles') ?>`.
+ * Apps Script lo invoca automáticamente desde las plantillas evaluadas.
+ */
 function include(filename: string): string {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+// ─── Healthcheck (para ejecutar desde el editor) ─────────────
+
+/**
+ * Verifica el estado del backend sin tocar nada. Útil para correr
+ * desde el editor de Apps Script tras un deploy.
+ */
+function healthcheck(): {
+  ok: boolean;
+  missingProperties: string[];
+  spreadsheet?: { id: string; url: string };
+  driveFolder?: { id: string; url: string };
+} {
+  const missing = checkRequiredProperties();
+  const result: {
+    ok: boolean;
+    missingProperties: string[];
+    spreadsheet?: { id: string; url: string };
+    driveFolder?: { id: string; url: string };
+  } = { ok: missing.length === 0, missingProperties: missing };
+
+  const sheetId = getProperty('SHEET_ID');
+  if (sheetId) {
+    try {
+      const ss = SpreadsheetApp.openById(sheetId);
+      result.spreadsheet = { id: sheetId, url: ss.getUrl() };
+    } catch (_) { /* IDs corruptos */ }
+  }
+
+  const folderId = getProperty('DRIVE_FOLDER_VOUCHERS');
+  if (folderId) {
+    try {
+      const folder = DriveApp.getFolderById(folderId);
+      result.driveFolder = { id: folderId, url: folder.getUrl() };
+    } catch (_) { /* IDs corruptos */ }
+  }
+
+  return result;
 }

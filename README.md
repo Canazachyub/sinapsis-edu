@@ -90,21 +90,94 @@ portal-central/
 - [x] Repositorio Git local inicializado (rama `main`, 2 commits).
 - [x] Servidor dev corriendo en `http://localhost:5173/` (HTTP 200).
 
-### ⏳ Fase 1 — Backend Apps Script (siguiente)
+### 🟡 Fase 1 — Backend Apps Script (código listo, falta desplegar)
 
-Lo que se construirá:
-- Web App de Apps Script desplegado vía clasp con URL pública.
-- `?ping=1` devolviendo JSON `{ ok: true, status: "online" }`.
-- `inicializarSheets()` que crea las 4 hojas (`Plataformas`, `Usuarios`, `Compras`, `Logs`) con sus headers en el Spreadsheet `PortalCentral_DB`.
-- `services.ts` con acceso real a Sheets, Drive y Gmail.
-- Properties cargadas en Apps Script (SHEET_ID, DRIVE_FOLDER_VOUCHERS, ADMIN_EMAIL, etc.).
-- `frontend/.env` actualizado con `VITE_API_URL` apuntando al deploy.
+Lo que ya está hecho:
+- [x] Reestructuración del backend al modo nativo de Apps Script (sin imports/exports, scope global).
+- [x] `services.ts` completo: Sheets, Drive, Gmail, Properties, Logs.
+- [x] `inicializarSheets()` crea las 4 hojas con headers (fila 1 con fondo Jungle + texto Lime, congelada).
+- [x] **Seed automático**: la hoja `Plataformas` se llena con las 6 plataformas (P-001 a P-006) en la primera corrida.
+- [x] `setup()` instalador idempotente: crea Spreadsheet, carpeta Drive, todas las Properties (incluyendo `SESSION_SECRET` aleatorio) — todo con una sola ejecución desde el editor.
+- [x] `healthcheck()` para verificar estado sin tocar datos.
+- [x] `ping()` real con check de Properties faltantes.
+- [x] `listarPlataformasPublicas()` funcional (filtra `url_real` y devuelve solo plataformas activas).
+- [x] Frontend ajustado: el indicador del hero ahora distingue 3 estados (`online`, `setup-pending`, `down`).
+- [x] `tsc --noEmit` pasa en backend y frontend.
 
-Lo que necesito de Yubert antes de empezar Fase 1:
-- ID del Spreadsheet `PortalCentral_DB` (o autorización para crear uno nuevo).
-- ID de la carpeta Drive para vouchers (o autorización para crear una nueva).
-- Correo admin para notificaciones (¿`canazach12@gmail.com` u otro?).
-- Confirmación de la cuenta Google con la que correrá `clasp login`.
+Lo que falta — son comandos que solo tú puedes correr:
+
+#### Paso 1 — Login y crear el proyecto Apps Script (una sola vez)
+
+```powershell
+cd "f:\PLATAFORMA MEDICINA PRO\portal-central\backend"
+npx clasp login
+# Abre tu navegador → loguéate con canazach12@gmail.com → autoriza clasp.
+```
+
+Si es la primera vez, tendrás que habilitar la API de Apps Script en
+https://script.google.com/home/usersettings (toggle "Google Apps Script API" → ON).
+
+```powershell
+npx clasp create --type webapp --title "PortalCentral_Backend" --rootDir ./src
+```
+
+Esto crea un nuevo proyecto Apps Script y genera `.clasp.json` con el `scriptId`.
+**Ya está en `.gitignore`**, no se sube al repo.
+
+#### Paso 2 — Subir el código
+
+```powershell
+npm run push
+```
+
+Sube `appsscript.json` + los 5 archivos `.ts` (clasp los transpila) + las 3 vistas HTML.
+
+#### Paso 3 — Ejecutar `setup()` desde el editor (una sola vez)
+
+```powershell
+npx clasp open
+```
+
+Se abre el proyecto Apps Script en el navegador. En el editor:
+1. Selecciona el archivo `services.gs` (o el que tenga la función `setup`).
+2. En el dropdown de funciones (arriba), elige **`setup`**.
+3. Click en **Run** (▶).
+4. Autoriza los permisos cuando lo pida (Sheets + Drive + Gmail).
+5. Revisa el log de ejecución: debe imprimir un objeto con `ok: true`,
+   los IDs del Spreadsheet y la carpeta Drive creados, y la lista de Properties añadidas.
+
+`setup()` es idempotente: puedes correrlo múltiples veces sin duplicar nada.
+
+#### Paso 4 — Desplegar el Web App
+
+```powershell
+npm run deploy
+```
+
+Imprime una URL del tipo `https://script.google.com/macros/s/AKfycb.../exec`.
+
+#### Paso 5 — Conectar el frontend
+
+Crea `frontend/.env` (si no existe) y pega la URL como `VITE_API_URL`:
+
+```powershell
+cd ..\frontend
+Copy-Item .env.example .env
+# edita .env y reemplaza la URL
+```
+
+Luego reinicia `npm run dev`. El indicador del hero debe pasar de
+"Backend no desplegado" → "Backend conectado" 🟢.
+
+#### Verificación rápida (opcional)
+
+```powershell
+# Test directo desde la terminal:
+$url = "https://script.google.com/macros/s/TU_SCRIPT_ID/exec"
+Invoke-RestMethod "$url`?ping=1"
+```
+
+Debe devolver `ok: true, data: { status: "online", properties: { ok: true } }`.
 
 ### Fases siguientes
 

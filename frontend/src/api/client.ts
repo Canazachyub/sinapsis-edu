@@ -41,6 +41,13 @@ export async function callApi<T = unknown>(
   }
 }
 
-export async function ping(): Promise<ApiEnvelope<{ status: string; timestamp: string }>> {
-  return callApi<{ status: string; timestamp: string }>('ping');
+export interface PingPayload {
+  status: 'online' | 'setup-pending';
+  timestamp: string;
+  properties: { ok: boolean; missing: string[] };
+  sheetUrl?: string;
+}
+
+export async function ping(): Promise<ApiEnvelope<PingPayload>> {
+  return callApi<PingPayload>('ping');
 }

@@ -11,10 +11,13 @@ import { ping } from '@/api/client';
 // Diseño completo (FAQ, testimonios, animaciones de scroll) en Fase 3/6.
 export function Landing() {
   const { plataformas } = usePlataformas();
-  const [backendStatus, setBackendStatus] = useState<'unknown' | 'ok' | 'down'>('unknown');
+  const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'setup-pending' | 'down'>('unknown');
 
   useEffect(() => {
-    ping().then((res) => setBackendStatus(res.ok ? 'ok' : 'down'));
+    ping().then((res) => {
+      if (!res.ok || !res.data) { setBackendStatus('down'); return; }
+      setBackendStatus(res.data.status === 'online' ? 'online' : 'setup-pending');
+    });
   }, []);
 
   return (
@@ -41,11 +44,13 @@ export function Landing() {
             <Check className="w-4 h-4" /> Pago por Yape · Binance · Transferencia
             <span className="text-jungle/30">·</span>
             <span className={
-              backendStatus === 'ok' ? 'text-success' :
+              backendStatus === 'online' ? 'text-success' :
+              backendStatus === 'setup-pending' ? 'text-warning' :
               backendStatus === 'down' ? 'text-jungle/50' : 'text-jungle/40'
             }>
-              {backendStatus === 'ok' ? 'Backend conectado' :
-               backendStatus === 'down' ? 'Backend pendiente (Fase 1)' :
+              {backendStatus === 'online' ? 'Backend conectado' :
+               backendStatus === 'setup-pending' ? 'Backend respondiendo, falta correr setup()' :
+               backendStatus === 'down' ? 'Backend no desplegado todavía' :
                'Verificando backend...'}
             </span>
           </div>

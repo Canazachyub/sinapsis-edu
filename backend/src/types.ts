@@ -1,15 +1,18 @@
 /**
  * types.ts — Modelo de datos compartido del Portal Central.
- * Refleja exactamente las hojas del Spreadsheet PortalCentral_DB.
+ *
+ * Apps Script + clasp transpila cada .ts y los une en un único scope global.
+ * Por eso aquí NO usamos `import` ni `export`: las definiciones quedan
+ * disponibles automáticamente en el resto de archivos del proyecto.
  */
 
-export type EstadoPago = 'pendiente' | 'aprobado' | 'rechazado';
-export type EstadoAcceso = 'pendiente' | 'activo' | 'vencido' | 'revocado';
-export type MetodoPago = 'yape' | 'transferencia' | 'binance' | 'whatsapp';
-export type EstadoUsuario = 'activo' | 'bloqueado';
-export type NivelLog = 'info' | 'warning' | 'error';
+type EstadoPago = 'pendiente' | 'aprobado' | 'rechazado';
+type EstadoAcceso = 'pendiente' | 'activo' | 'vencido' | 'revocado';
+type MetodoPago = 'yape' | 'transferencia' | 'binance' | 'whatsapp';
+type EstadoUsuario = 'activo' | 'bloqueado';
+type NivelLog = 'info' | 'warning' | 'error';
 
-export interface Plataforma {
+interface Plataforma {
   id_plataforma: string;
   nombre: string;
   slug: string;
@@ -20,7 +23,7 @@ export interface Plataforma {
   activo: boolean;
 }
 
-export interface Usuario {
+interface Usuario {
   id_usuario: string;
   nombre: string;
   correo: string;
@@ -31,7 +34,7 @@ export interface Usuario {
   estado: EstadoUsuario;
 }
 
-export interface Compra {
+interface Compra {
   id_compra: string;
   id_usuario: string;
   id_plataforma: string;
@@ -46,7 +49,7 @@ export interface Compra {
   estado_acceso: EstadoAcceso;
 }
 
-export interface LogEntry {
+interface LogEntry {
   timestamp: string;
   accion: string;
   id_usuario: string;
@@ -54,14 +57,21 @@ export interface LogEntry {
   detalle: string;
 }
 
-export interface ApiResponse<T = unknown> {
+interface LogContext {
+  accion: string;
+  idUsuario?: string;
+  nivel?: NivelLog;
+  detalle?: string;
+}
+
+interface ApiResponse<T = unknown> {
   ok: boolean;
   message?: string;
   data?: T;
   error?: string;
 }
 
-export interface ApiRequest {
+interface ApiRequest {
   action: string;
   token?: string;
   [key: string]: unknown;
