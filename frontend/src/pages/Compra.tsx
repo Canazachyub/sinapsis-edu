@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, Wallet } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { PagoOpciones, type MetodoPago } from '@/components/PagoOpciones';
@@ -30,74 +30,97 @@ function CopyButton({ value, label }: { value: string; label: string }) {
   );
 }
 
-function YapeBlock() {
-  const [imgFailed, setImgFailed] = useState(false);
+/** Encabezado común para los métodos en soles: muestra el total a pagar en grande. */
+function HeaderSoles({ priceInPEN, label }: { priceInPEN: number; label: string }) {
   return (
-    <div className="bg-white border border-jungle/10 rounded-2xl p-6 shadow-card grid md:grid-cols-2 gap-6 items-start">
-      <div className="flex flex-col items-center">
-        <div className="bg-[#7B1FA2] rounded-2xl p-4 w-full max-w-[260px]">
-          {!imgFailed ? (
-            <img
-              src={YAPE.qrImage}
-              alt="QR de Yape"
-              className="w-full aspect-square object-contain rounded-lg bg-white"
-              onError={() => setImgFailed(true)}
-            />
-          ) : (
-            <div className="aspect-square flex items-center justify-center bg-white rounded-lg text-jungle/60 text-xs text-center px-4">
-              Sube tu QR a<br />
-              <code className="text-jungle font-semibold">{YAPE.qrImage}</code>
-            </div>
-          )}
-        </div>
+    <div className="bg-jungle text-cream rounded-t-2xl px-6 pt-6 pb-5">
+      <div className="flex items-center gap-2 text-lime">
+        <Wallet className="w-5 h-5" aria-hidden />
+        <span className="font-semibold uppercase tracking-wider text-sm">{label}</span>
       </div>
-      <div>
-        <div className="text-jungle-light text-xs uppercase tracking-wider">Paga con Yape · Plin</div>
-        <div className="mt-2 font-semibold text-lg text-jungle">{YAPE.titular}</div>
-        <div className="mt-3 flex items-center justify-between bg-cream rounded-lg px-3 py-2 border border-jungle/10">
-          <div>
-            <div className="text-[11px] uppercase text-jungle-light">Número</div>
-            <div className="font-mono font-semibold">{YAPE.numero}</div>
-          </div>
-          <CopyButton value={YAPE.numeroPlano} label="número Yape" />
-        </div>
-        <ol className="mt-4 text-sm text-jungle-light space-y-1.5 list-decimal list-inside">
-          <li>Escanea el QR con Yape o Plin.</li>
-          <li>O usa el número <strong>{YAPE.numero}</strong> y confirma el titular.</li>
-          <li>Sube tu voucher abajo para que aprobemos el acceso.</li>
-        </ol>
+      <div className="mt-3 text-cream/70 text-xs uppercase tracking-wider">Total en soles</div>
+      <div className="font-display text-4xl md:text-5xl text-lime leading-none">
+        S/ {priceInPEN.toFixed(2)}
       </div>
     </div>
   );
 }
 
-function BancoBlock() {
+function YapeBlock({ priceInPEN }: { priceInPEN: number }) {
+  const [imgFailed, setImgFailed] = useState(false);
   return (
-    <div className="bg-white border border-jungle/10 rounded-2xl p-6 shadow-card">
-      <div className="text-jungle-light text-xs uppercase tracking-wider">Transferencia bancaria</div>
-      <div className="mt-1 font-semibold text-lg text-jungle">{BCP_SOLES.titular}</div>
-      <div className="mt-1 text-sm text-jungle-light">{BCP_SOLES.banco} · Cuenta en Soles</div>
-
-      <dl className="mt-5 grid sm:grid-cols-2 gap-3">
-        <div className="bg-cream rounded-lg px-3 py-2 border border-jungle/10">
-          <div className="flex items-center justify-between">
-            <dt className="text-[11px] uppercase text-jungle-light">Cuenta BCP</dt>
-            <CopyButton value={BCP_SOLES.cuenta.replace(/\s/g, '')} label="cuenta BCP" />
+    <div className="bg-white rounded-2xl border border-jungle/10 shadow-card overflow-hidden">
+      <HeaderSoles priceInPEN={priceInPEN} label="Paga con Yape · Plin" />
+      <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
+        <div className="flex flex-col items-center">
+          <div className="bg-[#7B1FA2] rounded-2xl p-4 w-full max-w-[260px]">
+            {!imgFailed ? (
+              <img
+                src={YAPE.qrImage}
+                alt="QR de Yape"
+                className="w-full aspect-square object-contain rounded-lg bg-white"
+                onError={() => setImgFailed(true)}
+              />
+            ) : (
+              <div className="aspect-square flex items-center justify-center bg-white rounded-lg text-jungle/60 text-xs text-center px-4">
+                Sube tu QR a<br />
+                <code className="text-jungle font-semibold">{YAPE.qrImage}</code>
+              </div>
+            )}
           </div>
-          <dd className="font-mono font-semibold mt-0.5">{BCP_SOLES.cuenta}</dd>
         </div>
-        <div className="bg-cream rounded-lg px-3 py-2 border border-jungle/10">
-          <div className="flex items-center justify-between">
-            <dt className="text-[11px] uppercase text-jungle-light">Interbancaria (CCI)</dt>
-            <CopyButton value={BCP_SOLES.interbancaria.replace(/\s/g, '')} label="CCI" />
+        <div>
+          <div className="text-jungle-light text-xs uppercase tracking-wider">Titular</div>
+          <div className="mt-1 font-semibold text-lg text-jungle">{YAPE.titular}</div>
+          <div className="mt-3 flex items-center justify-between bg-cream rounded-lg px-3 py-2 border border-jungle/10">
+            <div>
+              <div className="text-[11px] uppercase text-jungle-light">Número</div>
+              <div className="font-mono font-semibold">{YAPE.numero}</div>
+            </div>
+            <CopyButton value={YAPE.numeroPlano} label="número Yape" />
           </div>
-          <dd className="font-mono font-semibold mt-0.5">{BCP_SOLES.interbancaria}</dd>
+          <ol className="mt-4 text-sm text-jungle-light space-y-1.5 list-decimal list-inside">
+            <li>Escanea el QR con Yape o Plin.</li>
+            <li>O usa el número <strong>{YAPE.numero}</strong> y confirma el titular.</li>
+            <li>Envía exactamente <strong className="text-jungle">S/ {priceInPEN.toFixed(2)}</strong>.</li>
+            <li>Sube tu voucher abajo para aprobar el acceso.</li>
+          </ol>
         </div>
-      </dl>
+      </div>
+    </div>
+  );
+}
 
-      <p className="mt-4 text-sm text-jungle-light">
-        Realiza la transferencia desde tu banca móvil y sube el voucher abajo.
-      </p>
+function BancoBlock({ priceInPEN }: { priceInPEN: number }) {
+  return (
+    <div className="bg-white rounded-2xl border border-jungle/10 shadow-card overflow-hidden">
+      <HeaderSoles priceInPEN={priceInPEN} label="Transferencia bancaria" />
+      <div className="p-6">
+        <div className="text-jungle-light text-xs uppercase tracking-wider">Titular</div>
+        <div className="mt-1 font-semibold text-lg text-jungle">{BCP_SOLES.titular}</div>
+        <div className="mt-1 text-sm text-jungle-light">{BCP_SOLES.banco} · Cuenta en Soles</div>
+
+        <dl className="mt-5 grid sm:grid-cols-2 gap-3">
+          <div className="bg-cream rounded-lg px-3 py-2 border border-jungle/10">
+            <div className="flex items-center justify-between">
+              <dt className="text-[11px] uppercase text-jungle-light">Cuenta BCP</dt>
+              <CopyButton value={BCP_SOLES.cuenta.replace(/\s/g, '')} label="cuenta BCP" />
+            </div>
+            <dd className="font-mono font-semibold mt-0.5">{BCP_SOLES.cuenta}</dd>
+          </div>
+          <div className="bg-cream rounded-lg px-3 py-2 border border-jungle/10">
+            <div className="flex items-center justify-between">
+              <dt className="text-[11px] uppercase text-jungle-light">Interbancaria (CCI)</dt>
+              <CopyButton value={BCP_SOLES.interbancaria.replace(/\s/g, '')} label="CCI" />
+            </div>
+            <dd className="font-mono font-semibold mt-0.5">{BCP_SOLES.interbancaria}</dd>
+          </div>
+        </dl>
+
+        <p className="mt-4 text-sm text-jungle-light">
+          Transfiere exactamente <strong className="text-jungle">S/ {priceInPEN.toFixed(2)}</strong> desde tu banca móvil y sube el voucher abajo.
+        </p>
+      </div>
     </div>
   );
 }
@@ -122,7 +145,7 @@ export function Compra() {
             <span className="pill">Comprar acceso</span>
             <h1 className="mt-4 text-4xl">{data.nombre}</h1>
             <p className="mt-2 text-jungle-light">
-              S/ {data.precio} por {data.duracion_dias} días.
+              S/ {data.precio.toFixed(2)} por {data.duracion_dias} días.
             </p>
 
             <section className="mt-10">
@@ -149,12 +172,12 @@ export function Compra() {
             <section className="mt-10">
               <h2 className="text-2xl">Paso 3 — Paga y sube tu voucher</h2>
               <div className="mt-4">
-                {metodo === 'yape' && <YapeBlock />}
-                {metodo === 'transferencia' && <BancoBlock />}
+                {metodo === 'yape' && <YapeBlock priceInPEN={data.precio} />}
+                {metodo === 'transferencia' && <BancoBlock priceInPEN={data.precio} />}
                 {metodo === 'binance' && (
                   <PagarConCripto
                     priceInPEN={data.precio}
-                    note={`Binance Pay ID: ${BINANCE.payId}. Red: ${BINANCE.redes.join(' o ')}. Moneda: ${BINANCE.moneda}.`}
+                    note={`Binance Pay ID: ${BINANCE.payId}. Red: ${BINANCE.redes.join(' o ')}. Moneda preferida: ${BINANCE.moneda}.`}
                   />
                 )}
               </div>
@@ -176,7 +199,7 @@ export function Compra() {
             <div className="mt-6 text-center">
               <p className="text-jungle-light mb-3">Prefiero coordinar por WhatsApp</p>
               <WhatsAppButton
-                message={`Hola, quiero comprar acceso a ${data.nombre} en SINAPSIS EDU.`}
+                message={`Hola, quiero comprar acceso a ${data.nombre} en SINAPSIS EDU. Total: S/ ${data.precio.toFixed(2)}.`}
               />
             </div>
           </>
