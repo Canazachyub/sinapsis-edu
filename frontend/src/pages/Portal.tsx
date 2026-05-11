@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Clock, LogOut } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { ScrollLink } from '@/components/ScrollLink';
 import { callApi } from '@/api/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -115,16 +116,16 @@ export function Portal() {
         {!loading && accesos.length === 0 && !error && (
           <div className="mt-10 bg-white border border-jungle/10 rounded-2xl p-8 shadow-card text-center">
             <p className="text-jungle-light">Compra tu primer acceso para empezar a estudiar.</p>
-            <Link to="/#plataformas" className="btn-primary mt-4">Ver plataformas</Link>
+            <ScrollLink to="plataformas" className="btn-primary mt-4 cursor-pointer">Ver plataformas</ScrollLink>
           </div>
         )}
 
-        <Link
-          to="/#plataformas"
-          className="inline-block mt-10 text-jungle-light hover:text-jungle text-sm"
+        <ScrollLink
+          to="plataformas"
+          className="inline-block mt-10 text-jungle-light hover:text-jungle text-sm cursor-pointer"
         >
           ¿Quieres más? → Ver todas las plataformas
-        </Link>
+        </ScrollLink>
       </main>
       <Footer />
     </div>

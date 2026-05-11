@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ScrollLink } from './ScrollLink';
 
 export function Navbar() {
   return (
@@ -13,14 +14,17 @@ export function Navbar() {
           />
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-jungle/80">
-          <a href="#plataformas" className="hover:text-jungle">Plataformas</a>
-          <a href="#beneficios" className="hover:text-jungle">Beneficios</a>
-          <a href="#precios" className="hover:text-jungle">Precios</a>
-          <a href="#faq" className="hover:text-jungle">FAQ</a>
+          <ScrollLink to="plataformas" className="hover:text-jungle cursor-pointer">Plataformas</ScrollLink>
+          <ScrollLink to="beneficios" className="hover:text-jungle cursor-pointer">Beneficios</ScrollLink>
+          <ScrollLink to="cursos" className="hover:text-jungle cursor-pointer">Cursos</ScrollLink>
+          <ScrollLink to="nosotros" className="hover:text-jungle cursor-pointer">Nosotros</ScrollLink>
+          <ScrollLink to="contacto" className="hover:text-jungle cursor-pointer">Contacto</ScrollLink>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/login" className="btn-ghost !py-2 !px-4 text-sm">Login</Link>
-          <a href="#plataformas" className="btn-primary !py-2 !px-4 text-sm">Empezar ahora</a>
+          <ScrollLink to="plataformas" className="btn-primary !py-2 !px-4 text-sm cursor-pointer">
+            Empezar ahora
+          </ScrollLink>
         </div>
       </nav>
     </header>

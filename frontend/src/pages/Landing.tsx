@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Stethoscope, Check } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { PlataformaCard } from '@/components/PlataformaCard';
 import { WhatsAppFloating } from '@/components/WhatsAppButton';
 import { PromoBanner } from '@/components/PromoBanner';
+import { ScrollLink } from '@/components/ScrollLink';
 import { CursosCarousel } from '@/components/CursosCarousel';
 import { CursosEspecializados } from '@/components/CursosEspecializados';
 import { MisionVisionValores } from '@/components/MisionVisionValores';
@@ -50,6 +52,7 @@ const STATS: Stat[] = [
 export function Landing() {
   const { plataformas } = usePlataformas();
   const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'setup-pending' | 'down'>('unknown');
+  const location = useLocation();
 
   useEffect(() => {
     ping().then((res) => {
@@ -57,6 +60,18 @@ export function Landing() {
       setBackendStatus(res.data.status === 'online' ? 'online' : 'setup-pending');
     });
   }, []);
+
+  // Cross-page scroll: cuando otro componente navega con state.scrollTo, scrollea aqui.
+  useEffect(() => {
+    const state = location.state as { scrollTo?: string } | null;
+    if (!state?.scrollTo) return;
+    const target = state.scrollTo;
+    // Esperar un frame a que el DOM tenga los IDs disponibles.
+    const id = window.setTimeout(() => {
+      document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(id);
+  }, [location.state]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -77,8 +92,8 @@ export function Landing() {
               <strong className="font-bold"> acceso 24/7</strong>.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#plataformas" className="btn-primary">Ver plataformas</a>
-              <a href="#beneficios" className="btn-ghost">¿Cómo funciona?</a>
+              <ScrollLink to="plataformas" className="btn-primary cursor-pointer">Ver plataformas</ScrollLink>
+              <ScrollLink to="beneficios" className="btn-ghost cursor-pointer">¿Cómo funciona?</ScrollLink>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-jungle/80">
               <Check className="w-4 h-4" /> Pago por Yape · Binance · Transferencia
