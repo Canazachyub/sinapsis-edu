@@ -5,7 +5,7 @@
 
 export const config = {
   apiUrl: import.meta.env.VITE_API_URL ?? '',
-  whatsappNumber: import.meta.env.VITE_WHATSAPP ?? '51984300510',
+  whatsappNumber: import.meta.env.VITE_WHATSAPP ?? '51974707622',
 } as const;
 
 export type AppConfig = typeof config;

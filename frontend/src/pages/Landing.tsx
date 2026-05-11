@@ -7,8 +7,42 @@ import { WhatsAppFloating } from '@/components/WhatsAppButton';
 import { usePlataformas } from '@/hooks/usePlataformas';
 import { ping } from '@/api/client';
 
-// Fase 0: landing con hero, grid de plataformas, beneficios y CTA.
-// Diseño completo (FAQ, testimonios, animaciones de scroll) en Fase 3/6.
+interface BenefitData {
+  imagen: string;
+  titulo: string;
+  descripcion: string;
+}
+
+const BENEFITS: BenefitData[] = [
+  {
+    imagen: '/images/beneficios/banco-preguntas.png',
+    titulo: 'Bancos curados',
+    descripcion: 'Más de 6,000 preguntas con justificación, organizadas por curso y actualizadas al 2025.',
+  },
+  {
+    imagen: '/images/beneficios/simulacros.png',
+    titulo: 'Simulacros cronometrados',
+    descripcion: 'Vive la experiencia real del examen: tiempo limitado, score y feedback inmediato.',
+  },
+  {
+    imagen: '/images/beneficios/multidispositivo.png',
+    titulo: 'Acceso multidispositivo',
+    descripcion: 'Móvil, tablet o laptop. Donde estés, tu plataforma sincronizada al instante.',
+  },
+];
+
+interface Stat {
+  numero: string;
+  label: string;
+}
+
+const STATS: Stat[] = [
+  { numero: '500+', label: 'Estudiantes activos' },
+  { numero: '95%', label: 'Tasa de aprobación' },
+  { numero: '25+', label: 'Cursos biomédicos' },
+  { numero: '24/7', label: 'Soporte al alumno' },
+];
+
 export function Landing() {
   const { plataformas } = usePlataformas();
   const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'setup-pending' | 'down'>('unknown');
@@ -25,34 +59,58 @@ export function Landing() {
       <Navbar />
 
       {/* HERO */}
-      <section className="bg-lime">
-        <div className="container-x py-20 md:py-28">
-          <span className="pill"><Stethoscope className="w-4 h-4" /> La central de evaluación médica</span>
-          <h1 className="mt-6 text-5xl md:text-7xl text-jungle leading-[1.05] max-w-4xl">
-            Prepárate para tu examen<br /> con las mejores plataformas
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg text-jungle/80">
-            ENAM, ENCIB, ENCAPS, Residentado Médico y más. Bancos de preguntas con
-            <strong className="font-bold"> justificaciones</strong>, simulacros y
-            <strong className="font-bold"> acceso 24/7</strong>.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#plataformas" className="btn-primary">Ver plataformas</a>
-            <a href="#como-funciona" className="btn-ghost">¿Cómo funciona?</a>
+      <section className="bg-lime relative overflow-hidden">
+        <div className="container-x py-20 md:py-28 grid md:grid-cols-2 gap-10 items-center relative z-10">
+          <div>
+            <span className="pill"><Stethoscope className="w-4 h-4" /> La central de evaluación médica</span>
+            <h1 className="mt-6 text-5xl md:text-7xl text-jungle leading-[1.05]">
+              Prepárate para tu examen<br /> con las mejores plataformas
+            </h1>
+            <p className="mt-6 max-w-xl text-lg text-jungle/80">
+              ENAM, ENCIB, ENCAPS, Residentado Médico y más. Bancos de preguntas con
+              <strong className="font-bold"> justificaciones</strong>, simulacros y
+              <strong className="font-bold"> acceso 24/7</strong>.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a href="#plataformas" className="btn-primary">Ver plataformas</a>
+              <a href="#beneficios" className="btn-ghost">¿Cómo funciona?</a>
+            </div>
+            <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-jungle/80">
+              <Check className="w-4 h-4" /> Pago por Yape · Binance · Transferencia
+              <span className="text-jungle/30">·</span>
+              <span className={
+                backendStatus === 'online' ? 'text-success' :
+                backendStatus === 'setup-pending' ? 'text-warning' :
+                backendStatus === 'down' ? 'text-jungle/50' : 'text-jungle/40'
+              }>
+                {backendStatus === 'online' ? 'Backend conectado' :
+                 backendStatus === 'setup-pending' ? 'Backend respondiendo, falta correr setup()' :
+                 backendStatus === 'down' ? 'Backend no desplegado todavía' :
+                 'Verificando backend...'}
+              </span>
+            </div>
           </div>
-          <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-jungle/80">
-            <Check className="w-4 h-4" /> Pago por Yape · Binance · Transferencia
-            <span className="text-jungle/30">·</span>
-            <span className={
-              backendStatus === 'online' ? 'text-success' :
-              backendStatus === 'setup-pending' ? 'text-warning' :
-              backendStatus === 'down' ? 'text-jungle/50' : 'text-jungle/40'
-            }>
-              {backendStatus === 'online' ? 'Backend conectado' :
-               backendStatus === 'setup-pending' ? 'Backend respondiendo, falta correr setup()' :
-               backendStatus === 'down' ? 'Backend no desplegado todavía' :
-               'Verificando backend...'}
-            </span>
+          <div className="hidden md:block">
+            <img
+              src="/images/hero/hero-ilustracion.svg"
+              alt="Estudiante de medicina aprendiendo en línea"
+              className="w-full max-w-xl mx-auto"
+              loading="eager"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* STATS */}
+      <section className="bg-jungle text-cream">
+        <div className="container-x py-14">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {STATS.map((s) => (
+              <div key={s.label} className="px-4">
+                <div className="font-display text-5xl md:text-6xl text-lime">{s.numero}</div>
+                <div className="mt-2 text-sm opacity-80">{s.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -71,22 +129,25 @@ export function Landing() {
       </section>
 
       {/* BENEFICIOS */}
-      <section id="como-funciona" className="bg-jungle text-cream">
+      <section id="beneficios" className="bg-jungle text-cream">
         <div className="container-x py-20">
           <span className="pill !bg-jungle-dark !text-lime !border-white/10">Beneficios</span>
           <h2 className="mt-4 text-4xl md:text-5xl text-lime max-w-3xl">
             Todo lo que necesitas para aprobar
           </h2>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {[
-              ['Bancos curados', 'Preguntas con justificación, organizadas por curso.'],
-              ['Simulacros cronometrados', 'Vive la experiencia real del examen.'],
-              ['Acceso multidispositivo', 'Móvil, tablet o laptop. Desde donde estés.'],
-            ].map(([title, desc]) => (
-              <div key={title} className="bg-jungle-dark border border-white/5 rounded-2xl p-6">
-                <div className="w-10 h-10 rounded-lg bg-lime mb-4" aria-hidden />
-                <div className="font-semibold text-lg">{title}</div>
-                <p className="mt-2 text-sm opacity-80">{desc}</p>
+            {BENEFITS.map((b) => (
+              <div key={b.titulo} className="bg-jungle-dark border border-white/5 rounded-2xl p-6">
+                <div className="aspect-square rounded-xl bg-jungle/60 overflow-hidden">
+                  <img
+                    src={b.imagen}
+                    alt={b.titulo}
+                    className="w-full h-full object-contain"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="mt-4 font-semibold text-lg">{b.titulo}</div>
+                <p className="mt-2 text-sm opacity-80 leading-relaxed">{b.descripcion}</p>
               </div>
             ))}
           </div>

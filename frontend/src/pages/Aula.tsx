@@ -49,8 +49,7 @@ export function Aula() {
       <header className="h-14 bg-jungle text-cream flex items-center justify-between px-5 shrink-0">
         <div className="flex items-center gap-3">
           <Link to="/portal" className="flex items-center gap-3 hover:opacity-80">
-            <span className="inline-block w-7 h-7 rounded-md bg-lime" aria-hidden />
-            <span className="font-display tracking-wide text-lg">PORTAL CENTRAL</span>
+            <img src="/images/logo/logo-blanco.png" alt="SINAPSIS EDU" className="h-7 w-auto" />
           </Link>
           <span className="text-cream/40">|</span>
           <span className="uppercase text-sm font-medium text-lime">{slug}</span>
