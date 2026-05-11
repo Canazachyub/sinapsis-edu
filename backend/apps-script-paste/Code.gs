@@ -624,14 +624,37 @@ function findUsuarioByCorreo(correo) {
   return null;
 }
 
-/** Dias restantes hasta una fecha ISO (puede ser negativo si ya paso). */
-function daysUntil(isoDate) {
-  if (!isoDate) return null;
-  const target = new Date(String(isoDate));
+/**
+ * Convierte cualquier valor de fecha que venga de una celda de Sheets
+ * (puede ser Date object, string ISO, o string Date.toString verbose)
+ * a un string YYYY-MM-DD. Devuelve '' si no es parseable.
+ */
+function toIsoDate(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return '';
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1);
+    const d = String(value.getDate());
+    return y + '-' + (m.length === 1 ? '0' + m : m) + '-' + (d.length === 1 ? '0' + d : d);
+  }
+  const s = String(value);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const parsed = new Date(s);
+  if (isNaN(parsed.getTime())) return '';
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth() + 1);
+  const d = String(parsed.getDate());
+  return y + '-' + (m.length === 1 ? '0' + m : m) + '-' + (d.length === 1 ? '0' + d : d);
+}
+
+/** Dias restantes hasta una fecha (puede ser negativo si ya paso). Acepta Date o string. */
+function daysUntil(value) {
+  const iso = toIsoDate(value);
+  if (!iso) return null;
+  const target = new Date(iso + 'T00:00:00');
   if (isNaN(target.getTime())) return null;
   const today = new Date();
-  // Normalizar a medianoche para evitar saltos por hora
-  target.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
   const ms = target.getTime() - today.getTime();
   return Math.round(ms / (1000 * 60 * 60 * 24));
@@ -647,7 +670,8 @@ function hasActiveAccess(idUsuario, idPlataforma) {
     if (String(c.id_plataforma) !== String(idPlataforma)) continue;
     if (String(c.estado_pago) !== 'aprobado') continue;
     if (String(c.estado_acceso) !== 'activo') continue;
-    if (c.fecha_fin && String(c.fecha_fin).slice(0, 10) < today) continue;
+    const finIso = toIsoDate(c.fecha_fin);
+    if (finIso && finIso < today) continue;
     return true;
   }
   return false;
@@ -768,22 +792,22 @@ function misAccesos(req) {
     const compras = readAll(SHEET_NAMES.COMPRAS);
     const accesos = compras
       .filter(function (c) {
-        return String(c.id_usuario) === String(session.id_usuario)
-          && String(c.estado_pago) === 'aprobado'
-          && String(c.estado_acceso) === 'activo'
-          && (!c.fecha_fin || String(c.fecha_fin).slice(0, 10) >= today);
+        if (String(c.id_usuario) !== String(session.id_usuario)) return false;
+        if (String(c.estado_pago) !== 'aprobado') return false;
+        if (String(c.estado_acceso) !== 'activo') return false;
+        const finIso = toIsoDate(c.fecha_fin);
+        return !finIso || finIso >= today;
       })
       .map(function (c) {
         const plat = findPlataformaById(String(c.id_plataforma));
-        const finStr = c.fecha_fin ? String(c.fecha_fin).slice(0, 10) : '';
         return {
           id_acceso: String(c.id_compra),
           id_plataforma: String(c.id_plataforma),
           plataforma: plat ? String(plat.nombre) : '',
           slug: plat ? String(plat.slug) : '',
-          fecha_inicio: c.fecha_inicio ? String(c.fecha_inicio).slice(0, 10) : '',
-          fecha_fin: finStr,
-          dias_restantes: daysUntil(finStr)
+          fecha_inicio: toIsoDate(c.fecha_inicio),
+          fecha_fin: toIsoDate(c.fecha_fin),
+          dias_restantes: daysUntil(c.fecha_fin)
         };
       });
 
