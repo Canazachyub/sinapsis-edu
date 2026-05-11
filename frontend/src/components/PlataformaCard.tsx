@@ -71,9 +71,19 @@ export function PlataformaCard({ data }: { data: PlataformaCardData }) {
         {data.descripcion}
       </p>
       <div className="my-5 border-t border-jungle/10" />
-      <div className="flex items-baseline gap-2">
-        <span className="text-3xl font-bold text-jungle">S/ {data.precio}</span>
-        <span className="text-sm text-jungle-light">/ {formatDuracion(data.duracion_dias)}</span>
+      <div className="flex items-baseline gap-2 flex-wrap">
+        {data.slug === 'anatomia' ? (
+          <>
+            <span className="text-sm text-jungle-light">Desde</span>
+            <span className="text-3xl font-bold text-jungle">S/ 30</span>
+            <span className="text-sm text-jungle-light">/ segmento</span>
+          </>
+        ) : (
+          <>
+            <span className="text-3xl font-bold text-jungle">S/ {data.precio}</span>
+            <span className="text-sm text-jungle-light">/ {formatDuracion(data.duracion_dias)}</span>
+          </>
+        )}
       </div>
       <div className="mt-5 flex flex-col gap-2">
         <Link to={`/compra/${data.slug}`} className="btn-primary w-full">Comprar acceso</Link>

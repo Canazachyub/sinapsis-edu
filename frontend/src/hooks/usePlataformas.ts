@@ -88,7 +88,9 @@ const PLATAFORMAS_EXTRA: PlataformaCardData[] = [
     slug: 'anatomia',
     nombre: 'Anatomía de Testut',
     descripcion: 'Resúmenes teóricos basados en Testut. Material por segmentos anatómicos. Bancos UNAP y 5 simulacros por segmento. Formato físico disponible.',
-    precio: 20,
+    // Precio mínimo (un segmento): la página de compra recalcula
+    // según los segmentos que elige el alumno.
+    precio: 30,
     duracion_dias: 30,
   },
   {

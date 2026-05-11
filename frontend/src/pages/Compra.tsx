@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Check, Copy, Wallet } from 'lucide-react';
+import { Check, Copy, Wallet, AlertTriangle } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { PagoOpciones, type MetodoPago } from '@/components/PagoOpciones';
 import { PagarConCripto } from '@/components/PagarConCripto';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { AnatomiaSegmentos } from '@/components/AnatomiaSegmentos';
 import { usePlataformas } from '@/hooks/usePlataformas';
 import { BCP_SOLES, YAPE, BINANCE } from '@/config/pago';
+import { PRECIO_POR_SEGMENTO_PEN, SEGMENTOS_ANATOMIA } from '@/data/segmentosAnatomia';
 
 function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -30,7 +32,6 @@ function CopyButton({ value, label }: { value: string; label: string }) {
   );
 }
 
-/** Encabezado común para los métodos en soles: muestra el total a pagar en grande. */
 function HeaderSoles({ priceInPEN, label }: { priceInPEN: number; label: string }) {
   return (
     <div className="bg-jungle text-cream rounded-t-2xl px-6 pt-6 pb-5">
@@ -125,11 +126,42 @@ function BancoBlock({ priceInPEN }: { priceInPEN: number }) {
   );
 }
 
+function AvisoSeleccionar() {
+  return (
+    <div className="bg-warning/10 border border-warning/30 text-jungle rounded-2xl p-5 flex gap-3 items-start">
+      <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+      <div>
+        <div className="font-semibold">Selecciona al menos un segmento</div>
+        <p className="text-sm text-jungle-light mt-1">
+          Anatomía de Testut se compra por segmentos. Marca arriba los que necesitas para ver los métodos de pago.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function Compra() {
   const { slug } = useParams<{ slug: string }>();
   const { plataformas } = usePlataformas();
   const data = plataformas.find((p) => p.slug === slug);
   const [metodo, setMetodo] = useState<MetodoPago>('yape');
+
+  // Estado especial para Anatomía: selección de segmentos.
+  const esAnatomia = slug === 'anatomia';
+  const [segmentos, setSegmentos] = useState<Set<string>>(new Set());
+
+  const precioFinal = useMemo(() => {
+    if (esAnatomia) return segmentos.size * PRECIO_POR_SEGMENTO_PEN;
+    return data?.precio ?? 0;
+  }, [esAnatomia, segmentos, data]);
+
+  const puedeProceder = !esAnatomia || segmentos.size > 0;
+
+  const segmentosNombres = useMemo(() => {
+    return SEGMENTOS_ANATOMIA
+      .filter((s) => segmentos.has(s.id))
+      .map((s) => s.nombre);
+  }, [segmentos]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -145,11 +177,27 @@ export function Compra() {
             <span className="pill">Comprar acceso</span>
             <h1 className="mt-4 text-4xl">{data.nombre}</h1>
             <p className="mt-2 text-jungle-light">
-              S/ {data.precio.toFixed(2)} por {data.duracion_dias} días.
+              {esAnatomia
+                ? `Cada segmento cuesta S/ ${PRECIO_POR_SEGMENTO_PEN} por 30 días. Elige uno o varios.`
+                : `S/ ${data.precio.toFixed(2)} por ${data.duracion_dias} días.`}
             </p>
 
+            {esAnatomia && (
+              <section className="mt-10">
+                <h2 className="text-2xl">Paso 1 — Elige tus segmentos</h2>
+                <p className="text-sm text-jungle-light mt-1">
+                  Material por segmentos anatómicos basado en Testut. Banco UNAP + 5 simulacros por segmento.
+                </p>
+                <div className="mt-4">
+                  <AnatomiaSegmentos seleccionados={segmentos} onChange={setSegmentos} />
+                </div>
+              </section>
+            )}
+
             <section className="mt-10">
-              <h2 className="text-2xl">Paso 1 — Tus datos</h2>
+              <h2 className="text-2xl">
+                Paso {esAnatomia ? '2' : '1'} — Tus datos
+              </h2>
               <p className="text-sm text-jungle-light mt-1">
                 Formulario completo en Fase 2. Por ahora coordina por WhatsApp.
               </p>
@@ -163,24 +211,33 @@ export function Compra() {
             </section>
 
             <section className="mt-10">
-              <h2 className="text-2xl">Paso 2 — Elige cómo pagar</h2>
+              <h2 className="text-2xl">Paso {esAnatomia ? '3' : '2'} — Elige cómo pagar</h2>
               <div className="mt-4">
                 <PagoOpciones selected={metodo} onSelect={setMetodo} />
               </div>
             </section>
 
             <section className="mt-10">
-              <h2 className="text-2xl">Paso 3 — Paga y sube tu voucher</h2>
-              <div className="mt-4">
-                {metodo === 'yape' && <YapeBlock priceInPEN={data.precio} />}
-                {metodo === 'transferencia' && <BancoBlock priceInPEN={data.precio} />}
-                {metodo === 'binance' && (
-                  <PagarConCripto
-                    priceInPEN={data.precio}
-                    note={`Binance Pay ID: ${BINANCE.payId}. Red: ${BINANCE.redes.join(' o ')}. Moneda preferida: ${BINANCE.moneda}.`}
-                  />
-                )}
-              </div>
+              <h2 className="text-2xl">
+                Paso {esAnatomia ? '4' : '3'} — Paga y sube tu voucher
+              </h2>
+
+              {!puedeProceder ? (
+                <div className="mt-4">
+                  <AvisoSeleccionar />
+                </div>
+              ) : (
+                <div className="mt-4">
+                  {metodo === 'yape' && <YapeBlock priceInPEN={precioFinal} />}
+                  {metodo === 'transferencia' && <BancoBlock priceInPEN={precioFinal} />}
+                  {metodo === 'binance' && (
+                    <PagarConCripto
+                      priceInPEN={precioFinal}
+                      note={`Binance Pay ID: ${BINANCE.payId}. Red: ${BINANCE.redes.join(' o ')}. Moneda preferida: ${BINANCE.moneda}.`}
+                    />
+                  )}
+                </div>
+              )}
 
               <div className="mt-6 bg-white border border-jungle/10 rounded-2xl p-6 shadow-card">
                 <p className="text-sm text-jungle-light">
@@ -199,7 +256,11 @@ export function Compra() {
             <div className="mt-6 text-center">
               <p className="text-jungle-light mb-3">Prefiero coordinar por WhatsApp</p>
               <WhatsAppButton
-                message={`Hola, quiero comprar acceso a ${data.nombre} en SINAPSIS EDU. Total: S/ ${data.precio.toFixed(2)}.`}
+                message={
+                  esAnatomia && segmentosNombres.length > 0
+                    ? `Hola, quiero comprar Anatomía de Testut (${segmentosNombres.length} ${segmentosNombres.length === 1 ? 'segmento' : 'segmentos'}: ${segmentosNombres.join(', ')}) en SINAPSIS EDU. Total: S/ ${precioFinal.toFixed(2)}.`
+                    : `Hola, quiero comprar acceso a ${data.nombre} en SINAPSIS EDU. Total: S/ ${precioFinal.toFixed(2)}.`
+                }
               />
             </div>
           </>
