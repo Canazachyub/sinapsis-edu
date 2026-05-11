@@ -18,8 +18,9 @@
  *  Si lo dejas vacio '', setup() crea uno nuevo desde cero. */
 const PRECONFIGURED_SHEET_ID = '1LQf-scklnpMCejgRQH2O6hHcdCBszjHh4ex5AeyEpvo';
 
-/** Carpeta Drive donde guardar vouchers. Si vacio '', setup() crea una. */
-const PRECONFIGURED_DRIVE_FOLDER = '';
+/** Carpeta Drive donde guardar vouchers. Si vacio '', setup() crea una.
+ *  URL: https://drive.google.com/drive/folders/18KTajQWvgFJpvbzdchQJPf6elclJ4j-4 */
+const PRECONFIGURED_DRIVE_FOLDER = '18KTajQWvgFJpvbzdchQJPf6elclJ4j-4';
 
 /** WhatsApp para pago manual (sin +, codigo de pais incluido). */
 const PRECONFIGURED_WHATSAPP = '51984300510';
