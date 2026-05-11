@@ -1,0 +1,55 @@
+name: Deploy frontend to GitHub Pages
+
+# Se dispara en push a main o manualmente desde la pestaña Actions.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permisos necesarios para que la Action escriba a la rama gh-pages.
+permissions:
+  contents: write
+
+# Solo una corrida a la vez; las nuevas cancelan la anterior si está pendiente.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Build (Vite)
+        working-directory: frontend
+        env:
+          # Estos valores los configuras en Settings > Secrets and variables > Actions.
+          # Si no estan, el build sigue con valores por defecto de frontend/.env.example.
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_WHATSAPP: ${{ vars.VITE_WHATSAPP || '51974707622' }}
+        run: npm run build
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          cname: sinapsisedu.com
+          commit_message: "deploy: ${{ github.event.head_commit.message }}"

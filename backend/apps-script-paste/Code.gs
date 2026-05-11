@@ -265,13 +265,10 @@ function inicializarSheets() {
     }
   }
 
-  // Seed plataformas si la hoja esta vacia (solo headers)
-  let seeded = false;
+  // Seed plataformas: idempotente, agrega solo las filas faltantes por id_plataforma.
   const plat = ss.getSheetByName(SHEET_NAMES.PLATAFORMAS);
-  if (plat.getLastRow() <= 1) {
-    seedPlataformas(plat);
-    seeded = true;
-  }
+  const cuantasNuevas = seedPlataformas(plat);
+  const seeded = cuantasNuevas > 0;
 
   return {
     spreadsheetId: ss.getId(),
@@ -286,30 +283,65 @@ function inicializarSheets() {
   };
 }
 
+/**
+ * Idempotente: agrega solo las filas cuyo id_plataforma no exista ya.
+ * Devuelve la cantidad de filas nuevas agregadas.
+ *
+ * Columnas: id_plataforma, nombre, slug, descripcion, url_real,
+ *           precio, duracion_dias, activo,
+ *           precio_promocional, etiqueta, orden
+ */
 function seedPlataformas(sheet) {
-  // Para el MVP de prueba, todas las plataformas apuntan al mismo URL (ver CLAUDE.md §1).
   const URL_DEMO = 'https://canazachyub.github.io/simulaencib/';
   const data = [
+    // Las 6 originales
     ['P-001', 'ENAM', 'enam',
       'Examen Nacional de Medicina. Banco de preguntas con justificaciones y simulacros cronometrados.',
-      URL_DEMO, 49, 30, true],
+      URL_DEMO, 49, 30, true, '', 'Destacado', 1],
     ['P-002', 'ENCIB', 'encib',
       'Examen Nacional de Ciencias Basicas. Mas de 1500 preguntas explicadas, organizadas por curso.',
-      URL_DEMO, 49, 30, true],
+      URL_DEMO, 49, 30, true, '', '', 2],
     ['P-003', 'ENCAPS', 'encaps',
       'Evaluacion Nacional de Capacidades Clinicas. Casos clinicos con retroalimentacion detallada.',
-      URL_DEMO, 49, 30, true],
+      URL_DEMO, 49, 30, true, '', '', 3],
     ['P-004', 'Residentado Medico', 'rm',
       'Preparacion integral para el examen de residentado. Cobertura por especialidades.',
-      URL_DEMO, 79, 30, true],
+      URL_DEMO, 79, 30, true, '', 'Premium', 4],
     ['P-005', 'EsSalud', 'essalud',
       'Plataforma para concursos EsSalud y SERUMS. Material actualizado y simulacros.',
-      URL_DEMO, 59, 30, true],
+      URL_DEMO, 59, 30, true, '', '', 5],
     ['P-006', 'Biblioteca Medica', 'biblioteca',
       'Acceso a libros, guias clinicas y material complementario para tu carrera medica.',
-      URL_DEMO, 39, 30, true]
+      URL_DEMO, 39, 30, true, '', '', 6],
+
+    // Nuevas: Anatomia (compra por segmento) y Coleccion CTO
+    ['P-007', 'Anatomia de Testut', 'anatomia',
+      'Resumenes teoricos basados en Testut. Material por segmentos anatomicos. Bancos UNAP y 5 simulacros por segmento. Formato fisico disponible.',
+      URL_DEMO, 30, 30, true, '', 'Nuevo', 7],
+    ['P-008', 'Coleccion CTO', 'cto',
+      'Programa completo CTO, referente en Espana y Latinoamerica. Manuales, videos, casos y plataforma online.',
+      URL_DEMO, 299, 365, true, 50, 'Premium', 8]
   ];
-  sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
+
+  // Leer IDs existentes para evitar duplicados.
+  const existingIds = {};
+  const lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    const vals = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < vals.length; i++) {
+      existingIds[String(vals[i][0])] = true;
+    }
+  }
+
+  const aAgregar = data.filter(function (row) {
+    return !existingIds[String(row[0])];
+  });
+
+  if (aAgregar.length === 0) return 0;
+
+  const startRow = sheet.getLastRow() + 1;
+  sheet.getRange(startRow, 1, aAgregar.length, aAgregar[0].length).setValues(aAgregar);
+  return aAgregar.length;
 }
 
 function readAll(sheetName) {

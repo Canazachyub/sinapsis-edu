@@ -19,7 +19,7 @@ import type { PlataformaCardData } from '@/components/PlataformaCard';
  * reciben el nuevo precio/etiqueta/orden y recalculan automáticamente.
  */
 
-const CACHE_KEY = 'sinapsis_plataformas_v2';
+const CACHE_KEY = 'sinapsis_plataformas_v3';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface ApiPlataforma {
@@ -57,15 +57,17 @@ const PLATAFORMAS_EXTRA: PlataformaCardData[] = [
     precio: 30,
     duracion_dias: 30,
     etiqueta: 'Nuevo',
+    orden: 7,
   },
   {
     slug: 'cto',
     nombre: 'Colección CTO',
     descripcion: 'Programa completo CTO, referente en España y Latinoamérica. Manuales, videos, casos y plataforma online.',
-    precio: 50,
-    duracion_dias: 365,
+    precio: 299,
     precio_promocional: 50,
+    duracion_dias: 365,
     etiqueta: 'Premium',
+    orden: 8,
   },
 ];
 
