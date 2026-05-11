@@ -1,8 +1,39 @@
-// Stub Fase 0. En Fase 2 reemplazará el array hardcodeado por callApi('listarPlataformasPublicas').
 import { useEffect, useState } from 'react';
+import { callApi } from '@/api/client';
 import type { PlataformaCardData } from '@/components/PlataformaCard';
 
-const PLATAFORMAS_DEMO: PlataformaCardData[] = [
+/**
+ * Fuente de verdad: hoja Plataformas en Google Sheets (vía Apps Script).
+ *
+ * Estrategia para no parpadear:
+ *   1. Si hay cache en sessionStorage (TTL 5 min) → mostrarla al instante.
+ *   2. En paralelo, refrescar contra el backend.
+ *   3. Si el backend cae o tarda → usar la lista hardcoded como fallback.
+ *
+ * Resultado: editas un precio en el Sheet, refrescas el portal y todos los
+ * componentes (PlataformaCard, Compra, PagarConCripto) reciben el nuevo
+ * precio y recalculan automáticamente (USDT, BTC, ETH, BNB, soles).
+ */
+
+const CACHE_KEY = 'sinapsis_plataformas_v1';
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface ApiPlataforma {
+  id_plataforma: string;
+  nombre: string;
+  slug: string;
+  descripcion: string;
+  precio: number | string;
+  duracion_dias: number | string;
+  activo: boolean | string;
+}
+
+interface Cached {
+  data: PlataformaCardData[];
+  at: number;
+}
+
+const PLATAFORMAS_FALLBACK: PlataformaCardData[] = [
   {
     slug: 'enam',
     nombre: 'ENAM',
@@ -47,15 +78,64 @@ const PLATAFORMAS_DEMO: PlataformaCardData[] = [
   },
 ];
 
+function leerCache(): PlataformaCardData[] | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw) as Cached;
+    if (!c.at || Date.now() - c.at > CACHE_TTL_MS) return null;
+    return c.data;
+  } catch {
+    return null;
+  }
+}
+
+function guardarCache(data: PlataformaCardData[]) {
+  try {
+    const payload: Cached = { data, at: Date.now() };
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    /* sessionStorage lleno o no disponible: ok seguir sin cache */
+  }
+}
+
+function mapApiData(rows: ReadonlyArray<ApiPlataforma>): PlataformaCardData[] {
+  return rows.map((p) => ({
+    slug: String(p.slug),
+    nombre: String(p.nombre),
+    descripcion: String(p.descripcion),
+    precio: Number(p.precio),
+    duracion_dias: Number(p.duracion_dias),
+  }));
+}
+
+export type PlataformasSource = 'cache' | 'backend' | 'fallback' | 'loading';
+
 export function usePlataformas() {
-  const [plataformas, setPlataformas] = useState<PlataformaCardData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = typeof window !== 'undefined' ? leerCache() : null;
+  const [plataformas, setPlataformas] = useState<PlataformaCardData[]>(cached ?? []);
+  const [loading, setLoading] = useState<boolean>(!cached);
+  const [source, setSource] = useState<PlataformasSource>(cached ? 'cache' : 'loading');
 
   useEffect(() => {
-    // TODO Fase 2: reemplazar por callApi('listarPlataformasPublicas')
-    setPlataformas(PLATAFORMAS_DEMO);
-    setLoading(false);
+    let cancelled = false;
+    callApi<ApiPlataforma[]>('listarPlataformasPublicas').then((res) => {
+      if (cancelled) return;
+      if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+        const mapped = mapApiData(res.data);
+        setPlataformas(mapped);
+        setSource('backend');
+        guardarCache(mapped);
+      } else if (plataformas.length === 0) {
+        setPlataformas(PLATAFORMAS_FALLBACK);
+        setSource('fallback');
+      }
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+    // Solo en mount: el cache inicial ya se aplicó arriba con useState.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { plataformas, loading };
+  return { plataformas, loading, source };
 }
