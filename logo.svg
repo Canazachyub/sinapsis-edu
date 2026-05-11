@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48">
+  <g fill="none">
+    <rect x="0" y="6" width="36" height="36" rx="10" fill="#10312D"/>
+    <path d="M11 16v8a7 7 0 0 0 14 0v-8" stroke="#C2E476" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="18" cy="32" r="3" fill="#C2E476"/>
+  </g>
+  <text x="48" y="32" font-family="'Barlow Condensed', sans-serif" font-weight="800" font-size="22" fill="#10312D" letter-spacing="0.5">
+    PORTAL CENTRAL
+  </text>
+</svg>
