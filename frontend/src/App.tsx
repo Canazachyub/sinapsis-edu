@@ -1,5 +1,10 @@
+import { AuthProvider } from '@/hooks/useAuth';
 import { Router } from './router';
 
 export default function App() {
-  return <Router />;
+  return (
+    <AuthProvider>
+      <Router />
+    </AuthProvider>
+  );
 }
