@@ -4,7 +4,12 @@
  * NO commitear cambios de IDs reales — usar .env si se vuelven sensibles.
  */
 
-export const TITULAR = 'Yubert Fernando Canaza Chique';
+/**
+ * Titular enmascarado: ocultamos el segundo nombre y apellido materno
+ * en la UI pública. El nombre completo vive solo en los registros
+ * bancarios; el alumno reconoce al titular por las iniciales visibles.
+ */
+export const TITULAR = 'Yubert *** Canaza ****';
 
 export const YAPE = {
   titular: TITULAR,
@@ -22,7 +27,7 @@ export const BCP_SOLES = {
 } as const;
 
 export const BINANCE = {
-  titular: 'Yubert Canaza Chique',
+  titular: TITULAR,
   payId: 'User-c8086',
   redes: ['BEP20', 'TRC20'] as const,
   moneda: 'USDT (Tether)',

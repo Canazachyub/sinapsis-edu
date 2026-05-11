@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  Bone,
   BookOpen,
   Building2,
   GraduationCap,
@@ -17,7 +18,20 @@ const ICONS: Record<string, LucideIcon> = {
   rm: GraduationCap,
   essalud: Building2,
   biblioteca: Library,
+  anatomia: Bone,
+  cto: GraduationCap,
 };
+
+function formatDuracion(dias: number): string {
+  if (dias >= 360) return '1 año';
+  if (dias >= 180) return '6 meses';
+  if (dias === 90) return '3 meses';
+  if (dias === 60) return '2 meses';
+  if (dias === 30) return '1 mes';
+  if (dias === 15) return '15 días';
+  if (dias === 7) return '1 semana';
+  return `${dias} días`;
+}
 
 export interface PlataformaCardData {
   slug: string;
@@ -59,7 +73,7 @@ export function PlataformaCard({ data }: { data: PlataformaCardData }) {
       <div className="my-5 border-t border-jungle/10" />
       <div className="flex items-baseline gap-2">
         <span className="text-3xl font-bold text-jungle">S/ {data.precio}</span>
-        <span className="text-sm text-jungle-light">/ {data.duracion_dias} días</span>
+        <span className="text-sm text-jungle-light">/ {formatDuracion(data.duracion_dias)}</span>
       </div>
       <div className="mt-5 flex flex-col gap-2">
         <Link to={`/compra/${data.slug}`} className="btn-primary w-full">Comprar acceso</Link>
