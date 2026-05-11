@@ -188,12 +188,12 @@ export function PagarConCripto({ priceInPEN, note }: Props) {
       <div className="px-6 mt-6 grid md:grid-cols-2 gap-6 items-start">
         {/* QR */}
         <div className="flex flex-col items-center">
-          <div className="bg-cream rounded-xl p-3 w-full max-w-[260px]">
+          <div className="bg-cream rounded-xl p-2 w-full max-w-[340px]">
             {!qrFailed ? (
               <img
                 src={BINANCE.qrImage}
                 alt="QR de Binance Pay"
-                className="w-full aspect-square object-contain"
+                className="w-full aspect-square object-contain rounded-lg"
                 onError={() => setQrFailed(true)}
               />
             ) : (

@@ -78,6 +78,34 @@ const PLATAFORMAS_FALLBACK: PlataformaCardData[] = [
   },
 ];
 
+/**
+ * Plataformas extra que el frontend muestra SIEMPRE, aunque no estén en el
+ * Sheet. Si el backend ya las trae (P-007, P-008), se respeta lo del Sheet.
+ * Si no, se inyectan acá para que la landing las vea de todos modos.
+ */
+const PLATAFORMAS_EXTRA: PlataformaCardData[] = [
+  {
+    slug: 'anatomia',
+    nombre: 'Anatomía de Testut',
+    descripcion: 'Resúmenes teóricos basados en Testut. Material por segmentos anatómicos. Bancos UNAP y 5 simulacros por segmento. Formato físico disponible.',
+    precio: 20,
+    duracion_dias: 30,
+  },
+  {
+    slug: 'cto',
+    nombre: 'Colección CTO',
+    descripcion: 'Programa completo CTO, referente en España y Latinoamérica. Manuales, videos, casos y plataforma online.',
+    precio: 50,
+    duracion_dias: 365,
+  },
+];
+
+function mergeExtras(base: PlataformaCardData[]): PlataformaCardData[] {
+  const slugsExistentes = new Set(base.map((p) => p.slug));
+  const faltantes = PLATAFORMAS_EXTRA.filter((p) => !slugsExistentes.has(p.slug));
+  return [...base, ...faltantes];
+}
+
 function leerCache(): PlataformaCardData[] | null {
   try {
     const raw = sessionStorage.getItem(CACHE_KEY);
@@ -113,7 +141,9 @@ export type PlataformasSource = 'cache' | 'backend' | 'fallback' | 'loading';
 
 export function usePlataformas() {
   const cached = typeof window !== 'undefined' ? leerCache() : null;
-  const [plataformas, setPlataformas] = useState<PlataformaCardData[]>(cached ?? []);
+  const [plataformas, setPlataformas] = useState<PlataformaCardData[]>(
+    cached ? mergeExtras(cached) : [],
+  );
   const [loading, setLoading] = useState<boolean>(!cached);
   const [source, setSource] = useState<PlataformasSource>(cached ? 'cache' : 'loading');
 
@@ -123,11 +153,11 @@ export function usePlataformas() {
       if (cancelled) return;
       if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
         const mapped = mapApiData(res.data);
-        setPlataformas(mapped);
+        setPlataformas(mergeExtras(mapped));
         setSource('backend');
-        guardarCache(mapped);
+        guardarCache(mapped); // cache solo lo que vino del backend (los extras se aplican siempre)
       } else if (plataformas.length === 0) {
-        setPlataformas(PLATAFORMAS_FALLBACK);
+        setPlataformas(mergeExtras(PLATAFORMAS_FALLBACK));
         setSource('fallback');
       }
       setLoading(false);

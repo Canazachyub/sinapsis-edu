@@ -53,7 +53,7 @@ function YapeBlock({ priceInPEN }: { priceInPEN: number }) {
       <HeaderSoles priceInPEN={priceInPEN} label="Paga con Yape · Plin" />
       <div className="p-6 grid md:grid-cols-2 gap-6 items-start">
         <div className="flex flex-col items-center">
-          <div className="bg-[#7B1FA2] rounded-2xl p-4 w-full max-w-[260px]">
+          <div className="bg-[#7B1FA2] rounded-2xl p-3 w-full max-w-[340px]">
             {!imgFailed ? (
               <img
                 src={YAPE.qrImage}
