@@ -52,10 +52,15 @@ const config: Config = {
           '0%, 100%': { boxShadow: '0 0 0 0 rgba(194,228,118,.5)' },
           '50%': { boxShadow: '0 0 0 12px rgba(194,228,118,0)' },
         },
+        carousel: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'fade-slide-up': 'fadeSlideUp .5s ease forwards',
         'pulse-lime': 'pulseLime 2s infinite',
+        carousel: 'carousel 60s linear infinite',
       },
     },
   },

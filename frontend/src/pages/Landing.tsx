@@ -4,6 +4,10 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { PlataformaCard } from '@/components/PlataformaCard';
 import { WhatsAppFloating } from '@/components/WhatsAppButton';
+import { PromoBanner } from '@/components/PromoBanner';
+import { CursosCarousel } from '@/components/CursosCarousel';
+import { CursosEspecializados } from '@/components/CursosEspecializados';
+import { MisionVisionValores } from '@/components/MisionVisionValores';
 import { usePlataformas } from '@/hooks/usePlataformas';
 import { ping } from '@/api/client';
 
@@ -56,14 +60,15 @@ export function Landing() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <PromoBanner />
       <Navbar />
 
       {/* HERO */}
       <section className="bg-lime relative overflow-hidden">
-        <div className="container-x py-20 md:py-28 grid md:grid-cols-2 gap-10 items-center relative z-10">
-          <div>
+        <div className="container-x py-16 md:py-24 grid md:grid-cols-12 gap-8 md:gap-12 items-center relative z-10">
+          <div className="md:col-span-5">
             <span className="pill"><Stethoscope className="w-4 h-4" /> La central de evaluación médica</span>
-            <h1 className="mt-6 text-5xl md:text-7xl text-jungle leading-[1.05]">
+            <h1 className="mt-6 text-5xl md:text-6xl xl:text-7xl text-jungle leading-[1.05]">
               Prepárate para tu examen<br /> con las mejores plataformas
             </h1>
             <p className="mt-6 max-w-xl text-lg text-jungle/80">
@@ -90,11 +95,11 @@ export function Landing() {
               </span>
             </div>
           </div>
-          <div className="hidden md:block">
+          <div className="md:col-span-7">
             <img
-              src="/images/hero/hero-ilustracion.svg"
-              alt="Estudiante de medicina aprendiendo en línea"
-              className="w-full max-w-xl mx-auto"
+              src="/images/hero/hero-ilustracion.png"
+              alt="Estudiante de medicina aprendiendo en línea con SINAPSIS EDU"
+              className="w-full h-auto max-w-3xl mx-auto block"
               loading="eager"
             />
           </div>
@@ -153,6 +158,10 @@ export function Landing() {
           </div>
         </div>
       </section>
+
+      <CursosEspecializados />
+      <CursosCarousel />
+      <MisionVisionValores />
 
       <Footer />
       <WhatsAppFloating />
