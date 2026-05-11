@@ -1,6 +1,10 @@
 /**
  * Cliente fetch único contra el Web App de Apps Script.
  * Apps Script solo acepta POST con JSON; el campo `action` define el endpoint.
+ *
+ * Maneja un glitch intermitente conocido de Apps Script donde a veces
+ * devuelve la respuesta de doGet en vez de doPost — en esos casos hace
+ * un único reintento automático.
  */
 
 import { config } from '@/config';
@@ -14,26 +18,33 @@ export interface ApiEnvelope<T = unknown> {
 
 const DEBUG_API = typeof window !== 'undefined' && import.meta.env.DEV;
 
-export async function callApi<T = unknown>(
-  action: string,
-  payload: Record<string, unknown> = {},
-): Promise<ApiEnvelope<T>> {
-  if (!config.apiUrl) {
-    return {
-      ok: false,
-      error: 'VITE_API_URL no configurado. Crea frontend/.env y pega la URL del Web App.',
-    };
-  }
+/** Detecta la respuesta del fallback doGet (cuando Apps Script confunde POST con GET). */
+function esRespuestaDoGet(env: ApiEnvelope): boolean {
+  return (
+    env.ok === true &&
+    env.data === undefined &&
+    typeof env.message === 'string' &&
+    env.message.indexOf('Usa POST con') !== -1
+  );
+}
 
+async function callApiOnce<T>(
+  action: string,
+  payload: Record<string, unknown>,
+): Promise<ApiEnvelope<T>> {
   const body = JSON.stringify({ action, ...payload });
   if (DEBUG_API) {
-    console.log('[api →]', action, { url: config.apiUrl, bodyLength: body.length, body: body.length < 500 ? body : body.slice(0, 200) + '...' });
+    console.log('[api →]', action, {
+      url: config.apiUrl,
+      bodyLength: body.length,
+      body: body.length < 500 ? body : body.slice(0, 200) + '...',
+    });
   }
 
   try {
     const response = await fetch(config.apiUrl, {
       method: 'POST',
-      // Apps Script lee text/plain sin disparar preflight CORS
+      // Apps Script lee text/plain sin disparar preflight CORS.
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body,
       redirect: 'follow',
@@ -49,9 +60,7 @@ export async function callApi<T = unknown>(
       });
     }
 
-    if (!response.ok) {
-      return { ok: false, error: `HTTP ${response.status}` };
-    }
+    if (!response.ok) return { ok: false, error: `HTTP ${response.status}` };
 
     const text = await response.text();
     if (DEBUG_API) {
@@ -71,6 +80,28 @@ export async function callApi<T = unknown>(
     if (DEBUG_API) console.error('[api ✗]', action, detail);
     return { ok: false, error: `Error de red: ${detail}` };
   }
+}
+
+export async function callApi<T = unknown>(
+  action: string,
+  payload: Record<string, unknown> = {},
+): Promise<ApiEnvelope<T>> {
+  if (!config.apiUrl) {
+    return {
+      ok: false,
+      error: 'VITE_API_URL no configurado. Crea frontend/.env y pega la URL del Web App.',
+    };
+  }
+
+  let res = await callApiOnce<T>(action, payload);
+
+  // Reintento automático si Apps Script devolvió el fallback de doGet.
+  if (esRespuestaDoGet(res)) {
+    if (DEBUG_API) console.warn('[api ↻] Apps Script devolvió doGet, reintentando', action);
+    res = await callApiOnce<T>(action, payload);
+  }
+
+  return res;
 }
 
 export interface PingPayload {
