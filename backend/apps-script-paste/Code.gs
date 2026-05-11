@@ -569,6 +569,92 @@ function verificarPagoBinanceAuto(idCompra) {
 
 
 // ╔═══════════════════════════════════════════════════════════════╗
+// ║                       AUTH & HELPERS                          ║
+// ║  Sesiones, lookups, fechas                                    ║
+// ╚═══════════════════════════════════════════════════════════════╝
+
+const SESSION_TTL_SECONDS = 21600; // 6h (max de CacheService)
+
+/** Crea una sesion para el usuario y devuelve el token. */
+function createSession(usuario) {
+  const token = randomToken(32);
+  const payload = JSON.stringify({
+    id_usuario: usuario.id_usuario,
+    correo: usuario.correo,
+    nombre: usuario.nombre,
+    createdAt: new Date().toISOString()
+  });
+  CacheService.getScriptCache().put('session_' + token, payload, SESSION_TTL_SECONDS);
+  return token;
+}
+
+/** Devuelve los datos de la sesion si el token es valido, null en caso contrario. */
+function validateSession(token) {
+  if (!token) return null;
+  const raw = CacheService.getScriptCache().get('session_' + token);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+/** Lookup por id_plataforma en la hoja Plataformas. */
+function findPlataformaById(id) {
+  const all = readAll(SHEET_NAMES.PLATAFORMAS);
+  for (let i = 0; i < all.length; i++) {
+    if (String(all[i].id_plataforma) === String(id)) return all[i];
+  }
+  return null;
+}
+
+/** Lookup por slug en la hoja Plataformas. */
+function findPlataformaBySlug(slug) {
+  const all = readAll(SHEET_NAMES.PLATAFORMAS);
+  for (let i = 0; i < all.length; i++) {
+    if (String(all[i].slug) === String(slug)) return all[i];
+  }
+  return null;
+}
+
+/** Lookup por correo en la hoja Usuarios (case-insensitive). */
+function findUsuarioByCorreo(correo) {
+  const all = readAll(SHEET_NAMES.USUARIOS);
+  const c = String(correo).toLowerCase();
+  for (let i = 0; i < all.length; i++) {
+    if (String(all[i].correo).toLowerCase() === c) return all[i];
+  }
+  return null;
+}
+
+/** Dias restantes hasta una fecha ISO (puede ser negativo si ya paso). */
+function daysUntil(isoDate) {
+  if (!isoDate) return null;
+  const target = new Date(String(isoDate));
+  if (isNaN(target.getTime())) return null;
+  const today = new Date();
+  // Normalizar a medianoche para evitar saltos por hora
+  target.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  const ms = target.getTime() - today.getTime();
+  return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
+/** Verifica si un usuario tiene acceso activo a una plataforma dada. */
+function hasActiveAccess(idUsuario, idPlataforma) {
+  const compras = readAll(SHEET_NAMES.COMPRAS);
+  const today = todayIso();
+  for (let i = 0; i < compras.length; i++) {
+    const c = compras[i];
+    if (String(c.id_usuario) !== String(idUsuario)) continue;
+    if (String(c.id_plataforma) !== String(idPlataforma)) continue;
+    if (String(c.estado_pago) !== 'aprobado') continue;
+    if (String(c.estado_acceso) !== 'activo') continue;
+    if (c.fecha_fin && String(c.fecha_fin).slice(0, 10) < today) continue;
+    return true;
+  }
+  return false;
+}
+
+
+// ╔═══════════════════════════════════════════════════════════════╗
 // ║                            API                                ║
 // ║  Handlers publicos y de admin + dispatcher                    ║
 // ╚═══════════════════════════════════════════════════════════════╝
@@ -618,16 +704,219 @@ function listarPlataformasPublicas(req) {
   }
 }
 
-// Stubs Fase 2/4/5
+// Stubs Fase 2/4
 function registrarCompra(req)      { return ok(undefined, 'pendiente Fase 2'); }
 function subirVoucher(req)         { return ok(undefined, 'pendiente Fase 2'); }
-function loginAlumno(req)          { return ok(undefined, 'pendiente Fase 5'); }
-function misAccesos(req)           { return ok([],        'pendiente Fase 5'); }
-function obtenerUrlPlataforma(req) { return ok(undefined, 'pendiente Fase 5'); }
 function adminLogin(req)           { return ok(undefined, 'pendiente Fase 4'); }
 function listarSolicitudes(req)    { return ok([],        'pendiente Fase 4'); }
 function aprobarPago(req)          { return ok(undefined, 'pendiente Fase 4'); }
 function rechazarPago(req)         { return ok(undefined, 'pendiente Fase 4'); }
+
+// ─── Fase 5: login alumno + accesos + url plataforma ─────────
+
+function loginAlumno(req) {
+  try {
+    const correo = String(req.correo || '').trim();
+    const password = String(req.password || '');
+    if (!isEmail(correo)) return fail('Correo invalido');
+    if (!isNonEmptyString(password)) return fail('Falta la contrasena');
+
+    const user = findUsuarioByCorreo(correo);
+    if (!user) {
+      log({ accion: 'loginAlumno', nivel: 'warning', detalle: 'correo no existe: ' + correo });
+      return fail('Credenciales invalidas');
+    }
+    if (String(user.estado) !== 'activo') {
+      log({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'cuenta no activa' });
+      return fail('Cuenta bloqueada. Contacta soporte.');
+    }
+    const salt = String(user.password_salt || '');
+    const hash = String(user.password_hash || '');
+    if (!salt || !hash) {
+      log({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'usuario sin credenciales' });
+      return fail('Cuenta sin contrasena configurada. Contacta soporte.');
+    }
+    if (hashPassword(password, salt) !== hash) {
+      log({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'password incorrecta' });
+      return fail('Credenciales invalidas');
+    }
+
+    const token = createSession({
+      id_usuario: String(user.id_usuario),
+      correo: String(user.correo),
+      nombre: String(user.nombre)
+    });
+
+    log({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'login OK' });
+    return ok({
+      token: token,
+      usuario: { nombre: String(user.nombre), correo: String(user.correo) }
+    });
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'loginAlumno', nivel: 'error', detalle: detalle });
+    return fail('Error interno', 'No se pudo procesar el login');
+  }
+}
+
+function misAccesos(req) {
+  const session = validateSession(req.token);
+  if (!session) return fail('Sesion invalida o expirada');
+
+  try {
+    const today = todayIso();
+    const compras = readAll(SHEET_NAMES.COMPRAS);
+    const accesos = compras
+      .filter(function (c) {
+        return String(c.id_usuario) === String(session.id_usuario)
+          && String(c.estado_pago) === 'aprobado'
+          && String(c.estado_acceso) === 'activo'
+          && (!c.fecha_fin || String(c.fecha_fin).slice(0, 10) >= today);
+      })
+      .map(function (c) {
+        const plat = findPlataformaById(String(c.id_plataforma));
+        const finStr = c.fecha_fin ? String(c.fecha_fin).slice(0, 10) : '';
+        return {
+          id_acceso: String(c.id_compra),
+          id_plataforma: String(c.id_plataforma),
+          plataforma: plat ? String(plat.nombre) : '',
+          slug: plat ? String(plat.slug) : '',
+          fecha_inicio: c.fecha_inicio ? String(c.fecha_inicio).slice(0, 10) : '',
+          fecha_fin: finStr,
+          dias_restantes: daysUntil(finStr)
+        };
+      });
+
+    return ok(accesos);
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'misAccesos', idUsuario: String(session.id_usuario), nivel: 'error', detalle: detalle });
+    return fail('No se pudieron obtener los accesos');
+  }
+}
+
+function obtenerUrlPlataforma(req) {
+  const session = validateSession(req.token);
+  if (!session) return fail('Sesion invalida o expirada');
+
+  const slug = String(req.slug || '').trim();
+  if (!slug) return fail('Falta el slug');
+
+  const plat = findPlataformaBySlug(slug);
+  if (!plat) return fail('Plataforma no encontrada');
+
+  if (!hasActiveAccess(String(session.id_usuario), String(plat.id_plataforma))) {
+    log({
+      accion: 'obtenerUrlPlataforma',
+      idUsuario: String(session.id_usuario),
+      nivel: 'warning',
+      detalle: 'intento de acceso sin permiso: ' + slug
+    });
+    return fail('No tienes acceso activo a esta plataforma');
+  }
+
+  log({ accion: 'obtenerUrlPlataforma', idUsuario: String(session.id_usuario), nivel: 'info', detalle: slug });
+  return ok({ url: String(plat.url_real) });
+}
+
+// ─── Crear usuario de prueba (correr desde editor) ───────────
+
+/**
+ * Crea un usuario de prueba con tus credenciales + 2 compras activas.
+ * Idempotente: si ya existe el usuario, no lo duplica; si ya tiene las
+ * compras, tampoco las agrega.
+ *
+ * Credenciales por defecto: canazach12@gmail.com / Test1234
+ */
+function createTestUser() {
+  const correo = 'canazach12@gmail.com';
+  const password = 'Test1234';
+  const nombre = 'Yubert Canaza (Test)';
+
+  const sheetUsuarios = getSheet(SHEET_NAMES.USUARIOS);
+  const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+
+  // 1. Usuario
+  const existing = findUsuarioByCorreo(correo);
+  let userId;
+  let userCreated = false;
+  if (existing) {
+    userId = String(existing.id_usuario);
+  } else {
+    userId = nextId('U', nextSequenceFromColumn(SHEET_NAMES.USUARIOS, 1));
+    const salt = generateSalt();
+    const hash = hashPassword(password, salt);
+    sheetUsuarios.appendRow([
+      userId,
+      nombre,
+      correo,
+      '51984300510',
+      hash,
+      salt,
+      nowIso(),
+      'activo'
+    ]);
+    userCreated = true;
+  }
+
+  // 2. Compras de prueba (idempotentes por id_usuario + id_plataforma + activo)
+  const compras = readAll(SHEET_NAMES.COMPRAS);
+  function yaTieneActiva(idPlat) {
+    for (let i = 0; i < compras.length; i++) {
+      if (String(compras[i].id_usuario) === userId
+        && String(compras[i].id_plataforma) === idPlat
+        && String(compras[i].estado_acceso) === 'activo') return true;
+    }
+    return false;
+  }
+
+  const created = [];
+
+  // ENCIB: comprada hoy, vence en 30 dias
+  if (!yaTieneActiva('P-002')) {
+    const id = nextId('C', nextSequenceFromColumn(SHEET_NAMES.COMPRAS, 1));
+    sheetCompras.appendRow([
+      id, userId, 'P-002', 49, 'yape',
+      addDaysIso(0), '',
+      'aprobado', addDaysIso(0), addDaysIso(0), addDaysIso(30),
+      'activo'
+    ]);
+    created.push(id + ' = ENCIB (vence en 30 dias)');
+    compras.push({ id_compra: id, id_usuario: userId, id_plataforma: 'P-002', estado_acceso: 'activo' });
+  }
+
+  // ENAM: comprada hace 25 dias, vence en 5 dias (probar warning de "vence pronto")
+  if (!yaTieneActiva('P-001')) {
+    const id = nextId('C', nextSequenceFromColumn(SHEET_NAMES.COMPRAS, 1));
+    sheetCompras.appendRow([
+      id, userId, 'P-001', 49, 'yape',
+      addDaysIso(-25), '',
+      'aprobado', addDaysIso(-25), addDaysIso(-25), addDaysIso(5),
+      'activo'
+    ]);
+    created.push(id + ' = ENAM (vence en 5 dias)');
+  }
+
+  log({
+    accion: 'createTestUser',
+    idUsuario: userId,
+    nivel: 'info',
+    detalle: 'correo=' + correo + ' user_nuevo=' + userCreated + ' compras_nuevas=[' + created.join(';') + ']'
+  });
+
+  return {
+    ok: true,
+    usuario: {
+      id_usuario: userId,
+      correo: correo,
+      password: password,
+      nombre: nombre,
+      creado_ahora: userCreated
+    },
+    accesos_creados: created,
+    note: 'Idempotente. Para resetear, borra las filas manualmente en las hojas Usuarios y Compras.'
+  };
+}
 
 function dispatchPublic(req) {
   const action = String(req.action);
