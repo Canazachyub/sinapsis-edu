@@ -1,8 +1,37 @@
-# IMAGENES.md — Guía completa de imágenes del Portal Central
+# IMAGENES.md — Guía visual de SINAPSIS EDU
 
-> Hoja de ruta visual del portal. Prompts AI, dimensiones, ubicaciones y
-> convenciones de nombres. Cuando termines de generar las imágenes,
-> renómbralas exactamente como se indica y avísame para cablearlas.
+> Hoja de ruta visual de **SINAPSIS EDU** (sinapsisedu.com). Prompts AI listos
+> para copiar/pegar, dimensiones exactas, dónde guardar y qué nombre debe
+> tener cada archivo. Cuando termines de generarlas, renómbralas exactamente
+> como se indica y avísame para cablearlas en los componentes.
+
+---
+
+## 🧠 Concepto de marca
+
+**Nombre:** SINAPSIS EDU
+**Dominio:** sinapsisedu.com
+**Metáfora visual central:** la **sinapsis** — el momento exacto donde dos
+neuronas se conectan y el conocimiento "salta". Es la chispa entre estudiar
+y aprobar. Entre teoría y caso clínico. Entre intentar y lograrlo.
+
+Esto se traduce en motifs recurrentes en TODAS las imágenes:
+
+- Puntos (nodos) conectados por líneas finas → **patrón de red neuronal**.
+- Una chispa o glow en el punto de conexión → **lime green (#C2E476) brillante**.
+- Dendritas o ramificaciones sutiles en los fondos.
+- En logos: una "S" o "X" que sugiere una conexión.
+
+**Vibe del proyecto:** premium · médico moderno · energético · profesional · inteligente.
+
+**Lo que NO queremos** (negative prompts para todas las imágenes):
+- Estilo institucional acartonado, hospital de los 90s.
+- Stock photo aburrida (doctor sonriendo con mascarilla y pulgar arriba).
+- Gradientes morados de Microsoft Office.
+- Iconitos planos genéricos de Material Design.
+- Texto en chino, japonés o caracteres no latinos.
+- Marcas de agua, watermarks, banners de stock.
+- Colores fuera de la paleta (rosa, naranja, amarillo crudo, azul cobalto).
 
 ---
 
@@ -10,27 +39,25 @@
 
 ```
 PRIMARIOS
-  Lime:    #C2E476   ← acento vivo (botones, highlights)
-  Jungle:  #10312D   ← verde oscuro casi negro (fondos serios, texto)
-  Cream:   #F3F1E8   ← beige suave (fondos neutros)
+  Lime green       #C2E476   ← acento vivo, chispa de sinapsis
+  Jungle (teal)    #10312D   ← fondo serio, casi negro con tinte verde
+  Cream            #F3F1E8   ← fondos neutros, papel, "respiración"
 
 SECUNDARIOS
-  Lime Dark:  #AACF57   ← gradientes
-  Jungle Dark:#0B211F   ← negros con tinte verde
-  Purple:     #795BC2   ← acento puntual (badges)
-  WhatsApp:   #25D366   ← solo para botón WhatsApp
+  Lime Dark        #AACF57   ← gradientes y hover
+  Jungle Dark      #0B211F   ← negros más profundos
+  Purple accent    #795BC2   ← solo para badges/highlights muy puntuales
+  WhatsApp green   #25D366   ← exclusivo del botón WhatsApp
 ```
 
-**Vibe del proyecto:** premium, médico moderno, energético, profesional.
-**Lo que NO queremos:** institucional acartonado, stock photo aburrida,
-fotos de doctores con mascarilla y pulgar arriba, gradientes morados de
-hospital, iconitos planos genéricos.
+**Regla de oro de contraste:**
+- Sobre Lime → texto Jungle
+- Sobre Jungle → texto Lime o Cream
+- Sobre Cream → texto Jungle
 
 ---
 
-## 📁 Dónde guardar las imágenes
-
-Crea esta carpeta:
+## 📁 Estructura de carpetas (ya creada)
 
 ```
 portal-central/frontend/public/images/
@@ -42,9 +69,8 @@ portal-central/frontend/public/images/
 └── og/
 ```
 
-Cuando guardes un archivo, **respeta el nombre EXACTO** que se indica en
-cada sección (en minúsculas, sin tildes, con guiones medios). Si lo
-nombras distinto, dímelo y lo cableo con ese nombre.
+Respeta el nombre **EXACTO** de cada archivo (minúsculas, sin tildes,
+guiones medios). Si lo nombras distinto, dímelo y lo cableo con ese nombre.
 
 ---
 
@@ -52,29 +78,29 @@ nombras distinto, dímelo y lo cableo con ese nombre.
 
 | Tipo | Herramienta | Cuándo usarla |
 |------|-------------|---------------|
-| Generación IA | **ChatGPT (DALL·E 3)** | Ilustraciones, escenas médicas, hero. Razonablemente bueno con prompts en inglés. |
-| Generación IA | **Gemini Imagen** | Alternativa gratuita. Buena calidad. |
-| Generación IA | **Midjourney** | Mejor calidad si tienes suscripción. Estilo más cinematográfico. |
-| Stock photo | **unsplash.com** | Fotos reales sin marca de agua. Búsqueda en inglés. |
-| Stock photo | **pexels.com** | Igual que Unsplash, complementario. |
-| Ilustraciones SVG | **unDraw.co** | **MUY RECOMENDADO**: SVG editables con color personalizable. Pones el color #C2E476 y queda perfecto para nuestra marca. |
-| Edición rápida | **canva.com** | Para QR de Yape con marco, OG image, retoques. |
-| Compresión | **squoosh.app** | Después de generar, comprime PNG → WebP o reduce kB. |
+| IA generativa | **ChatGPT (DALL·E 3)** | Ilustraciones detalladas, escenas, hero. Mejor en inglés. |
+| IA generativa | **Gemini Imagen 3** | Alternativa gratuita potente. Muy bueno con texto en imagen. |
+| IA generativa | **Midjourney v6** | La calidad cinematográfica top si tienes suscripción. |
+| IA generativa | **Ideogram** | El mejor para imágenes CON texto legible (logos, OG). |
+| Ilustraciones SVG | **unDraw.co** | SVG editables con color personalizado. **Atajo más rápido.** |
+| Stock photos | **unsplash.com** / **pexels.com** | Fotos reales libres de derechos. Buscar en inglés. |
+| Edición rápida | **canva.com** | QR de Yape con marco, OG image, retoques de texto sobre foto. |
+| Compresión | **squoosh.app** | Reducir PNG a WebP o JPG optimizado antes de subir. |
 
 ---
 
 ## 📐 Convenciones técnicas
 
-- **Logos / iconos**: SVG (escalable) o PNG con fondo transparente.
-- **Cards de plataforma**: PNG o JPG, ratio 16:9, ancho mínimo 800px.
-- **Hero**: PNG con transparencia, ancho mínimo 1200px.
-- **Fotos (vouchers, QR, etc.)**: JPG / PNG, ancho 600-1000px.
-- **OG image** (compartir en redes): PNG 1200×630.
-- **Tamaño máximo por archivo**: 500 KB. Si excede, comprime con squoosh.
+- **Logos / iconos**: SVG si es posible, o PNG transparente.
+- **Cards de plataforma**: PNG/WebP, **ratio 16:9 estricto**, ancho mínimo 1200px.
+- **Hero**: PNG transparente, ancho mínimo 1600px.
+- **Fotos / QR**: JPG o PNG, ancho 600-1000px.
+- **OG image**: PNG **1200×630 (estándar Open Graph)**.
+- **Peso por archivo**: máximo 500 KB. Si excede, comprime con squoosh.
 
 ---
 
-# 1. LOGO PRINCIPAL
+# 1. LOGO PRINCIPAL — SINAPSIS EDU
 
 **Dónde se usa:** [Navbar](frontend/src/components/Navbar.tsx) · [Footer](frontend/src/components/Footer.tsx) · [Aula](frontend/src/pages/Aula.tsx) · favicon · OG image.
 
@@ -82,271 +108,396 @@ nombras distinto, dímelo y lo cableo con ese nombre.
 
 | Archivo | Dónde guardar | Tamaño | Formato |
 |---------|---------------|--------|---------|
-| `logo.svg` | `frontend/public/images/logo/` | escalable | SVG |
-| `logo-blanco.svg` | `frontend/public/images/logo/` | escalable | SVG (versión sobre fondo oscuro) |
-| `favicon.svg` | `frontend/public/` (sobreescribir) | 64×64 | SVG |
+| `logo.svg` | `frontend/public/images/logo/` | escalable | SVG (versión sobre fondo claro) |
+| `logo-blanco.svg` | `frontend/public/images/logo/` | escalable | SVG (versión sobre fondo Jungle) |
+| `logo-icono.svg` | `frontend/public/images/logo/` | 256×256 | Solo el símbolo, sin wordmark |
+| `favicon.svg` | `frontend/public/` (sobreescribir) | 64×64 | SVG (solo icono) |
 
-### Prompt AI
+### Prompt AI — Logo principal (Ideogram o DALL·E 3)
 
 ```
-Modern minimalist logo for "PORTAL CENTRAL" — a Peruvian medical education
-platform. Symbol: a stylized stethoscope curving into the letter "P", or
-a shield with a subtle cross/pulse line. Wordmark in bold condensed
-uppercase typography (similar to Barlow Condensed 800), all letters
-equal weight. Color: dark teal/jungle green #10312D for the wordmark on
-light backgrounds. Geometric, confident, premium feel. Flat vector style,
-no gradients, no 3D. Clean negative space. Aspect ratio: horizontal
-landscape (3:1).
+Premium minimal vector logo design for "SINAPSIS EDU", a Peruvian medical
+education platform preparing students for national medical exams.
+
+SYMBOL (left of wordmark): Two abstract nodes connected by a single curved
+line, forming a stylized synapse. The connection point has a small spark
+or glow. Symbol color: dark teal (#10312D) outline with a lime green
+(#C2E476) glow at the synapse junction. Could also read as a stylized
+letter "S" if abstracted further.
+
+WORDMARK (right of symbol): "SINAPSIS" in bold condensed uppercase
+typography (Barlow Condensed 800 style), all caps, very tight letter
+spacing. Below or beside in much smaller size: ".EDU" or "EDU" as a tag
+in a lighter weight. Wordmark color: dark teal (#10312D).
+
+STYLE: Flat vector, no gradients, no 3D, no drop shadows. Clean negative
+space. Premium SaaS aesthetic similar to Linear, Notion, or Stripe brand
+identities. Confident, modern, intelligent.
+
+ASPECT: horizontal landscape, roughly 3:1 ratio. Transparent background.
+
+DO NOT include: stethoscopes, hearts, crosses, hospital crosses, brain
+illustrations, generic medical icons, gradients, glow effects beyond the
+synapse spark, any text in non-Latin characters.
 ```
 
-### Versión sobre fondo oscuro (para Aula header)
+### Prompt para versión blanco/lime (sobre fondo oscuro)
 
-Misma logo pero con el wordmark en color Lime `#C2E476` en vez de Jungle.
+Mismo prompt pero cambia los colores:
+- Wordmark "SINAPSIS" → color cream (#F3F1E8)
+- Símbolo → outline lime green (#C2E476)
+- Spark del synapse → lime brillante
 
-### Notas
+### Prompt para `logo-icono.svg` (solo símbolo, sin texto)
 
-- Si no tienes ganas de generar uno propio, sigue funcionando el SVG actual de [public/logo.svg](frontend/public/logo.svg). Es serviciable pero genérico.
-- El nombre **"PORTAL CENTRAL"** debe leerse claro a 200px de ancho.
+```
+Vector symbol icon for SINAPSIS EDU brand. Just the symbol, no wordmark.
+Two abstract circular nodes connected by a single curved line with a
+small lime green (#C2E476) spark/glow at the connection point. Outline
+in dark teal (#10312D). Could be read as a stylized "S". Flat vector,
+transparent background, 256x256 canvas with the symbol centered and
+sized to ~80% of the canvas.
+```
+
+### Alternativa low-effort (si no quieres generar)
+
+Sigue funcionando el SVG actual de [public/logo.svg](frontend/public/logo.svg). Lo modifico para que diga "SINAPSIS EDU" si me lo pides, queda decente sin generar nada.
 
 ---
 
-# 2. HERO — Fondo del hero principal
+# 2. HERO — Imagen principal de la landing
 
-**Dónde se usa:** [Landing.tsx](frontend/src/pages/Landing.tsx), sección de arriba.
+**Dónde se usa:** [Landing.tsx](frontend/src/pages/Landing.tsx), sección de arriba con el headline.
 
 ### Archivos a entregar
 
 | Archivo | Dónde guardar | Tamaño | Formato |
 |---------|---------------|--------|---------|
-| `hero-ilustracion.png` | `frontend/public/images/hero/` | 1200×800 | PNG con transparencia |
+| `hero-ilustracion.png` | `frontend/public/images/hero/` | 1600×1100 | PNG con transparencia |
 
-### Prompt AI (ChatGPT / DALL·E 3 / Gemini)
-
-```
-Editorial-style flat illustration of a confident young Peruvian medical
-student, dark hair, white lab coat, holding an iPad showing a question
-bank interface. Background: abstract geometric shapes in lime green
-(#C2E476), dark forest green (#10312D) and cream (#F3F1E8). Floating UI
-elements around her: a stethoscope icon, a microscope, a graduation cap,
-a checkmark. Modern, clean, premium SaaS landing page illustration style
-similar to Stripe, Linear or Vercel marketing pages. No drop shadows,
-flat colors only. Composition: subject centered-right, breathing room on
-the left for headline text. Transparent background.
-```
-
-### Alternativa minimalista (si quieres algo más sutil)
+### Prompt AI — Opción A: Estudiante + sinapsis (recomendado)
 
 ```
-Abstract flat geometric composition for a medical SaaS landing page hero.
-Layered shapes: a large lime green (#C2E476) circle, overlapping dark
-teal (#10312D) rounded rectangle, a small purple (#795BC2) accent dot,
-and a thin cream (#F3F1E8) wave line crossing through. Floating in the
-center: stylized stethoscope outline, microscope, and book icons in
-dark teal. Bauhaus-inspired, premium feel, no gradients, transparent
-background. 1200x800px.
+Editorial-style flat vector illustration for the hero of a medical
+education SaaS landing page called "SINAPSIS EDU".
+
+SUBJECT: A confident young Peruvian medical student, around 22-26 years
+old, dark wavy hair, wearing a clean white lab coat over casual clothes,
+holding an open laptop. She is looking at the laptop with focused
+concentration, a soft smile of "I got this". Slightly stylized features,
+not hyperrealistic.
+
+ENVIRONMENT: She is surrounded by a glowing neural network — small lime
+green (#C2E476) dots floating around her, connected by thin curved lines.
+At each connection point, a tiny lime spark. The neural network visually
+represents synapses firing — knowledge connecting in her brain. The
+network is most dense around her head, fading out toward the edges.
+
+BACKGROUND: A solid cream (#F3F1E8) base with a large soft lime green
+(#C2E476) organic blob on the bottom-left and a small dark teal (#10312D)
+geometric shape on the top-right. Behind the student, very faint
+dotted-grid pattern that hints at neural texture.
+
+UI HINTS: From the laptop screen, soft light rays escape (lime tinted),
+hinting at content emerging. One or two minimal UI cards float near her:
+a clinical case question, a progress bar.
+
+STYLE: Modern flat illustration similar to high-end SaaS marketing
+(Linear, Stripe, Webflow). No gradients, no harsh shadows, only solid
+flat colors. Bold confident shapes, premium feel.
+
+COMPOSITION: Subject centered-right, with empty breathing room on the
+LEFT half of the canvas for headline text overlay. 1600x1100 pixels.
+Transparent or cream background.
+
+DO NOT include: stethoscopes hanging from neck (cliché), thumbs up,
+exaggerated smiles, mascots, anime style, hyperrealistic 3D render,
+generic stock photo style.
 ```
 
-### Búsqueda en stock (Unsplash / Pexels)
+### Prompt AI — Opción B: Cerebro / neuronas abstractas (sin persona)
 
-Busca: `medical student tablet`, `young doctor studying laptop`, `flat lay stethoscope notebook`.
-Filtra por verticales con espacio para texto a un lado.
+```
+Premium abstract editorial illustration for the hero of "SINAPSIS EDU",
+a medical exam preparation platform.
 
-### Notas
+CENTER COMPOSITION: A stylized brain made entirely of interconnected
+nodes and lines — a neural network forming the silhouette of a human
+brain, with each node a small dark teal (#10312D) circle and lines
+between them in lime green (#C2E476). At certain key intersections,
+larger lime glows representing active synapses firing. Some lines
+extend beyond the brain silhouette like dendrites reaching out.
 
-- Si NO quieres imagen de hero (preferir solo tipografía), avísame y dejo el hero sin imagen pero con animación de fondo.
-- DESIGN.md menciona que el hero puede ir solo con texto + tag pill. Es válido.
+INSIDE THE BRAIN: Subtle medical icons emerging from the synapse network
+— a stethoscope outline, a tiny pill, a heart pulse line, a microscope
+— all in dark teal, integrated into the neural pattern.
+
+BACKGROUND: Cream (#F3F1E8) base with a large soft lime organic blob
+in the bottom-right corner.
+
+STYLE: Editorial illustration, modern flat with subtle texture, premium
+SaaS aesthetic. No 3D, no gradients, no shadows except a very soft
+ambient glow around active synapses.
+
+COMPOSITION: Centered brain, with breathing room on the left for
+headline overlay. 1600x1100 pixels. Transparent or cream background.
+
+DO NOT include: anatomical realism, gore, photorealism, generic brain
+stock photos.
+```
+
+### Alternativa: solo decoración sutil (sin imagen central)
+
+Si quieres mantener el hero ligero (solo headline + pills), puedo dejar
+en el fondo SOLO un patrón de puntos conectados (neural pattern) generado
+con CSS. No requiere imagen. Dime si te interesa esta vía.
+
+### Búsqueda en Unsplash (si prefieres foto real)
+
+`female medical student laptop`, `young doctor studying`, `medical book stethoscope flat lay`. Después aplicar overlay duotone Lime/Jungle en Canva.
 
 ---
 
 # 3. THUMBNAILS DE PLATAFORMAS (6 imágenes)
 
-**Dónde se usan:** cards en [Landing.tsx](frontend/src/pages/Landing.tsx) sección "Plataformas" y en [Plataforma.tsx](frontend/src/pages/Plataforma.tsx) detalle.
+**Dónde se usan:** cards en [Landing.tsx](frontend/src/pages/Landing.tsx) y detalle en [Plataforma.tsx](frontend/src/pages/Plataforma.tsx).
 
 ### Archivos a entregar
 
-| Archivo | Plataforma | Dónde guardar | Tamaño |
-|---------|------------|---------------|--------|
-| `enam.png` | ENAM | `frontend/public/images/plataformas/` | 800×450 (16:9) |
-| `encib.png` | ENCIB | `frontend/public/images/plataformas/` | 800×450 |
-| `encaps.png` | ENCAPS | `frontend/public/images/plataformas/` | 800×450 |
-| `rm.png` | Residentado Médico | `frontend/public/images/plataformas/` | 800×450 |
-| `essalud.png` | EsSalud | `frontend/public/images/plataformas/` | 800×450 |
-| `biblioteca.png` | Biblioteca Médica | `frontend/public/images/plataformas/` | 800×450 |
+| Archivo | Plataforma | Tamaño |
+|---------|------------|--------|
+| `enam.png` | ENAM (Examen Nacional de Medicina) | 1200×675 (16:9) |
+| `encib.png` | ENCIB (Ciencias Básicas) | 1200×675 |
+| `encaps.png` | ENCAPS (Capacidades Clínicas) | 1200×675 |
+| `rm.png` | Residentado Médico | 1200×675 |
+| `essalud.png` | EsSalud / SERUMS | 1200×675 |
+| `biblioteca.png` | Biblioteca Médica | 1200×675 |
 
-### Estilo común (CRUCIAL)
+Todas en `frontend/public/images/plataformas/`.
 
-**Las 6 cards deben verse como una familia.** Mismo estilo, misma paleta,
-mismo tratamiento. Si parecen 6 imágenes de 6 sitios distintos, se ve mal.
+### Plantilla común (CRUCIAL: las 6 deben verse como familia)
 
-Tres opciones de estilo (elige UNA y aplícala a las 6):
+Si las 6 imágenes parecen venir de 6 sitios diferentes, queda mal.
+**Una sola plantilla, 6 variaciones de icono+nombre.**
 
-#### Opción A — Mockup de plataforma sobre fondo abstracto (recomendado)
+**Plantilla base — descríbela en cada prompt:**
 
-Cada imagen muestra un mockup de laptop/tablet con un screenshot de
-interfaz de banco de preguntas, sobre un fondo geométrico de la paleta
-de marca. El icono médico de la materia flotando al lado.
+> Dark teal (#10312D) background with a subtle neural-network texture
+> (lime green dots connected by thin lines, very faint, alpha 15%) in
+> the background. A large lime green (#C2E476) organic blob shape in
+> the top-right corner. Centered on the canvas: a glowing lime green
+> medical icon (varies per platform) at large size, with a small lime
+> spark behind it suggesting a synapse. Bottom-left aligned text:
+> the platform code (e.g. "ENAM") in massive bold condensed uppercase
+> (Barlow Condensed 800 style) in cream color (#F3F1E8), and below it
+> a small "SINAPSIS EDU" caption in lime green at 30% size. Flat vector
+> aesthetic, no 3D, no gradients.
 
-#### Opción B — Iconografía + tipografía sobre gradiente
+### Prompts individuales por plataforma
 
-Fondo gradiente Jungle (#10312D) a Jungle-light, icono grande en Lime
-centrado, nombre de la plataforma en Barlow Condensed bold abajo.
-
-#### Opción C — Foto realista temática
-
-Foto real (stock) relacionada al tema, con overlay duotone Lime/Jungle.
-Más caro de generar pero muy premium.
-
-### Prompts AI por plataforma (Opción A)
+Reemplaza `[ICONO]` y `[NOMBRE]` en la plantilla anterior:
 
 #### ENAM (`enam.png`) — Examen Nacional de Medicina
 
 ```
-Hero card image for "ENAM" (Peruvian medical exam) on a 16:9 canvas.
-Layout: dark teal background (#10312D) with a soft lime green (#C2E476)
-geometric blob in the corner. Centered: a 3/4 angle mockup of a laptop
-screen showing a multiple-choice clinical question interface (clean,
-white background, lime accent buttons). Floating to the side: a glowing
-stethoscope icon in lime green. Bottom-left corner text: "ENAM" in bold
-condensed uppercase typography (Barlow Condensed 800) in cream color.
-Premium SaaS marketing card aesthetic. Flat colors, no harsh shadows.
-800x450 pixels.
+Apply the SINAPSIS EDU platform card template (see brand spec) for
+"ENAM" — the Peruvian National Medical Exam.
+
+ICON: A large stylized stethoscope curved into a circular shape,
+lime green (#C2E476), centered, with a small lime spark/glow at the
+earpiece junction (the "synapse point").
+
+WORDMARK: "ENAM" in massive cream-colored Barlow Condensed 800,
+bottom-left aligned. Below: "SINAPSIS EDU" small lime green caption.
+
+BACKGROUND: Dark teal (#10312D), neural dot pattern at 15% alpha,
+lime blob top-right.
+
+ASPECT: 16:9, 1200x675 pixels. Flat vector, no gradients, no shadows.
 ```
 
 #### ENCIB (`encib.png`) — Ciencias Básicas
 
 ```
-Hero card image for "ENCIB" (Examen Nacional de Ciencias Básicas) on a
-16:9 canvas. Layout: dark teal background (#10312D) with a soft lime
-geometric shape. Centered: 3/4 mockup of tablet screen showing a
-biology/anatomy diagram with a multiple-choice question below. Floating
-icon: a microscope in lime green (#C2E476). Bottom-left text: "ENCIB"
-in bold condensed uppercase, cream color. Same premium style as the
-ENAM card. 800x450 pixels.
+Apply the SINAPSIS EDU platform card template for "ENCIB" — National
+Basic Sciences Exam.
+
+ICON: A large stylized microscope, lime green (#C2E476), centered,
+with a small lime spark at the eyepiece. The microscope can have
+subtle dot-connection details suggesting neural pattern.
+
+WORDMARK: "ENCIB" in massive cream Barlow Condensed 800, bottom-left.
+Below: "SINAPSIS EDU" small lime caption.
+
+BACKGROUND: Identical to the ENAM card — dark teal, neural dots,
+lime blob top-right.
+
+ASPECT: 16:9, 1200x675. Flat vector.
 ```
 
 #### ENCAPS (`encaps.png`) — Capacidades Clínicas
 
 ```
-Hero card image for "ENCAPS" (Capacidades Clínicas exam) on a 16:9
-canvas. Same template as ENAM/ENCIB cards: dark teal background, lime
-geometric accents, mockup of a clinical case interface on tablet,
-floating icon of an open medical book or a clipboard with checkmark in
-lime green. Bottom-left text: "ENCAPS" in cream bold condensed. 800x450.
+Apply the SINAPSIS EDU platform card template for "ENCAPS" — Clinical
+Capabilities Exam.
+
+ICON: A clipboard with a stylized clinical case checklist, lime green
+(#C2E476), centered. The checklist has 3-4 lines with lime checkmarks,
+the topmost one glowing with a synapse spark.
+
+WORDMARK: "ENCAPS" in massive cream Barlow Condensed 800, bottom-left.
+Below: "SINAPSIS EDU" small lime caption.
+
+BACKGROUND: Identical template — dark teal, neural dots, lime blob.
+
+ASPECT: 16:9, 1200x675. Flat vector.
 ```
 
 #### Residentado Médico (`rm.png`)
 
 ```
-Hero card image for "RESIDENTADO MEDICO" exam preparation on a 16:9
-canvas. Same template style. Floating icon: a graduation cap with a
-small stethoscope underneath, lime green color. Bottom-left text:
-"RESIDENTADO" in cream bold condensed. Background dark teal with lime
-geometric shapes. 800x450.
+Apply the SINAPSIS EDU platform card template for "RESIDENTADO MEDICO"
+exam preparation.
+
+ICON: A graduation cap with a small stethoscope draped around it,
+both in lime green (#C2E476), centered. A small lime spark glows
+between the tassel and the stethoscope.
+
+WORDMARK: "RESIDENTADO" in massive cream Barlow Condensed 800,
+bottom-left (or "RM" if the word doesn't fit). Below: "SINAPSIS EDU"
+small lime caption.
+
+BACKGROUND: Identical template.
+
+ASPECT: 16:9, 1200x675. Flat vector.
 ```
 
 #### EsSalud (`essalud.png`)
 
 ```
-Hero card image for "ESSALUD" concurso preparation on a 16:9 canvas.
-Same template style: dark teal background, lime accents, mockup of a
-question interface. Floating icon: a building/hospital silhouette in
-lime green. Bottom-left text: "ESSALUD" in cream bold condensed. 800x450.
+Apply the SINAPSIS EDU platform card template for "ESSALUD" exam.
+
+ICON: A stylized hospital building silhouette (minimal, just the
+outline of a 3-floor structure with a + cross on top), lime green
+(#C2E476), centered. A small lime spark glows on the cross.
+
+WORDMARK: "ESSALUD" in massive cream Barlow Condensed 800, bottom-left.
+Below: "SINAPSIS EDU" small lime caption.
+
+BACKGROUND: Identical template.
+
+ASPECT: 16:9, 1200x675. Flat vector.
 ```
 
 #### Biblioteca Médica (`biblioteca.png`)
 
 ```
-Hero card image for "BIBLIOTECA MEDICA" (digital medical library) on a
-16:9 canvas. Same template style: dark teal background, lime accents,
-mockup of a tablet showing a stack of book covers or a reader interface.
-Floating icon: an open book with a small bookmark in lime green.
-Bottom-left text: "BIBLIOTECA" in cream bold condensed. 800x450.
+Apply the SINAPSIS EDU platform card template for "BIBLIOTECA MEDICA"
+(digital medical library).
+
+ICON: An open book with abstract page lines suggesting text, lime green
+(#C2E476), centered. From the pages, small lime dots rise like neural
+sparks — knowledge connecting.
+
+WORDMARK: "BIBLIOTECA" in massive cream Barlow Condensed 800,
+bottom-left. Below: "SINAPSIS EDU" small lime caption.
+
+BACKGROUND: Identical template.
+
+ASPECT: 16:9, 1200x675. Flat vector.
 ```
 
-### Búsqueda en stock (si prefieres Opción C foto real)
+### Atajo más rápido si no quieres generar las 6
 
-Busca y aplica luego overlay duotone (puedes hacerlo en Canva):
-- ENAM: `medical exam students`, `stethoscope on book`
-- ENCIB: `microscope`, `biology lab`
-- ENCAPS: `clinical case`, `doctor patient consultation`
-- RM: `medical residency`, `graduation hospital`
-- EsSalud: `hospital building peru`, `medical clinic exterior`
-- Biblioteca: `medical books stack`, `library reading`
+El componente actual de [PlataformaCard](frontend/src/components/PlataformaCard.tsx) ya renderiza
+un gradiente Jungle con icono Lime de lucide-react. **No necesita imagen
+para funcionar**. Las imágenes son una mejora visual, no obligatorias.
 
-### Notas
-
-- Si elegiste Opción B (sin mockup), reusa el componente actual de
-  PlataformaCard — ya renderiza un gradiente Jungle con icono Lime de
-  lucide-react. No hace falta imagen. Solo necesitas imágenes si quieres
-  algo más premium.
-- Para una primera versión rápida, **basta con generar 1 imagen "plantilla"**
-  y editar el ícono+texto para las 6. Te dejo el código para que cargue
-  desde public/.
+**Mínimo viable:** genera UNA imagen-plantilla buena (ENAM por ejemplo)
+y edita solo el icono + texto para las 6 en Canva. 30 minutos vs 6 horas.
 
 ---
 
 # 4. BENEFICIOS — 3 ilustraciones para sección oscura
 
-**Dónde se usan:** [Landing.tsx](frontend/src/pages/Landing.tsx), sección "Todo lo que necesitas para aprobar".
+**Dónde se usan:** [Landing.tsx](frontend/src/pages/Landing.tsx), sección "Todo lo que necesitas para aprobar" (fondo Jungle).
 
 ### Archivos a entregar
 
 | Archivo | Tema | Tamaño |
 |---------|------|--------|
-| `banco-preguntas.png` | Bancos de preguntas curados | 600×600 |
-| `simulacros.png` | Simulacros cronometrados | 600×600 |
-| `multidispositivo.png` | Acceso desde cualquier dispositivo | 600×600 |
+| `banco-preguntas.png` | Bancos de preguntas curados | 800×800 |
+| `simulacros.png` | Simulacros cronometrados | 800×800 |
+| `multidispositivo.png` | Acceso desde cualquier dispositivo | 800×800 |
 
-Guardar en `frontend/public/images/beneficios/`.
+Todas en `frontend/public/images/beneficios/`.
 
-### Prompt AI
+### Prompts AI
 
 #### `banco-preguntas.png`
 
 ```
-Flat geometric illustration for a feature card on a dark background.
-Subject: a stack of question cards floating, each with a multiple-choice
-A/B/C/D layout, the top card glowing with a lime green (#C2E476) check
-mark. Background: transparent. Color palette: lime green (#C2E476) as
-primary accent, cream white (#F3F1E8) for the cards, dark teal (#10312D)
-strokes. Style: modern, minimal, SaaS hero illustration like Linear or
-Notion. Square 600x600 transparent PNG.
+Flat geometric illustration for a feature card on a dark teal (#10312D)
+background. Subject: a stack of 3-4 question cards floating in the
+center, each showing a multiple-choice layout (A/B/C/D buttons). The
+topmost card glows with a lime green (#C2E476) circle around the
+correct answer. Tiny lime spark connections (synapses) flow from the
+top card outward, suggesting "knowledge clicking". Cards are cream
+(#F3F1E8) with dark teal text/lines. Style: modern minimal SaaS
+illustration similar to Linear or Notion feature graphics. No gradients,
+flat colors. Transparent 800x800 PNG.
+
+DO NOT include: realistic paper textures, drop shadows, 3D, marketing
+clichés.
 ```
 
 #### `simulacros.png`
 
 ```
-Flat geometric illustration for a feature card. Subject: a stopwatch /
-chronometer with a lime green (#C2E476) progress ring filling up, and
-behind it a partial exam paper with multiple-choice questions. Style
-same as previous: modern SaaS, minimal, flat. Palette: lime accents,
-cream paper, dark teal outlines. Transparent 600x600 PNG.
+Flat geometric illustration for a feature card. Subject: a circular
+stopwatch / chronometer with a lime green (#C2E476) progress ring
+filled at about 70%. Inside the stopwatch face, instead of numbers,
+small dots forming a synapse pattern. Behind the stopwatch and to the
+side, a partial floating question card (cream color, dark teal text).
+A small lime spark connects the stopwatch ring to a "submit" button
+shape. Style: same modern flat as the banco-preguntas illustration.
+Transparent 800x800 PNG.
+
+DO NOT include: realistic clock textures, mechanical gears,
+photorealism.
 ```
 
 #### `multidispositivo.png`
 
 ```
-Flat geometric illustration showing three devices side-by-side at an
-angle: a laptop, a tablet, and a smartphone, each displaying the same
-abstract medical app interface (lime green accent button visible). The
-devices are slightly overlapped to show responsive design. Palette:
-cream device frames, dark teal screen edges, lime green UI accents.
-Modern minimal SaaS style. Transparent 600x600 PNG.
+Flat geometric illustration showing three devices arranged from
+left to right at slight angles: a laptop, a tablet, and a smartphone.
+Each device displays the same abstract medical app interface — a lime
+green (#C2E476) accent button visible, a few cream cards stacked. The
+devices are slightly overlapped to suggest synchronization. Between
+the three devices, tiny lime spark lines connect them — synapses
+representing the seamless sync. Palette: cream device frames, dark
+teal screen borders, lime green UI accents. Style: same modern flat
+minimal. Transparent 800x800 PNG.
+
+DO NOT include: brand-specific device shapes (Apple/Samsung), realistic
+shadows, 3D perspective.
 ```
 
-### Atajo recomendado: unDraw.co
+### Atajo top: unDraw.co
 
-Ve a https://undraw.co/illustrations y busca:
-- `questions` → elige "Knowledge" o "Choice"
-- `stopwatch` → "Stopwatch" o "Time management"
-- `devices` → "Responsive" o "Devices"
+1. Ve a https://undraw.co/illustrations
+2. Cambia el color primario (arriba derecha) a `#C2E476`
+3. Descarga estos 3 (busca por nombre exacto):
+   - **"Knowledge"** o **"Choice"** → guarda como `banco-preguntas.png`
+   - **"Stopwatch"** o **"Time management"** → guarda como `simulacros.png`
+   - **"Responsive"** o **"Devices"** → guarda como `multidispositivo.png`
 
-Cambia el color primario a **#C2E476** en el selector de la web, descarga
-el SVG. ¡Listo!
+Tiempo total: ~5 minutos para los 3.
 
 ---
 
-# 5. SECCIÓN DE PAGO — QR Yape, Binance, banco
+# 5. SECCIÓN DE PAGO — QR Yape + logos
 
 **Dónde se usan:** [Compra.tsx](frontend/src/pages/Compra.tsx) en el paso 3.
 
@@ -354,88 +505,116 @@ el SVG. ¡Listo!
 
 | Archivo | Tipo | Tamaño | Notas |
 |---------|------|--------|-------|
-| `qr-yape.png` | **FOTO REAL** | 500×500 | El QR de tu cuenta Yape personal. Capturalo desde tu app y recortalo. |
-| `yape-logo.svg` | Logo | escalable | Logo oficial de Yape (descárgalo de https://www.yape.com.pe) |
-| `binance-logo.svg` | Logo | escalable | Logo oficial de Binance (descárgalo de https://binance.com/en/brand) |
-| `banco-logo.png` | Logo del banco | 400×200 | BCP, Interbank, BBVA — el que uses para transferencias |
-| `binance-wallet-qr.png` | (opcional) FOTO REAL | 500×500 | Tu QR de dirección Binance USDT |
+| `qr-yape.png` | **FOTO REAL** | 600×600 | El QR de tu Yape personal. NO se genera con IA. |
+| `yape-logo.svg` | Logo oficial | escalable | Descárgalo de https://www.yape.com.pe/prensa |
+| `binance-logo.svg` | Logo oficial | escalable | Descárgalo de https://www.binance.com/en/brand |
+| `banco-logo.png` | Logo del banco | 400×200 | BCP, Interbank, BBVA, según el que uses |
+| `binance-wallet-qr.png` | (opcional) FOTO | 600×600 | Tu QR de dirección Binance USDT |
 
 Guardar en `frontend/public/images/pago/`.
 
-### Para el QR de Yape (importante)
+### Para el QR de Yape (instrucciones)
 
-NO es una imagen generada por IA. Es una foto REAL de tu QR personal:
+NO se genera con IA. Es tu QR personal.
 
-1. Abre tu app Yape.
-2. Toca tu QR personal.
-3. Captura de pantalla (Power + Vol- en celular).
-4. Recorta el QR cuadrado limpio, sin fondo de la app.
-5. Guarda como `qr-yape.png` 500×500.
+1. Abre tu app Yape en el celular.
+2. Tu nombre arriba → toca tu QR.
+3. Captura de pantalla (Power + Vol-).
+4. **Recorta solo el QR cuadrado**, sin el fondo de la app, sin tu nombre.
+5. Súbelo a https://canva.com → plantilla cuadrada 600×600.
+6. Agrega un marco blanco de 30px alrededor, sombra suave, opcionalmente
+   un borde lime de 4px.
+7. Exporta como PNG → guarda como `qr-yape.png`.
 
-Si quieres marco bonito alrededor: súbelo a Canva, agrégale un borde
-verde lime de 8px, fondo blanco. Sale en 30 segundos.
+### Logos oficiales — NO los generes con IA
 
-### Logos oficiales (NO generes con IA)
+Generar logos de marcas registradas con IA da problemas legales y suelen
+salir mal. Descárgalos de las páginas oficiales:
 
-- **Yape**: usa el logo oficial de https://www.yape.com.pe/prensa o pídele a
-  un diseñador. Generarlo con IA puede dar problemas legales.
-- **Binance**: descárgalo de https://www.binance.com/en/brand-assets
-- **Bancos**: usa el logo oficial del banco (BCP, Interbank, etc.).
+- **Yape**: https://www.yape.com.pe/prensa (sección "Logos y manual")
+- **Binance**: https://www.binance.com/en/brand-assets
+- **BCP / Interbank / BBVA / Scotiabank**: googlea "[banco] logo oficial vector"
+  o usa https://worldvectorlogo.com/
 
 ---
 
-# 6. OG IMAGE — Vista previa para compartir en redes
+# 6. OG IMAGE — Preview para compartir en redes
 
-**Dónde se usa:** `<meta property="og:image" />` en [index.html](frontend/index.html). Es lo que aparece cuando alguien comparte el link en WhatsApp, Facebook, X, etc.
+**Dónde se usa:** `<meta property="og:image">` en [index.html](frontend/index.html). Aparece cuando alguien comparte el link en WhatsApp, Facebook, X, LinkedIn.
 
 ### Archivos a entregar
 
 | Archivo | Tamaño | Formato |
 |---------|--------|---------|
-| `og-image.png` | **1200×630** (estándar OG) | PNG |
+| `og-image.png` | **1200×630** (estándar Open Graph) | PNG |
 
 Guardar en `frontend/public/images/og/`.
 
-### Prompt AI
+### Prompt AI (Ideogram funciona excelente porque renderiza texto)
 
 ```
-Open Graph social media preview image (1200x630 pixels) for "Portal
-Central" — Peruvian medical exam preparation platform.
-Layout: Lime green (#C2E476) background on the left half, dark teal
-(#10312D) on the right half, diagonal split. Left side: large bold
-condensed uppercase headline "PREPARATE PARA TU EXAMEN MEDICO" in dark
-teal color, three lines max. Right side: a stylized stethoscope icon
-in lime green, large, centered. Bottom-right: small "portalcentral.com"
-URL placeholder in cream. Premium, professional SaaS landing page
-preview style. Flat colors, geometric, no gradients.
+Open Graph social media preview image (1200x630 pixels) for "SINAPSIS
+EDU" — sinapsisedu.com — a Peruvian medical exam preparation platform.
+
+LAYOUT: Diagonal split. Left 55% of the canvas: lime green (#C2E476)
+background. Right 45%: dark teal (#10312D) background. The diagonal
+edge has a subtle synapse-pattern texture — small dots connected by
+thin lines crossing the diagonal.
+
+LEFT SIDE (lime green background):
+- Large headline in bold condensed uppercase typography (Barlow
+  Condensed 800 style): "PREPARATE PARA TU EXAMEN MEDICO"
+- Color: dark teal (#10312D)
+- Three lines max, tight letter spacing
+- Below the headline, smaller text in Inter Medium: "ENAM · ENCIB ·
+  ENCAPS · Residentado Medico · EsSalud" — same dark teal color
+
+RIGHT SIDE (dark teal background):
+- A glowing stylized SYNAPSE icon in lime green: two abstract nodes
+  connected by a curved line with a bright lime spark at the junction.
+  Large, centered vertically.
+
+BOTTOM-LEFT CORNER (over the lime side):
+- Small cream-colored text: "SINAPSISEDU.COM"
+- Tiny synapse icon next to the URL in dark teal
+
+STYLE: Premium, professional, modern editorial. Flat colors, no
+gradients, no shadows except a subtle glow around the synapse spark.
+Looks like a Linear / Stripe / Vercel announcement card.
+
+DO NOT include: stock photo doctors, generic medical icons, dollar
+signs, stars, decorative borders, gradients.
 ```
 
-### Alternativa rápida en Canva
+### Receta rápida en Canva (sin IA)
 
-1. Plantilla "Open Graph" (1200×630).
-2. Fondo dividido: izquierda Lime, derecha Jungle.
-3. Texto izquierdo: **"PREPÁRATE PARA TU EXAMEN"** en Barlow Condensed
-   bold 96px, color Jungle.
-4. Subtítulo: "ENAM · ENCIB · ENCAPS · Residentado" en Inter 32px Jungle.
-5. Icono derecho: estetoscopio Lime grande.
-6. Esquina inferior: el logo de Portal Central.
-7. Exporta como PNG.
+1. Plantilla custom 1200×630.
+2. Fondo dividido diagonal: izquierda Lime `#C2E476`, derecha Jungle `#10312D`.
+3. Texto izquierdo (Jungle): **"PREPÁRATE PARA TU EXAMEN"** en Barlow
+   Condensed 800, 90px.
+4. Subtítulo (Jungle): "ENAM · ENCIB · ENCAPS · Residentado · EsSalud"
+   en Inter 32px.
+5. Icono derecho (Lime): tu logo `logo-icono.svg` a 280px.
+6. Esquina inferior izquierda: "SINAPSISEDU.COM" en Inter Medium 22px,
+   color Jungle.
+7. Exporta PNG. Listo.
 
 ---
 
-# 📋 CHECKLIST — qué entregar para considerar imágenes completas
+# 📋 CHECKLIST — qué entregar
 
 Marca con ✅ cuando guardes cada archivo en la ruta correcta:
 
 ### Logos
 - [ ] `frontend/public/images/logo/logo.svg`
 - [ ] `frontend/public/images/logo/logo-blanco.svg`
-- [ ] `frontend/public/favicon.svg` (sobreescrito)
+- [ ] `frontend/public/images/logo/logo-icono.svg`
+- [ ] `frontend/public/favicon.svg` (sobreescrito con el nuevo)
 
 ### Hero
 - [ ] `frontend/public/images/hero/hero-ilustracion.png`
 
-### Plataformas
+### Plataformas (6)
 - [ ] `frontend/public/images/plataformas/enam.png`
 - [ ] `frontend/public/images/plataformas/encib.png`
 - [ ] `frontend/public/images/plataformas/encaps.png`
@@ -443,7 +622,7 @@ Marca con ✅ cuando guardes cada archivo en la ruta correcta:
 - [ ] `frontend/public/images/plataformas/essalud.png`
 - [ ] `frontend/public/images/plataformas/biblioteca.png`
 
-### Beneficios
+### Beneficios (3)
 - [ ] `frontend/public/images/beneficios/banco-preguntas.png`
 - [ ] `frontend/public/images/beneficios/simulacros.png`
 - [ ] `frontend/public/images/beneficios/multidispositivo.png`
@@ -457,34 +636,47 @@ Marca con ✅ cuando guardes cada archivo en la ruta correcta:
 ### OG
 - [ ] `frontend/public/images/og/og-image.png`
 
-**Total: 17 archivos máximo.** Empieza por las plataformas y el hero si
-quieres ver el cambio más vistoso.
+**Total: 17 archivos máximo.** El portal funciona aunque no estén todos —
+los componentes ya tienen fallbacks decentes.
+
+---
+
+# 🎯 Prioridad sugerida (si vas por etapas)
+
+1. **Logo** → impacta todo el portal (Navbar, Footer, Aula, OG, favicon).
+2. **OG image** → importante para compartir el link de sinapsisedu.com en
+   redes y WhatsApp con buena pinta.
+3. **Hero** → mejora el primer impacto al entrar al portal.
+4. **Plataformas** → lo más visible de la landing.
+5. **Beneficios** → completa la landing.
+6. **Pago** → solo el QR de Yape es crítico para Fase 2.
 
 ---
 
 # 🚀 Cuando termines
 
-1. Avísame qué archivos generaste y cuáles no (no necesitas TODAS — el
-   código actual fallback a iconos cuando no hay imagen).
-2. Te confirmo si los nombres están bien o si renombro alguno.
-3. Yo cableo cada imagen en su componente correspondiente.
-4. Hacemos un commit "feat(visual): integrar imágenes de marca".
-
-**Prioridad sugerida** (si vas a generar por etapas):
-
-1. **Logo** (impacta todo el portal)
-2. **Plataformas** (lo más visible en la landing)
-3. **OG image** (importante para compartir el link)
-4. **Hero** (mejora el primer impacto)
-5. **Beneficios** (mejora la sección oscura)
-6. **Pago** (QR de Yape es el único crítico para Fase 2)
+1. Avísame qué archivos generaste (puede ser solo algunos).
+2. Te confirmo si los nombres están bien o si renombro.
+3. Yo cableo cada imagen en su componente correspondiente y actualizo:
+   - El nombre `PORTAL CENTRAL` → `SINAPSIS EDU` en Navbar/Footer/index.html.
+   - Los meta tags `og:image`, `og:url`, `og:title` con `sinapsisedu.com`.
+   - El title del documento HTML.
+   - El componente PlataformaCard para usar las imágenes nuevas (con fallback al gradiente actual si la imagen falla).
+4. Hacemos un commit `feat(brand): integrar identidad visual de SINAPSIS EDU`.
 
 ---
 
-# 🎯 Tips finales
+# 💡 Tips finales
 
 - **Consistencia > cantidad.** Mejor 3 imágenes coherentes que 17 dispares.
-- **Optimiza siempre.** Usa squoosh.app para bajar peso. Las 6 cards no deberían pesar más de 1.5 MB en total.
-- **Si una imagen no convence, regenera.** Cambia el prompt iterando, no aceptes "más o menos".
-- **Hot reload.** Cuando guardes una imagen en `public/`, Vite la sirve al instante. Solo hay que refrescar el navegador.
-- **Cache.** Si reemplazas una imagen con el mismo nombre, hard refresh (`Ctrl+Shift+R`) para que el navegador la recargue.
+- **Optimiza siempre.** Usa squoosh.app para bajar peso. Las 6 cards no
+  deberían pesar más de 2 MB en total.
+- **Si una imagen no convence, regenera.** Iterar el prompt es gratis.
+  No aceptes "más o menos".
+- **Hot reload.** Cuando guardes una imagen en `public/`, Vite la sirve
+  al instante. Solo refresca el navegador.
+- **Cache.** Si reemplazas con el mismo nombre, hard refresh (`Ctrl+Shift+R`)
+  para que el navegador recargue.
+- **Texto en imágenes.** Si la IA pone texto mal escrito ("SINAPSI SEDU"
+  en vez de "SINAPSIS EDU"), prueba **Ideogram** que es el mejor para
+  texto, o pásala por Canva y reemplaza el texto a mano.
