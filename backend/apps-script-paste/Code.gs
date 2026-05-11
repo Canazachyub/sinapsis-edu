@@ -181,8 +181,36 @@ function checkRequiredProperties() {
 
 // ─── Sheets ──────────────────────────────────────────────────
 
+/**
+ * Devuelve el Spreadsheet a usar. Orden de preferencia:
+ *   1. Container-bound: el script vive dentro de un Sheet
+ *      (Extensiones > Apps Script desde el Sheet) → getActiveSpreadsheet().
+ *      Esta es la forma normal de trabajar en este proyecto.
+ *   2. SHEET_ID en Script Properties (re-runs de setup o standalone).
+ *   3. PRECONFIGURED_SHEET_ID hardcoded arriba en este archivo.
+ *   4. Si nada existe, lanza error pidiendo correr setup().
+ */
 function getSpreadsheet() {
-  return SpreadsheetApp.openById(getRequired('SHEET_ID'));
+  // 1) Container-bound (modo normal): no requiere permisos de Drive externos
+  try {
+    const active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (e) { /* no es bound, seguir */ }
+
+  // 2) ID en Properties
+  const propId = getProperty('SHEET_ID');
+  if (propId) {
+    try { return SpreadsheetApp.openById(propId); }
+    catch (e) { /* ID invalido, seguir */ }
+  }
+
+  // 3) ID preconfigurado
+  if (PRECONFIGURED_SHEET_ID) {
+    try { return SpreadsheetApp.openById(PRECONFIGURED_SHEET_ID); }
+    catch (e) { /* ID invalido, seguir */ }
+  }
+
+  throw new Error('No hay Spreadsheet asociado. Corre setup() desde el editor.');
 }
 
 function getSheet(name) {
@@ -347,12 +375,8 @@ function enviarCorreo(to, asunto, cuerpoHtml) {
 
 function log(ctx) {
   try {
-    const sheetId = getProperty('SHEET_ID');
-    if (!sheetId) {
-      Logger.log('[log] SHEET_ID no configurado | ' + JSON.stringify(ctx));
-      return;
-    }
-    const sheet = SpreadsheetApp.openById(sheetId).getSheetByName(SHEET_NAMES.LOGS);
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.LOGS);
     if (!sheet) {
       Logger.log('[log] hoja Logs no existe | ' + JSON.stringify(ctx));
       return;
@@ -387,24 +411,60 @@ function setup() {
   const added = [];
   const existing = [];
 
-  // 1. Spreadsheet
-  let sheetId = props.getProperty('SHEET_ID');
-  let sheetCreated = false;
+  // 1. Spreadsheet — orden de preferencia:
+  //    a) Container-bound: usa el Sheet padre (modo normal).
+  //    b) SHEET_ID ya en Properties (re-runs de setup).
+  //    c) PRECONFIGURED_SHEET_ID hardcoded arriba.
+  //    d) Crea uno nuevo (ultimo recurso).
   let spreadsheet;
-  if (!sheetId && PRECONFIGURED_SHEET_ID) {
-    // Adopta el Spreadsheet preconfigurado.
-    sheetId = PRECONFIGURED_SHEET_ID;
-    spreadsheet = SpreadsheetApp.openById(sheetId);
-    props.setProperty('SHEET_ID', sheetId);
-    added.push('SHEET_ID (preconfigured)');
-  } else if (!sheetId) {
+  let sheetId;
+  let sheetCreated = false;
+  let sheetSource = 'desconocido';
+
+  // (a) Container-bound
+  try {
+    const bound = SpreadsheetApp.getActiveSpreadsheet();
+    if (bound) {
+      spreadsheet = bound;
+      sheetId = bound.getId();
+      sheetSource = 'container-bound';
+    }
+  } catch (e) { /* no es bound */ }
+
+  // (b) Property existente
+  if (!spreadsheet) {
+    const propId = props.getProperty('SHEET_ID');
+    if (propId) {
+      try {
+        spreadsheet = SpreadsheetApp.openById(propId);
+        sheetId = propId;
+        sheetSource = 'property';
+      } catch (e) { /* ID en property invalido, seguir */ }
+    }
+  }
+
+  // (c) ID preconfigurado en codigo
+  if (!spreadsheet && PRECONFIGURED_SHEET_ID) {
+    try {
+      spreadsheet = SpreadsheetApp.openById(PRECONFIGURED_SHEET_ID);
+      sheetId = PRECONFIGURED_SHEET_ID;
+      sheetSource = 'preconfigured';
+    } catch (e) { /* PRECONFIGURED_SHEET_ID invalido, seguir */ }
+  }
+
+  // (d) Crear uno nuevo
+  if (!spreadsheet) {
     spreadsheet = SpreadsheetApp.create('PortalCentral_DB');
     sheetId = spreadsheet.getId();
-    props.setProperty('SHEET_ID', sheetId);
-    added.push('SHEET_ID');
     sheetCreated = true;
+    sheetSource = 'created';
+  }
+
+  // Persistir el ID en Properties para que log() y otras llamadas lo conozcan
+  if (props.getProperty('SHEET_ID') !== sheetId) {
+    props.setProperty('SHEET_ID', sheetId);
+    added.push('SHEET_ID (' + sheetSource + ')');
   } else {
-    spreadsheet = SpreadsheetApp.openById(sheetId);
     existing.push('SHEET_ID');
   }
 
