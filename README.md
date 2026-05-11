@@ -90,19 +90,17 @@ portal-central/
 - [x] Repositorio Git local inicializado (rama `main`, 2 commits).
 - [x] Servidor dev corriendo en `http://localhost:5173/` (HTTP 200).
 
-### 🟡 Fase 1 — Backend Apps Script (código listo, falta desplegar)
+### ✅ Fase 1 — Backend Apps Script desplegado (2026-05-11)
 
-Lo que ya está hecho:
-- [x] Reestructuración del backend al modo nativo de Apps Script (sin imports/exports, scope global).
-- [x] `services.ts` completo: Sheets, Drive, Gmail, Properties, Logs.
-- [x] `inicializarSheets()` crea las 4 hojas con headers (fila 1 con fondo Jungle + texto Lime, congelada).
-- [x] **Seed automático**: la hoja `Plataformas` se llena con las 6 plataformas (P-001 a P-006) en la primera corrida.
-- [x] `setup()` instalador idempotente: crea Spreadsheet, carpeta Drive, todas las Properties (incluyendo `SESSION_SECRET` aleatorio) — todo con una sola ejecución desde el editor.
-- [x] `healthcheck()` para verificar estado sin tocar datos.
-- [x] `ping()` real con check de Properties faltantes.
-- [x] `listarPlataformasPublicas()` funcional (filtra `url_real` y devuelve solo plataformas activas).
-- [x] Frontend ajustado: el indicador del hero ahora distingue 3 estados (`online`, `setup-pending`, `down`).
-- [x] `tsc --noEmit` pasa en backend y frontend.
+- [x] Backend Apps Script container-bound al Sheet `1LQf-scklnp...`.
+- [x] 4 pestañas creadas con headers Jungle/Lime: Plataformas (+ 6 filas seed), Usuarios, Compras, Logs.
+- [x] Carpeta Drive de vouchers configurada (`18KTajQ...`).
+- [x] Todas las Properties seteadas: SHEET_ID, DRIVE_FOLDER_VOUCHERS, ADMIN_EMAIL, NOTIFICACION_EMAIL, SESSION_SECRET, WHATSAPP_NUMBER, RATE_LIMIT_PER_HOUR.
+- [x] Web App desplegado y respondiendo: `ping` devuelve `status: online` y `listarPlataformasPublicas` devuelve las 6 plataformas (sin `url_real`).
+- [x] `frontend/.env` apuntando al Web App. Landing en localhost:5173 muestra "Backend conectado" 🟢.
+- [x] `tsc --noEmit` pasa en backend (TypeScript original) y frontend.
+
+Ruta de despliegue usada: paste manual de [Code.gs](backend/apps-script-paste/Code.gs) en script abierto desde **Extensiones → Apps Script** del Sheet (container-bound, sin clasp).
 
 Lo que falta — son comandos que solo tú puedes correr:
 
