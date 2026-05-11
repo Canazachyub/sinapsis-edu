@@ -380,6 +380,22 @@ function nextSequenceFromColumn(sheetName, columnIndex) {
   return max;
 }
 
+/**
+ * Devuelve el numero de fila (1-indexed, considerando header) donde la columna
+ * `columnIndex` (1-indexed) tiene el valor `value`. -1 si no se encuentra.
+ */
+function findRowIndex(sheetName, columnIndex, value) {
+  const sheet = getSheet(sheetName);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return -1;
+  const values = sheet.getRange(2, columnIndex, lastRow - 1, 1).getValues();
+  const target = String(value);
+  for (let i = 0; i < values.length; i++) {
+    if (String(values[i][0]) === target) return i + 2; // header en fila 1
+  }
+  return -1;
+}
+
 // ─── Drive ───────────────────────────────────────────────────
 
 function getCarpetaVouchers() {
@@ -783,13 +799,202 @@ function listarPlataformasPublicas(req) {
   }
 }
 
-// Stubs Fase 2/4
-function registrarCompra(req)      { return ok(undefined, 'pendiente Fase 2'); }
-function subirVoucher(req)         { return ok(undefined, 'pendiente Fase 2'); }
+// Stubs Fase 4 (admin)
 function adminLogin(req)           { return ok(undefined, 'pendiente Fase 4'); }
 function listarSolicitudes(req)    { return ok([],        'pendiente Fase 4'); }
 function aprobarPago(req)          { return ok(undefined, 'pendiente Fase 4'); }
 function rechazarPago(req)         { return ok(undefined, 'pendiente Fase 4'); }
+
+// ─── Fase 2: registrar compra + subir voucher ────────────────
+
+const METODOS_PAGO_VALIDOS = ['yape', 'transferencia', 'binance', 'whatsapp'];
+
+/**
+ * Registra una solicitud de compra. Crea el usuario si no existe.
+ * Body esperado:
+ *  { action, nombre, correo, whatsapp, id_plataforma, metodo_pago, monto, detalle_extra? }
+ * Devuelve { id_compra, id_usuario }.
+ */
+function registrarCompra(req) {
+  try {
+    const nombre = String(req.nombre || '').trim();
+    const correo = String(req.correo || '').trim().toLowerCase();
+    const whatsapp = String(req.whatsapp || '').trim();
+    const idPlataforma = String(req.id_plataforma || '').trim();
+    const metodoPago = String(req.metodo_pago || '').trim().toLowerCase();
+    const monto = Number(req.monto || 0);
+
+    if (!isNonEmptyString(nombre) || nombre.length < 3) return fail('Nombre invalido');
+    if (!isEmail(correo)) return fail('Correo invalido');
+    if (!isWhatsapp(whatsapp)) return fail('WhatsApp invalido');
+    if (!isNonEmptyString(idPlataforma)) return fail('Falta plataforma');
+    if (METODOS_PAGO_VALIDOS.indexOf(metodoPago) === -1) return fail('Metodo de pago invalido');
+    if (!isFinite(monto) || monto <= 0) return fail('Monto invalido');
+
+    const plat = findPlataformaById(idPlataforma);
+    if (!plat) return fail('Plataforma no encontrada');
+    const activo = plat.activo === true || String(plat.activo).toLowerCase() === 'true';
+    if (!activo) return fail('Plataforma no disponible');
+
+    // Serializar detalle_extra (puede venir como objeto o string).
+    let detalleExtra = '';
+    if (req.detalle_extra !== undefined && req.detalle_extra !== null && req.detalle_extra !== '') {
+      detalleExtra = (typeof req.detalle_extra === 'string')
+        ? req.detalle_extra
+        : JSON.stringify(req.detalle_extra);
+    }
+
+    // Find or create user
+    const sheetUsuarios = getSheet(SHEET_NAMES.USUARIOS);
+    const userExistente = findUsuarioByCorreo(correo);
+    let userId;
+    if (userExistente) {
+      userId = String(userExistente.id_usuario);
+    } else {
+      userId = nextId('U', nextSequenceFromColumn(SHEET_NAMES.USUARIOS, 1));
+      // Password se genera y envia en aprobarPago. Por ahora password_hash vacio.
+      sheetUsuarios.appendRow([
+        userId, nombre, correo, whatsapp,
+        '', '',        // password_hash, password_salt
+        nowIso(),      // fecha_registro
+        'activo'
+      ]);
+    }
+
+    // Crear compra (estado pendiente)
+    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+    const idCompra = nextId('C', nextSequenceFromColumn(SHEET_NAMES.COMPRAS, 1));
+    sheetCompras.appendRow([
+      idCompra, userId, idPlataforma, monto, metodoPago,
+      nowIso(),       // fecha_solicitud
+      '',             // voucher_url
+      'pendiente',    // estado_pago
+      '',             // fecha_aprobacion
+      '',             // fecha_inicio
+      '',             // fecha_fin
+      'pendiente',    // estado_acceso
+      detalleExtra    // detalle_extra
+    ]);
+
+    // Notificar admin por email
+    try {
+      const ssUrl = getSpreadsheet().getUrl();
+      const detalleHtml = detalleExtra
+        ? `<p><strong>Detalles:</strong> <code>${detalleExtra}</code></p>`
+        : '';
+      notificarAdmin(
+        '[SINAPSIS EDU] Nueva compra ' + idCompra + ' - ' + plat.nombre,
+        '<h2 style="color:#10312D">Nueva solicitud de compra</h2>' +
+        '<p><strong>ID compra:</strong> ' + idCompra + '</p>' +
+        '<p><strong>Alumno:</strong> ' + nombre + ' (' + correo + ', WhatsApp ' + whatsapp + ')</p>' +
+        '<p><strong>Plataforma:</strong> ' + plat.nombre + ' (' + idPlataforma + ')</p>' +
+        '<p><strong>Monto:</strong> S/ ' + monto.toFixed(2) + '</p>' +
+        '<p><strong>Metodo:</strong> ' + metodoPago + '</p>' +
+        detalleHtml +
+        '<p>El alumno subira el voucher en los proximos minutos.</p>' +
+        '<p><a href="' + ssUrl + '">Abrir Spreadsheet</a></p>'
+      );
+    } catch (e) {
+      // El email es best-effort. No bloquear la compra si falla.
+      log({ accion: 'notificarAdmin', nivel: 'warning', detalle: 'falla email: ' + e });
+    }
+
+    log({
+      accion: 'registrarCompra',
+      idUsuario: userId,
+      nivel: 'info',
+      detalle: idCompra + ' ' + plat.nombre + ' S/' + monto + ' ' + metodoPago
+    });
+
+    return ok({
+      id_compra: idCompra,
+      id_usuario: userId,
+      message: 'Solicitud registrada. Ahora sube tu voucher.'
+    });
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'registrarCompra', nivel: 'error', detalle: detalle });
+    return fail('Error interno', 'No se pudo registrar tu compra. Intenta de nuevo.');
+  }
+}
+
+/**
+ * Sube voucher a Drive y actualiza la fila de Compras con la URL.
+ * Body esperado:
+ *  { action, id_compra, archivo_base64, tipo (mime), nombre (filename) }
+ */
+function subirVoucher(req) {
+  try {
+    const idCompra = String(req.id_compra || '').trim();
+    const archivoBase64 = String(req.archivo_base64 || '');
+    const mime = String(req.tipo || req.mime || '').trim();
+    const filename = String(req.nombre || req.filename || 'voucher.png').trim();
+
+    if (!isNonEmptyString(idCompra)) return fail('Falta id_compra');
+    if (!isNonEmptyString(archivoBase64)) return fail('Falta archivo');
+
+    const v = validateVoucher(mime, archivoBase64);
+    if (!v.ok) return fail(v.error);
+
+    const rowIndex = findRowIndex(SHEET_NAMES.COMPRAS, 1, idCompra);
+    if (rowIndex < 0) return fail('Compra no encontrada');
+
+    // Subir a Drive
+    const safeName = idCompra + '_' + Date.now() + '_' + filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const subida = subirVoucherDrive(archivoBase64, mime, safeName);
+
+    // Actualizar columna voucher_url (columna 7 en HEADERS_COMPRAS)
+    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+    sheetCompras.getRange(rowIndex, 7).setValue(subida.fileUrl);
+
+    // Leer la compra completa para el email
+    let monto = '';
+    let plataforma = '';
+    let alumnoCorreo = '';
+    try {
+      const all = readAll(SHEET_NAMES.COMPRAS);
+      const compra = null;
+      for (let i = 0; i < all.length; i++) {
+        if (String(all[i].id_compra) === idCompra) {
+          monto = String(all[i].monto);
+          const plat = findPlataformaById(String(all[i].id_plataforma));
+          plataforma = plat ? String(plat.nombre) : String(all[i].id_plataforma);
+          const usuarios = readAll(SHEET_NAMES.USUARIOS);
+          for (let j = 0; j < usuarios.length; j++) {
+            if (String(usuarios[j].id_usuario) === String(all[i].id_usuario)) {
+              alumnoCorreo = String(usuarios[j].correo);
+              break;
+            }
+          }
+          break;
+        }
+      }
+    } catch (_) { /* email best-effort */ }
+
+    try {
+      notificarAdmin(
+        '[SINAPSIS EDU] Voucher subido: ' + idCompra,
+        '<h2 style="color:#10312D">Voucher recibido</h2>' +
+        '<p><strong>Compra:</strong> ' + idCompra + '</p>' +
+        '<p><strong>Plataforma:</strong> ' + plataforma + '</p>' +
+        '<p><strong>Monto:</strong> S/ ' + monto + '</p>' +
+        '<p><strong>Alumno:</strong> ' + alumnoCorreo + '</p>' +
+        '<p><a href="' + subida.fileUrl + '">Ver voucher en Drive</a></p>' +
+        '<p>Revisa y aprueba desde el panel admin.</p>'
+      );
+    } catch (e) {
+      log({ accion: 'notificarAdmin', nivel: 'warning', detalle: 'falla email voucher: ' + e });
+    }
+
+    log({ accion: 'subirVoucher', nivel: 'info', detalle: idCompra + ' ' + safeName });
+
+    return ok({ message: 'Voucher recibido. Te avisaremos por correo cuando aprobemos.' });
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'subirVoucher', nivel: 'error', detalle: detalle });
+    return fail('Error interno', 'No se pudo subir el voucher. Intenta de nuevo o envialo por WhatsApp.');
+  }
+}
 
 // ─── Fase 5: login alumno + accesos + url plataforma ─────────
 

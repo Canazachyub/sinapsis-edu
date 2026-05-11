@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Check, Copy, Wallet, AlertTriangle } from 'lucide-react';
+import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  AlertTriangle, Check, Copy, FileUp, Loader2, Wallet,
+} from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { PagoOpciones, type MetodoPago } from '@/components/PagoOpciones';
@@ -8,8 +10,12 @@ import { PagarConCripto } from '@/components/PagarConCripto';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { AnatomiaSegmentos } from '@/components/AnatomiaSegmentos';
 import { usePlataformas } from '@/hooks/usePlataformas';
+import { callApi } from '@/api/client';
 import { BCP_SOLES, YAPE, BINANCE } from '@/config/pago';
 import { PRECIO_POR_SEGMENTO_PEN, SEGMENTOS_ANATOMIA } from '@/data/segmentosAnatomia';
+import { fileToBase64, validateVoucherFile } from '@/utils/fileToBase64';
+
+// ─── Sub-componentes de UI ───────────────────────────────────
 
 function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
@@ -84,7 +90,7 @@ function YapeBlock({ priceInPEN }: { priceInPEN: number }) {
             <li>Escanea el QR con Yape o Plin.</li>
             <li>O usa el número <strong>{YAPE.numero}</strong> y confirma el titular.</li>
             <li>Envía exactamente <strong className="text-jungle">S/ {priceInPEN.toFixed(2)}</strong>.</li>
-            <li>Sube tu voucher abajo para aprobar el acceso.</li>
+            <li>Captura el voucher y súbelo abajo.</li>
           </ol>
         </div>
       </div>
@@ -119,7 +125,7 @@ function BancoBlock({ priceInPEN }: { priceInPEN: number }) {
         </dl>
 
         <p className="mt-4 text-sm text-jungle-light">
-          Transfiere exactamente <strong className="text-jungle">S/ {priceInPEN.toFixed(2)}</strong> desde tu banca móvil y sube el voucher abajo.
+          Transfiere exactamente <strong className="text-jungle">S/ {priceInPEN.toFixed(2)}</strong> y sube el voucher abajo.
         </p>
       </div>
     </div>
@@ -133,60 +139,183 @@ function AvisoSeleccionar() {
       <div>
         <div className="font-semibold">Selecciona al menos un segmento</div>
         <p className="text-sm text-jungle-light mt-1">
-          Anatomía de Testut se compra por segmentos. Marca arriba los que necesitas para ver los métodos de pago.
+          Anatomía de Testut se compra por segmentos. Marca arriba los que necesitas.
         </p>
       </div>
     </div>
   );
 }
 
+// ─── Página principal ────────────────────────────────────────
+
+interface FormData {
+  nombre: string;
+  correo: string;
+  whatsapp: string;
+}
+
+const FORM_VACIO: FormData = { nombre: '', correo: '', whatsapp: '' };
+
+const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RE_WHATSAPP = /^\+?\d{8,15}$/;
+
+function validateForm(f: FormData): string | null {
+  if (f.nombre.trim().length < 3) return 'Ingresa tu nombre completo';
+  if (!RE_EMAIL.test(f.correo.trim())) return 'Correo inválido';
+  if (!RE_WHATSAPP.test(f.whatsapp.replace(/\s|-/g, ''))) return 'WhatsApp inválido (8-15 dígitos)';
+  return null;
+}
+
 export function Compra() {
   const { slug } = useParams<{ slug: string }>();
   const { plataformas } = usePlataformas();
   const data = plataformas.find((p) => p.slug === slug);
-  const [metodo, setMetodo] = useState<MetodoPago>('yape');
+  const navigate = useNavigate();
 
-  // Estado especial para Anatomía: selección de segmentos.
+  // Estado del flujo
+  const [metodo, setMetodo] = useState<MetodoPago>('yape');
+  const [form, setForm] = useState<FormData>(FORM_VACIO);
+  const [voucherFile, setVoucherFile] = useState<File | null>(null);
+  const [enviando, setEnviando] = useState<false | 'registrando' | 'subiendo'>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [idCompraCreada, setIdCompraCreada] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Anatomía: selección de segmentos
   const esAnatomia = slug === 'anatomia';
   const [segmentos, setSegmentos] = useState<Set<string>>(new Set());
 
   const precioFinal = useMemo(() => {
     if (esAnatomia) return segmentos.size * PRECIO_POR_SEGMENTO_PEN;
-    return data?.precio ?? 0;
+    if (!data) return 0;
+    if (typeof data.precio_promocional === 'number' && data.precio_promocional > 0 && data.precio_promocional < data.precio) {
+      return data.precio_promocional;
+    }
+    return data.precio;
   }, [esAnatomia, segmentos, data]);
 
-  const puedeProceder = !esAnatomia || segmentos.size > 0;
+  const idPlataforma = useMemo(() => {
+    // Mapear slug a id_plataforma. Las EXTRA (anatomia/cto) usan P-007/P-008 cuando estan en el Sheet,
+    // si no, mandamos slug directamente y el backend lo busca.
+    const id_local: Record<string, string> = {
+      enam: 'P-001', encib: 'P-002', encaps: 'P-003', rm: 'P-004',
+      essalud: 'P-005', biblioteca: 'P-006', anatomia: 'P-007', cto: 'P-008',
+    };
+    return id_local[slug ?? ''] ?? '';
+  }, [slug]);
 
-  const segmentosNombres = useMemo(() => {
-    return SEGMENTOS_ANATOMIA
-      .filter((s) => segmentos.has(s.id))
-      .map((s) => s.nombre);
-  }, [segmentos]);
+  const puedeProceder = !esAnatomia || segmentos.size > 0;
+  const formError = validateForm(form);
+
+  function onField(field: keyof FormData) {
+    return (e: ChangeEvent<HTMLInputElement>) => {
+      setForm((f) => ({ ...f, [field]: e.target.value }));
+      setError(null);
+    };
+  }
+
+  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    if (!f) { setVoucherFile(null); return; }
+    const v = validateVoucherFile(f);
+    if (!v.ok) {
+      setError(v.error);
+      setVoucherFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    setError(null);
+    setVoucherFile(f);
+  }
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!data) return;
+    if (formError) { setError(formError); return; }
+    if (!puedeProceder) { setError('Selecciona al menos un segmento de Anatomía'); return; }
+    if (!voucherFile) { setError('Sube tu voucher (jpg, png o pdf)'); return; }
+    if (!idPlataforma) { setError('Plataforma no identificada'); return; }
+
+    setError(null);
+
+    // Detalle extra (segmentos para anatomía).
+    const detalle_extra = esAnatomia
+      ? { segmentos: SEGMENTOS_ANATOMIA.filter((s) => segmentos.has(s.id)).map((s) => s.id) }
+      : undefined;
+
+    // 1) Si aún no hemos registrado la compra → llamamos registrarCompra
+    let idCompra = idCompraCreada;
+    if (!idCompra) {
+      setEnviando('registrando');
+      const reg = await callApi<{ id_compra: string; id_usuario: string; message?: string }>(
+        'registrarCompra',
+        {
+          nombre: form.nombre.trim(),
+          correo: form.correo.trim(),
+          whatsapp: form.whatsapp.trim(),
+          id_plataforma: idPlataforma,
+          metodo_pago: metodo,
+          monto: precioFinal,
+          detalle_extra,
+        },
+      );
+      if (!reg.ok || !reg.data?.id_compra) {
+        setEnviando(false);
+        setError(reg.error || reg.message || 'No se pudo registrar tu compra.');
+        return;
+      }
+      idCompra = reg.data.id_compra;
+      setIdCompraCreada(idCompra);
+    }
+
+    // 2) Subir el voucher
+    setEnviando('subiendo');
+    try {
+      const file = await fileToBase64(voucherFile);
+      const up = await callApi<{ message?: string }>('subirVoucher', {
+        id_compra: idCompra,
+        archivo_base64: file.base64,
+        tipo: file.mime,
+        nombre: file.name,
+      });
+      setEnviando(false);
+      if (!up.ok) {
+        setError(up.error || up.message || 'No se pudo subir el voucher. La compra quedó registrada, intenta subir el voucher de nuevo.');
+        return;
+      }
+      // Éxito total
+      navigate(`/gracias?id=${idCompra}`);
+    } catch (err) {
+      setEnviando(false);
+      const detalle = err instanceof Error ? err.message : 'Error desconocido';
+      setError('Error al procesar archivo: ' + detalle);
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main className="flex-1 container-x py-16 max-w-3xl">
+      <main className="flex-1 container-x py-12 md:py-16 max-w-3xl">
         {!data ? (
           <div>
             <h1 className="text-3xl">Plataforma no encontrada</h1>
             <Link to="/" className="btn-ghost mt-6">Volver al inicio</Link>
           </div>
         ) : (
-          <>
+          <form onSubmit={handleSubmit}>
             <span className="pill">Comprar acceso</span>
-            <h1 className="mt-4 text-4xl">{data.nombre}</h1>
+            <h1 className="mt-4 text-3xl sm:text-4xl">{data.nombre}</h1>
             <p className="mt-2 text-jungle-light">
               {esAnatomia
                 ? `Cada segmento cuesta S/ ${PRECIO_POR_SEGMENTO_PEN} por 30 días. Elige uno o varios.`
-                : `S/ ${data.precio.toFixed(2)} por ${data.duracion_dias} días.`}
+                : `S/ ${precioFinal.toFixed(2)} por ${data.duracion_dias} días.`}
             </p>
 
             {esAnatomia && (
               <section className="mt-10">
                 <h2 className="text-2xl">Paso 1 — Elige tus segmentos</h2>
                 <p className="text-sm text-jungle-light mt-1">
-                  Material por segmentos anatómicos basado en Testut. Banco UNAP + 5 simulacros por segmento.
+                  Material por segmentos basado en Testut. Banco UNAP + 5 simulacros por segmento.
                 </p>
                 <div className="mt-4">
                   <AnatomiaSegmentos seleccionados={segmentos} onChange={setSegmentos} />
@@ -195,17 +324,35 @@ export function Compra() {
             )}
 
             <section className="mt-10">
-              <h2 className="text-2xl">
-                Paso {esAnatomia ? '2' : '1'} — Tus datos
-              </h2>
-              <p className="text-sm text-jungle-light mt-1">
-                Formulario completo en Fase 2. Por ahora coordina por WhatsApp.
-              </p>
+              <h2 className="text-2xl">Paso {esAnatomia ? '2' : '1'} — Tus datos</h2>
               <div className="mt-4 bg-white border border-jungle/10 rounded-2xl p-6 shadow-card">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <input className="border border-jungle/15 rounded-[10px] px-4 py-3" placeholder="Nombre completo" disabled />
-                  <input className="border border-jungle/15 rounded-[10px] px-4 py-3" placeholder="Correo" disabled />
-                  <input className="border border-jungle/15 rounded-[10px] px-4 py-3 sm:col-span-2" placeholder="WhatsApp" disabled />
+                  <input
+                    className="border border-jungle/15 rounded-[10px] px-4 py-3 focus:outline-none focus:border-jungle"
+                    placeholder="Nombre completo"
+                    value={form.nombre}
+                    onChange={onField('nombre')}
+                    autoComplete="name"
+                    required
+                  />
+                  <input
+                    type="email"
+                    className="border border-jungle/15 rounded-[10px] px-4 py-3 focus:outline-none focus:border-jungle"
+                    placeholder="Correo"
+                    value={form.correo}
+                    onChange={onField('correo')}
+                    autoComplete="email"
+                    required
+                  />
+                  <input
+                    type="tel"
+                    className="border border-jungle/15 rounded-[10px] px-4 py-3 sm:col-span-2 focus:outline-none focus:border-jungle"
+                    placeholder="WhatsApp (ej. 51974707622)"
+                    value={form.whatsapp}
+                    onChange={onField('whatsapp')}
+                    autoComplete="tel"
+                    required
+                  />
                 </div>
               </div>
             </section>
@@ -218,33 +365,78 @@ export function Compra() {
             </section>
 
             <section className="mt-10">
-              <h2 className="text-2xl">
-                Paso {esAnatomia ? '4' : '3'} — Paga y sube tu voucher
-              </h2>
+              <h2 className="text-2xl">Paso {esAnatomia ? '4' : '3'} — Paga y sube tu voucher</h2>
 
               {!puedeProceder ? (
-                <div className="mt-4">
-                  <AvisoSeleccionar />
-                </div>
+                <div className="mt-4"><AvisoSeleccionar /></div>
               ) : (
-                <div className="mt-4">
-                  {metodo === 'yape' && <YapeBlock priceInPEN={precioFinal} />}
-                  {metodo === 'transferencia' && <BancoBlock priceInPEN={precioFinal} />}
-                  {metodo === 'binance' && (
-                    <PagarConCripto
-                      priceInPEN={precioFinal}
-                      note={`Binance Pay ID: ${BINANCE.payId}. Red: ${BINANCE.redes.join(' o ')}. Moneda preferida: ${BINANCE.moneda}.`}
-                    />
-                  )}
-                </div>
-              )}
+                <>
+                  <div className="mt-4">
+                    {metodo === 'yape' && <YapeBlock priceInPEN={precioFinal} />}
+                    {metodo === 'transferencia' && <BancoBlock priceInPEN={precioFinal} />}
+                    {metodo === 'binance' && (
+                      <PagarConCripto
+                        priceInPEN={precioFinal}
+                        note={`Binance Pay ID: ${BINANCE.payId}. Red: ${BINANCE.redes.join(' o ')}.`}
+                      />
+                    )}
+                  </div>
 
-              <div className="mt-6 bg-white border border-jungle/10 rounded-2xl p-6 shadow-card">
-                <p className="text-sm text-jungle-light">
-                  Subida de voucher disponible en Fase 2. Por ahora, envía la captura por WhatsApp.
-                </p>
-                <button className="btn-primary mt-4" disabled>Confirmar solicitud</button>
-              </div>
+                  <div className="mt-6 bg-white border border-jungle/10 rounded-2xl p-6 shadow-card">
+                    <div className="font-semibold text-jungle">Sube tu voucher</div>
+                    <p className="text-sm text-jungle-light mt-1">
+                      JPG, PNG o PDF. Máximo 5 MB.
+                    </p>
+
+                    <label className="mt-4 block">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,application/pdf"
+                        onChange={onFileChange}
+                        className="block w-full text-sm text-jungle-light
+                                   file:mr-3 file:py-2 file:px-4
+                                   file:rounded-lg file:border-0
+                                   file:bg-jungle file:text-lime file:font-semibold
+                                   file:cursor-pointer
+                                   hover:file:bg-jungle-dark"
+                      />
+                    </label>
+
+                    {voucherFile && (
+                      <div className="mt-3 inline-flex items-center gap-2 text-sm bg-cream px-3 py-2 rounded-lg border border-jungle/10">
+                        <FileUp className="w-4 h-4 text-success" />
+                        <span className="font-medium">{voucherFile.name}</span>
+                        <span className="text-jungle-light">
+                          ({(voucherFile.size / 1024).toFixed(0)} KB)
+                        </span>
+                      </div>
+                    )}
+
+                    {idCompraCreada && (
+                      <div className="mt-4 text-sm bg-success/10 border border-success/30 rounded-lg px-3 py-2">
+                        ✅ Solicitud <strong>{idCompraCreada}</strong> registrada. Solo falta el voucher.
+                      </div>
+                    )}
+
+                    {error && (
+                      <div className="mt-4 text-sm text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={!!enviando}
+                      className="btn-primary mt-5 disabled:opacity-60"
+                    >
+                      {enviando === 'registrando' && (<><Loader2 className="w-4 h-4 animate-spin" /> Registrando…</>)}
+                      {enviando === 'subiendo' && (<><Loader2 className="w-4 h-4 animate-spin" /> Subiendo voucher…</>)}
+                      {!enviando && 'Confirmar solicitud'}
+                    </button>
+                  </div>
+                </>
+              )}
             </section>
 
             <div className="mt-10 flex items-center gap-4">
@@ -256,14 +448,10 @@ export function Compra() {
             <div className="mt-6 text-center">
               <p className="text-jungle-light mb-3">Prefiero coordinar por WhatsApp</p>
               <WhatsAppButton
-                message={
-                  esAnatomia && segmentosNombres.length > 0
-                    ? `Hola, quiero comprar Anatomía de Testut (${segmentosNombres.length} ${segmentosNombres.length === 1 ? 'segmento' : 'segmentos'}: ${segmentosNombres.join(', ')}) en SINAPSIS EDU. Total: S/ ${precioFinal.toFixed(2)}.`
-                    : `Hola, quiero comprar acceso a ${data.nombre} en SINAPSIS EDU. Total: S/ ${precioFinal.toFixed(2)}.`
-                }
+                message={`Hola, quiero comprar acceso a ${data.nombre} en SINAPSIS EDU. Total: S/ ${precioFinal.toFixed(2)}.`}
               />
             </div>
-          </>
+          </form>
         )}
       </main>
       <Footer />
