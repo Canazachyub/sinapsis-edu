@@ -80,24 +80,26 @@ export function Landing() {
 
       {/* HERO */}
       <section className="bg-lime relative overflow-hidden">
-        <div className="container-x py-16 md:py-24 grid md:grid-cols-12 gap-8 md:gap-12 items-center relative z-10">
-          <div className="md:col-span-5">
+        <div className="container-x py-12 md:py-20 lg:py-24 grid md:grid-cols-12 gap-8 md:gap-12 items-center relative z-10">
+          <div className="md:col-span-5 order-2 md:order-1">
             <span className="pill"><Stethoscope className="w-4 h-4" /> La central de evaluación médica</span>
-            <h1 className="mt-6 text-5xl md:text-6xl xl:text-7xl text-jungle leading-[1.05]">
+            <h1 className="mt-5 md:mt-6 text-4xl sm:text-5xl md:text-6xl xl:text-7xl text-jungle leading-[1.05]">
               Prepárate para tu examen<br /> con las mejores plataformas
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-jungle/80">
+            <p className="mt-5 md:mt-6 max-w-xl text-base sm:text-lg text-jungle/80">
               ENAM, ENCIB, ENCAPS, Residentado Médico y más. Bancos de preguntas con
               <strong className="font-bold"> justificaciones</strong>, simulacros y
               <strong className="font-bold"> acceso 24/7</strong>.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 md:mt-8 flex flex-wrap gap-3">
               <ScrollLink to="plataformas" className="btn-primary cursor-pointer">Ver plataformas</ScrollLink>
               <ScrollLink to="beneficios" className="btn-ghost cursor-pointer">¿Cómo funciona?</ScrollLink>
             </div>
-            <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-jungle/80">
-              <Check className="w-4 h-4" /> Pago por Yape · Binance · Transferencia
-              <span className="text-jungle/30">·</span>
+            <div className="mt-6 md:mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm text-jungle/80">
+              <span className="inline-flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" /> Pago por Yape · Binance · Transferencia
+              </span>
+              <span className="hidden sm:inline text-jungle/30">·</span>
               <span className={
                 backendStatus === 'online' ? 'text-success' :
                 backendStatus === 'setup-pending' ? 'text-warning' :
@@ -110,11 +112,11 @@ export function Landing() {
               </span>
             </div>
           </div>
-          <div className="md:col-span-7">
+          <div className="md:col-span-7 order-1 md:order-2">
             <img
               src="/images/hero/hero-ilustracion.png"
               alt="Estudiante de medicina aprendiendo en línea con SINAPSIS EDU"
-              className="w-full h-auto max-w-3xl mx-auto block"
+              className="w-full h-auto max-w-md sm:max-w-lg md:max-w-3xl mx-auto block"
               loading="eager"
             />
           </div>

@@ -134,7 +134,11 @@ const SHEET_NAMES = {
 
 const HEADERS_PLATAFORMAS = [
   'id_plataforma', 'nombre', 'slug', 'descripcion', 'url_real',
-  'precio', 'duracion_dias', 'activo'
+  'precio', 'duracion_dias', 'activo',
+  // Nuevos campos opcionales (pueden quedar vacios en filas existentes):
+  'precio_promocional', // numero o vacio; si esta, mostrar como precio tachado del original
+  'etiqueta',           // 'Nuevo' | 'Premium' | 'Oferta' | 'Destacado' o vacio
+  'orden'               // entero; menor = aparece primero. Vacio = va al final
 ];
 
 const HEADERS_USUARIOS = [
@@ -145,7 +149,10 @@ const HEADERS_USUARIOS = [
 const HEADERS_COMPRAS = [
   'id_compra', 'id_usuario', 'id_plataforma', 'monto', 'metodo_pago',
   'fecha_solicitud', 'voucher_url', 'estado_pago', 'fecha_aprobacion',
-  'fecha_inicio', 'fecha_fin', 'estado_acceso'
+  'fecha_inicio', 'fecha_fin', 'estado_acceso',
+  // Metadata adicional como JSON string (segmentos de anatomia,
+  // modulos de CTO, codigo de cupon, etc.). Vacio si no aplica.
+  'detalle_extra'
 ];
 
 const HEADERS_LOGS = ['timestamp', 'accion', 'id_usuario', 'nivel', 'detalle'];
@@ -710,6 +717,12 @@ function listarPlataformasPublicas(req) {
         return p.activo === true || String(p.activo).toLowerCase() === 'true';
       })
       .map(function (p) {
+        const promo = p.precio_promocional === undefined || p.precio_promocional === ''
+          ? null
+          : Number(p.precio_promocional);
+        const orden = p.orden === undefined || p.orden === ''
+          ? 9999
+          : Number(p.orden);
         return {
           id_plataforma: String(p.id_plataforma),
           nombre: String(p.nombre),
@@ -717,9 +730,19 @@ function listarPlataformasPublicas(req) {
           descripcion: String(p.descripcion),
           precio: Number(p.precio),
           duracion_dias: Number(p.duracion_dias),
-          activo: true
+          activo: true,
+          precio_promocional: (promo !== null && !isNaN(promo)) ? promo : null,
+          etiqueta: p.etiqueta ? String(p.etiqueta) : '',
+          orden: isNaN(orden) ? 9999 : orden
         };
       });
+
+    // Ordenar: primero por `orden` ascendente, luego por id_plataforma.
+    safe.sort(function (a, b) {
+      if (a.orden !== b.orden) return a.orden - b.orden;
+      return a.id_plataforma < b.id_plataforma ? -1 : 1;
+    });
+
     return ok(safe);
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
