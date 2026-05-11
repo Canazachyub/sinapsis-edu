@@ -8,6 +8,22 @@
  * ╚════════════════════════════════════════════════════════════════╝
  */
 
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  CONFIGURACION PRE-CARGADA                                    ║
+// ║  Lo que pones aqui se aplica la PRIMERA vez que corre setup().║
+// ║  Despues vive en Script Properties; cambiarlo aqui no afecta. ║
+// ╚═══════════════════════════════════════════════════════════════╝
+
+/** Spreadsheet existente que vamos a usar como base de datos.
+ *  Si lo dejas vacio '', setup() crea uno nuevo desde cero. */
+const PRECONFIGURED_SHEET_ID = '1LQf-scklnpMCejgRQH2O6hHcdCBszjHh4ex5AeyEpvo';
+
+/** Carpeta Drive donde guardar vouchers. Si vacio '', setup() crea una. */
+const PRECONFIGURED_DRIVE_FOLDER = '';
+
+/** WhatsApp para pago manual (sin +, codigo de pais incluido). */
+const PRECONFIGURED_WHATSAPP = '51984300510';
+
 
 // ╔═══════════════════════════════════════════════════════════════╗
 // ║                          UTILS                                ║
@@ -375,7 +391,13 @@ function setup() {
   let sheetId = props.getProperty('SHEET_ID');
   let sheetCreated = false;
   let spreadsheet;
-  if (!sheetId) {
+  if (!sheetId && PRECONFIGURED_SHEET_ID) {
+    // Adopta el Spreadsheet preconfigurado.
+    sheetId = PRECONFIGURED_SHEET_ID;
+    spreadsheet = SpreadsheetApp.openById(sheetId);
+    props.setProperty('SHEET_ID', sheetId);
+    added.push('SHEET_ID (preconfigured)');
+  } else if (!sheetId) {
     spreadsheet = SpreadsheetApp.create('PortalCentral_DB');
     sheetId = spreadsheet.getId();
     props.setProperty('SHEET_ID', sheetId);
@@ -390,7 +412,12 @@ function setup() {
   let folderId = props.getProperty('DRIVE_FOLDER_VOUCHERS');
   let folderCreated = false;
   let folder;
-  if (!folderId) {
+  if (!folderId && PRECONFIGURED_DRIVE_FOLDER) {
+    folderId = PRECONFIGURED_DRIVE_FOLDER;
+    folder = DriveApp.getFolderById(folderId);
+    props.setProperty('DRIVE_FOLDER_VOUCHERS', folderId);
+    added.push('DRIVE_FOLDER_VOUCHERS (preconfigured)');
+  } else if (!folderId) {
     folder = DriveApp.createFolder('PortalCentral_Vouchers');
     folderId = folder.getId();
     props.setProperty('DRIVE_FOLDER_VOUCHERS', folderId);
@@ -431,7 +458,7 @@ function setup() {
 
   // 5. Defaults
   if (!props.getProperty('WHATSAPP_NUMBER')) {
-    props.setProperty('WHATSAPP_NUMBER', '51984300510');
+    props.setProperty('WHATSAPP_NUMBER', PRECONFIGURED_WHATSAPP || '51984300510');
     added.push('WHATSAPP_NUMBER');
   } else {
     existing.push('WHATSAPP_NUMBER');
