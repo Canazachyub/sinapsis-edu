@@ -1003,7 +1003,10 @@ function aprobarPago(req) {
         String(compra.id_usuario),
         String(usuario.correo),
         platNombreLog,
-        plainPassword || '(contraseña existente, no se regeneró)',
+        // Seguridad: NO guardamos la contraseña en texto plano. Solo dejamos
+        // constancia de que se envió por correo. Si el alumno la pierde, usa
+        // "¿Olvidaste tu contraseña?" (recuperarPassword) para regenerarla.
+        plainPassword ? '(enviada por correo)' : '(contraseña existente, no se regeneró)',
         hoy
       ]);
     } catch (credErr) {
@@ -1131,6 +1134,17 @@ function registrarCompra(req) {
     let userId;
     if (userExistente) {
       userId = String(userExistente.id_usuario);
+      // Actualizar nombre/WhatsApp con los datos más recientes de esta compra
+      // (cols Usuarios: 2=nombre, 4=whatsapp). Evita que quede un nombre viejo.
+      const userRow = findRowIndex(SHEET_NAMES.USUARIOS, 1, userId);
+      if (userRow > 0) {
+        if (nombre && String(userExistente.nombre) !== nombre) {
+          sheetUsuarios.getRange(userRow, 2).setValue(nombre);
+        }
+        if (whatsapp && String(userExistente.whatsapp) !== whatsapp) {
+          sheetUsuarios.getRange(userRow, 4).setValue(whatsapp);
+        }
+      }
     } else {
       userId = nextId('U', nextSequenceFromColumn(SHEET_NAMES.USUARIOS, 1));
       // Password se genera y envia en aprobarPago. Por ahora password_hash vacio.
