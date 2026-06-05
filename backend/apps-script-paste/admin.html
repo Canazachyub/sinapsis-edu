@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SINAPSIS EDU — Admin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
+:root{--j:#10312D;--jd:#0B211F;--jl:#3D5752;--lime:#C2E476;--cream:#F3F1E8;--off:#FCFCFB;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--bd:rgba(16,49,45,.1);--sh:0 4px 20px rgba(16,49,45,.08)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--cream);color:var(--j);line-height:1.6;font-size:14px}
+.topbar{height:56px;background:var(--j);color:var(--lime);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.brand{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;letter-spacing:.04em;text-transform:uppercase}
+.topbar-r{display:flex;align-items:center;gap:12px;font-size:13px}
+.btn-out{background:none;border:1px solid rgba(194,228,118,.3);color:var(--lime);border-radius:8px;padding:4px 12px;cursor:pointer;font-size:12px}
+.btn-out:hover{background:rgba(194,228,118,.1)}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+/* login */
+.login-wrap{min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--off);border:1px solid var(--bd);border-radius:20px;padding:40px;width:100%;max-width:360px;box-shadow:var(--sh)}
+.login-card h1{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:32px;text-transform:uppercase;margin-bottom:8px}
+.login-card p{color:var(--jl);margin-bottom:20px;font-size:13px}
+/* tabs */
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:rgba(16,49,45,.05);border-radius:12px;padding:4px}
+.tab{flex:1;padding:8px 12px;border:none;background:none;border-radius:9px;cursor:pointer;font-weight:600;font-size:13px;color:var(--jl);transition:all .15s}
+.tab.active{background:var(--j);color:var(--lime)}
+.badge{display:inline-flex;align-items:center;justify-content:center;background:var(--err);color:#fff;border-radius:999px;font-size:10px;font-weight:700;min-width:16px;height:16px;padding:0 4px;margin-left:6px}
+.tab.active .badge{background:var(--lime);color:var(--j)}
+/* stats */
+.stats{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.stat{flex:1;min-width:90px;background:var(--off);border:1px solid var(--bd);border-radius:12px;padding:12px 16px;text-align:center}
+.stat .n{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:28px}
+.stat .l{font-size:11px;font-weight:600;color:var(--jl);text-transform:uppercase;letter-spacing:.04em}
+/* card */
+.card{background:var(--off);border:1px solid var(--bd);border-radius:16px;padding:18px;box-shadow:var(--sh);margin-bottom:10px;transition:box-shadow .15s}
+.card:hover{box-shadow:0 8px 32px rgba(16,49,45,.12)}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.cid{font-size:11px;font-weight:700;color:var(--jl);letter-spacing:.06em;text-transform:uppercase}
+.cname{font-size:16px;font-weight:700;margin-top:2px}
+.cemail{font-size:13px;color:var(--jl)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:rgba(16,49,45,.07);color:var(--j)}
+.chip-m{background:rgba(34,197,94,.12);color:#166534}
+.chip-p{background:rgba(245,158,11,.12);color:#92400e}
+.eb{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.ep{background:rgba(245,158,11,.15);color:#92400e}
+.ea{background:rgba(34,197,94,.15);color:#166534}
+.er{background:rgba(239,68,68,.15);color:#991b1b}
+.foot{display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap}
+.vlink{font-size:12px;color:var(--jl);text-decoration:underline;cursor:pointer}
+.vlink:hover{color:var(--j)}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:13px;transition:all .15s;white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-p{background:var(--j);color:var(--lime)}
+.btn-p:hover:not(:disabled){background:var(--jd)}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-ok:hover:not(:disabled){filter:brightness(.9)}
+.btn-err{background:var(--err);color:#fff}
+.btn-err:hover:not(:disabled){filter:brightness(.9)}
+.btn-gh{background:transparent;color:var(--j);border:1px solid var(--bd)}
+.btn-gh:hover:not(:disabled){background:rgba(16,49,45,.05)}
+/* form */
+input[type=password],input[type=text],textarea{width:100%;border:1px solid var(--bd);border-radius:10px;padding:10px 14px;font-family:inherit;font-size:14px;background:#fff;color:var(--j);outline:none;transition:border-color .15s;margin-bottom:10px}
+input:focus,textarea:focus{border-color:var(--j)}
+label{display:block;font-size:12px;font-weight:600;color:var(--jl);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px}
+.modal{background:var(--off);border-radius:20px;padding:28px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h2{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;text-transform:uppercase;margin-bottom:10px}
+.modal p{color:var(--jl);margin-bottom:12px;font-size:13px;line-height:1.5}
+.mf{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
+/* utils */
+.hidden{display:none!important}
+.empty{text-align:center;padding:48px 20px;color:var(--jl)}
+.spin{display:inline-block;width:18px;height:18px;border:2px solid rgba(16,49,45,.15);border-top-color:var(--j);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--j);color:var(--lime);padding:12px 18px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 8px 32px rgba(0,0,0,.25);z-index:9999;animation:su .25s ease;max-width:320px}
+.toast.err{background:var(--err);color:#fff}
+@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* log table */
+.lt{width:100%;border-collapse:collapse;font-size:12px}
+.lt th{text-align:left;padding:8px 10px;background:rgba(16,49,45,.06);color:var(--jl);font-weight:600;font-size:11px;text-transform:uppercase}
+.lt td{padding:7px 10px;border-bottom:1px solid var(--bd)}
+.lt tr:hover td{background:rgba(16,49,45,.03)}
+.le{color:var(--err);font-weight:700}
+.lw{color:var(--warn);font-weight:700}
+.li{color:var(--ok)}
+.reload-row{display:flex;align-items:center;justify-content:flex-end;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">SINAPSIS EDU · Admin</div>
+  <div class="topbar-r">
+    <span id="usr"></span>
+    <button class="btn-out" id="btn-logout">Cerrar sesión</button>
+  </div>
+</header>
+
+<!-- LOGIN -->
+<div id="login-section" class="login-wrap">
+  <div class="login-card">
+    <h1>Admin</h1>
+    <p>Ingresa la contraseña del panel de administración.</p>
+    <form id="login-form">
+      <label for="pw">Contraseña</label>
+      <input type="password" id="pw" placeholder="••••••••" required autocomplete="current-password"/>
+      <div id="lerr" style="color:var(--err);font-size:13px;margin-bottom:8px;min-height:18px"></div>
+      <button type="submit" class="btn btn-p" id="lbtn" style="width:100%">Entrar →</button>
+    </form>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div id="panel" class="hidden">
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat"><div class="n" id="stp">—</div><div class="l">Pendientes</div></div>
+      <div class="stat"><div class="n" id="sta">—</div><div class="l">Aprobados (en vista)</div></div>
+      <div class="stat"><div class="n" id="stt">—</div><div class="l">Total en vista</div></div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end">
+        <button class="btn btn-gh" id="btn-reload">↺ Actualizar</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="pendiente">⏳ Pendientes <span class="badge" id="bdg"></span></button>
+      <button class="tab" data-tab="aprobado">✅ Aprobados</button>
+      <button class="tab" data-tab="rechazado">❌ Rechazados</button>
+      <button class="tab" data-tab="todos">📋 Todos</button>
+      <button class="tab" data-tab="logs">🗂 Logs</button>
+      <button class="tab" data-tab="credenciales">🔑 Credenciales</button>
+    </div>
+
+    <div id="list"></div>
+    <div id="logs" class="hidden"></div>
+    <div id="creds" class="hidden"></div>
+  </div>
+</div>
+
+<!-- MODAL APROBAR -->
+<div id="m-apr" class="overlay hidden">
+  <div class="modal">
+    <h2>✅ Aprobar pago</h2>
+    <p id="m-apr-info" style="font-weight:600;color:var(--j);font-size:15px;margin-bottom:12px"></p>
+    <p>Al aprobar:</p>
+    <ul style="color:var(--jl);font-size:13px;padding-left:18px;line-height:2">
+      <li>El acceso se activa inmediatamente.</li>
+      <li>Si es usuario nuevo → se genera contraseña → se envía por correo.</li>
+      <li>El alumno recibe correo con credenciales + enlace al portal.</li>
+    </ul>
+    <input type="hidden" id="m-apr-id"/>
+    <div class="mf">
+      <button class="btn btn-gh" id="m-apr-no">Cancelar</button>
+      <button class="btn btn-ok" id="m-apr-ok">✅ Confirmar aprobación</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RECHAZAR -->
+<div id="m-rec" class="overlay hidden">
+  <div class="modal">
+    <h2>❌ Rechazar pago</h2>
+    <p id="m-rec-info" style="font-weight:600;color:var(--j);font-size:15px;margin-bottom:12px"></p>
+    <label for="motivo">Motivo (se envía al alumno por correo)</label>
+    <textarea id="motivo" rows="3" placeholder="Ej: El voucher no se ve claro. Envía una foto más nítida."></textarea>
+    <input type="hidden" id="m-rec-id"/>
+    <div class="mf">
+      <button class="btn btn-gh" id="m-rec-no">Cancelar</button>
+      <button class="btn btn-err" id="m-rec-ok">❌ Confirmar rechazo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var tok = sessionStorage.getItem('adm_tok') || null;
+var curTab = 'pendiente';
+var data = [];
+
+var $ = function(id){ return document.getElementById(id); };
+
+function init(){
+  if(tok){ showPanel(); load(); } else { showLogin(); }
+}
+
+function showLogin(){ $('login-section').classList.remove('hidden'); $('panel').classList.add('hidden'); }
+function showPanel(){ $('login-section').classList.add('hidden'); $('panel').classList.remove('hidden'); $('usr').textContent='Admin activo'; }
+
+function toast(msg, isErr){
+  var t=document.createElement('div');
+  t.className='toast'+(isErr?' err':'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); },3500);
+}
+
+// ── Login
+$('login-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  var pw=$('pw').value;
+  $('lbtn').disabled=true; $('lbtn').textContent='Verificando…'; $('lerr').textContent='';
+  google.script.run
+    .withSuccessHandler(function(r){
+      $('lbtn').disabled=false; $('lbtn').textContent='Entrar →';
+      if(!r||!r.ok||!r.data||!r.data.token){ $('lerr').textContent=(r&&r.error)||'Error de autenticación'; return; }
+      tok=r.data.token; sessionStorage.setItem('adm_tok',tok);
+      showPanel(); load();
+    })
+    .withFailureHandler(function(e){ $('lbtn').disabled=false; $('lbtn').textContent='Entrar →'; $('lerr').textContent='Error: '+(e.message||e); })
+    .gs_adminLogin(pw);
+});
+
+// ── Logout
+$('btn-logout').addEventListener('click',function(){ tok=null; sessionStorage.removeItem('adm_tok'); data=[]; showLogin(); });
+
+// ── Tabs
+document.querySelectorAll('.tab[data-tab]').forEach(function(b){
+  b.addEventListener('click',function(){
+    curTab=this.dataset.tab;
+    document.querySelectorAll('.tab[data-tab]').forEach(function(t){ t.classList.remove('active'); });
+    this.classList.add('active');
+    if(curTab==='logs'){
+      $('list').classList.add('hidden'); $('logs').classList.remove('hidden'); $('creds').classList.add('hidden');
+      loadLogs();
+    } else if(curTab==='credenciales'){
+      $('list').classList.add('hidden'); $('logs').classList.add('hidden'); $('creds').classList.remove('hidden');
+      loadCreds();
+    } else {
+      $('list').classList.remove('hidden'); $('logs').classList.add('hidden'); $('creds').classList.add('hidden');
+      load();
+    }
+  });
+});
+
+$('btn-reload').addEventListener('click',function(){
+  if(curTab==='logs') loadLogs();
+  else if(curTab==='credenciales') loadCreds();
+  else load();
+});
+
+// ── Cargar
+function load(){
+  $('list').innerHTML='<div class="empty"><div class="spin"></div> Cargando…</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r||!r.ok){ if(r&&(r.error||'').includes('nválid')){ tok=null; sessionStorage.removeItem('adm_tok'); showLogin(); return; } $('list').innerHTML='<div class="empty">Error: '+(r?r.error:'')+'</div>'; return; }
+      data=r.data||[]; stats(); render(data);
+    })
+    .withFailureHandler(function(e){ $('list').innerHTML='<div class="empty">Error: '+(e.message||e)+'</div>'; })
+    .gs_listarSolicitudes(tok, curTab);
+}
+
+function stats(){
+  var p=data.filter(function(s){ return s.estado_pago==='pendiente'; }).length;
+  var a=data.filter(function(s){ return s.estado_pago==='aprobado'; }).length;
+  $('stp').textContent=p; $('sta').textContent=a; $('stt').textContent=data.length;
+  $('bdg').textContent=p||'';
+}
+
+// ── Render
+function eb(ep){
+  var cls={pendiente:'ep',aprobado:'ea',rechazado:'er'}[ep]||'ep';
+  var lbl={pendiente:'⏳ Pendiente',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'}[ep]||ep;
+  return '<span class="eb '+cls+'">'+lbl+'</span>';
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function render(list){
+  if(!list||!list.length){ $('list').innerHTML='<div class="empty">📭 Sin solicitudes en esta categoría.</div>'; return; }
+  $('list').innerHTML=list.map(function(s){
+    var v=s.voucher_url?'<a href="'+s.voucher_url+'" target="_blank" class="vlink">📎 Ver voucher</a>':'<span style="font-size:12px;color:var(--jl)">Sin voucher aún</span>';
+    var bts=s.estado_pago==='pendiente'
+      ?'<button class="btn btn-ok bapr" data-id="'+s.id_compra+'" data-info="'+esc(s.nombre+' — '+s.plataforma+' (S/ '+s.monto+')')+'">✅ Aprobar</button>'
+       +'<button class="btn btn-err brec" data-id="'+s.id_compra+'" data-info="'+esc(s.nombre+' — '+s.plataforma)+'">❌ Rechazar</button>'
+      :'';
+    var dx=s.detalle_extra?'<div style="margin-top:8px;padding:7px 12px;background:rgba(16,49,45,.05);border-radius:8px;font-size:12px;color:var(--jl)">📋 '+esc(s.detalle_extra)+'</div>':'';
+    var pw=s.tiene_password?'':'<span class="chip" style="background:rgba(139,92,246,.1);color:#5b21b6">🔑 Se generará contraseña al aprobar</span>';
+    var shLink=s.url_sheet_plataforma
+      ?'<a href="'+s.url_sheet_plataforma+'" target="_blank" class="btn btn-gh" style="font-size:12px;padding:4px 10px">📊 Abrir Sheet de '+esc(s.plataforma)+'</a>'
+      :'';
+    return '<div class="card"><div class="card-top"><div>'
+      +'<div class="cid">'+s.id_compra+' · '+(s.fecha_solicitud||'').slice(0,10)+'</div>'
+      +'<div class="cname">'+esc(s.nombre)+'</div>'
+      +'<div class="cemail">✉️ '+esc(s.correo)+(s.whatsapp?' · 📱 '+esc(s.whatsapp):'')+'</div>'
+      +'</div><div>'+eb(s.estado_pago)+'</div></div>'
+      +'<div class="chips"><span class="chip">🎓 '+esc(s.plataforma)+'</span><span class="chip chip-m">S/ '+s.monto+'</span><span class="chip chip-p">💳 '+s.metodo_pago+'</span>'
+      +(s.fecha_fin?'<span class="chip">📅 Vence '+s.fecha_fin+'</span>':'')+pw+'</div>'
+      +dx
+      +'<div class="foot">'+v+shLink+bts+'</div></div>';
+  }).join('');
+
+  document.querySelectorAll('.bapr').forEach(function(b){ b.addEventListener('click',function(){ openApr(this.dataset.id,this.dataset.info); }); });
+  document.querySelectorAll('.brec').forEach(function(b){ b.addEventListener('click',function(){ openRec(this.dataset.id,this.dataset.info); }); });
+}
+
+// ── Modal Aprobar
+function openApr(id,info){ $('m-apr-id').value=id; $('m-apr-info').textContent=info; $('m-apr').classList.remove('hidden'); }
+$('m-apr-no').addEventListener('click',function(){ $('m-apr').classList.add('hidden'); });
+$('m-apr-ok').addEventListener('click',function(){
+  var id=$('m-apr-id').value;
+  $('m-apr-ok').disabled=true; $('m-apr-ok').textContent='Aprobando…';
+  google.script.run
+    .withSuccessHandler(function(r){
+      $('m-apr-ok').disabled=false; $('m-apr-ok').textContent='✅ Confirmar aprobación';
+      $('m-apr').classList.add('hidden');
+      if(!r||!r.ok){ toast('Error: '+(r?r.error:'sin respuesta'),true); return; }
+      toast('✅ '+(r.message||'Pago aprobado'));
+      load();
+    })
+    .withFailureHandler(function(e){ $('m-apr-ok').disabled=false; $('m-apr-ok').textContent='✅ Confirmar aprobación'; toast('Error: '+(e.message||e),true); })
+    .gs_aprobarPago(tok,id);
+});
+
+// ── Modal Rechazar
+function openRec(id,info){ $('m-rec-id').value=id; $('m-rec-info').textContent=info; $('motivo').value=''; $('m-rec').classList.remove('hidden'); }
+$('m-rec-no').addEventListener('click',function(){ $('m-rec').classList.add('hidden'); });
+$('m-rec-ok').addEventListener('click',function(){
+  var id=$('m-rec-id').value;
+  var mot=$('motivo').value.trim()||'No especificado';
+  $('m-rec-ok').disabled=true; $('m-rec-ok').textContent='Rechazando…';
+  google.script.run
+    .withSuccessHandler(function(r){
+      $('m-rec-ok').disabled=false; $('m-rec-ok').textContent='❌ Confirmar rechazo';
+      $('m-rec').classList.add('hidden');
+      if(!r||!r.ok){ toast('Error: '+(r?r.error:''),true); return; }
+      toast(r.message||'Rechazado');
+      load();
+    })
+    .withFailureHandler(function(e){ $('m-rec-ok').disabled=false; $('m-rec-ok').textContent='❌ Confirmar rechazo'; toast('Error: '+(e.message||e),true); })
+    .gs_rechazarPago(tok,id,mot);
+});
+
+// ── Logs
+function loadLogs(){
+  $('logs').innerHTML='<div class="empty"><div class="spin"></div> Cargando logs…</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r||!r.ok){ $('logs').innerHTML='<div class="empty">Error: '+(r?r.error:'')+'</div>'; return; }
+      var ls=r.data||[];
+      if(!ls.length){ $('logs').innerHTML='<div class="empty">No hay logs.</div>'; return; }
+      $('logs').innerHTML='<table class="lt"><thead><tr><th>Timestamp</th><th>Acción</th><th>Usuario</th><th>Nivel</th><th>Detalle</th></tr></thead><tbody>'
+        +ls.map(function(l){ var c=l.nivel==='error'?'le':l.nivel==='warning'?'lw':'li'; return '<tr><td style="white-space:nowrap">'+esc(l.timestamp)+'</td><td>'+esc(l.accion)+'</td><td>'+esc(l.id_usuario)+'</td><td class="'+c+'">'+esc(l.nivel)+'</td><td>'+esc(l.detalle)+'</td></tr>'; }).join('')
+        +'</tbody></table>';
+    })
+    .withFailureHandler(function(e){ $('logs').innerHTML='<div class="empty">Error: '+(e.message||e)+'</div>'; })
+    .gs_listarLogs(tok,100);
+}
+
+// ── Credenciales
+function loadCreds(){
+  $('creds').innerHTML='<div class="empty"><div class="spin"></div> Cargando credenciales…</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r||!r.ok){ $('creds').innerHTML='<div class="empty">Error: '+(r?r.error:'')+'</div>'; return; }
+      var rows=r.data||[];
+      if(!rows.length){ $('creds').innerHTML='<div class="empty">No hay credenciales registradas aún.</div>'; return; }
+      $('creds').innerHTML=
+        '<p style="font-size:13px;color:var(--jl);margin-bottom:12px">Contraseñas enviadas a alumnos al aprobar su pago. Úsalas para copiar en el Sheet de cada plataforma.</p>'
+        +'<table class="lt"><thead><tr>'
+        +'<th>Fecha</th><th>Compra</th><th>Usuario</th><th>Correo</th><th>Plataforma</th><th>Contraseña enviada</th>'
+        +'</tr></thead><tbody>'
+        +rows.map(function(c){
+          return '<tr>'
+            +'<td style="white-space:nowrap">'+esc(c.fecha_asignacion)+'</td>'
+            +'<td>'+esc(c.id_compra)+'</td>'
+            +'<td>'+esc(c.id_usuario)+'</td>'
+            +'<td>'+esc(c.correo)+'</td>'
+            +'<td>'+esc(c.plataforma)+'</td>'
+            +'<td><code style="background:#fff;padding:2px 8px;border-radius:6px;font-size:13px;font-weight:700;border:1px solid var(--bd)">'+esc(c.contrasena_enviada)+'</code></td>'
+            +'</tr>';
+        }).join('')
+        +'</tbody></table>';
+    })
+    .withFailureHandler(function(e){ $('creds').innerHTML='<div class="empty">Error: '+(e.message||e)+'</div>'; })
+    .gs_listarCredenciales(tok);
+}
+
+init();
+})();
+</script>
+</body>
+</html>

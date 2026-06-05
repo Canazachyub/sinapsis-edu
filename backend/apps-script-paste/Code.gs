@@ -130,15 +130,17 @@ const SHEET_NAMES = {
   USUARIOS: 'Usuarios',
   COMPRAS: 'Compras',
   LOGS: 'Logs',
+  CREDENCIALES: 'Credenciales',
 };
 
 const HEADERS_PLATAFORMAS = [
   'id_plataforma', 'nombre', 'slug', 'descripcion', 'url_real',
   'precio', 'duracion_dias', 'activo',
-  // Nuevos campos opcionales (pueden quedar vacios en filas existentes):
+  // Campos opcionales (pueden quedar vacios en filas existentes):
   'precio_promocional', // numero o vacio; si esta, mostrar como precio tachado del original
   'etiqueta',           // 'Nuevo' | 'Premium' | 'Oferta' | 'Destacado' o vacio
-  'orden'               // entero; menor = aparece primero. Vacio = va al final
+  'orden',              // entero; menor = aparece primero. Vacio = va al final
+  'url_sheet_plataforma' // URL del Google Sheet propio de la plataforma donde el admin copia las credenciales
 ];
 
 const HEADERS_USUARIOS = [
@@ -156,6 +158,10 @@ const HEADERS_COMPRAS = [
 ];
 
 const HEADERS_LOGS = ['timestamp', 'accion', 'id_usuario', 'nivel', 'detalle'];
+
+const HEADERS_CREDENCIALES = [
+  'id_compra', 'id_usuario', 'correo', 'plataforma', 'contrasena_enviada', 'fecha_asignacion'
+];
 
 const REQUIRED_PROPS = [
   'SHEET_ID', 'DRIVE_FOLDER_VOUCHERS', 'ADMIN_EMAIL',
@@ -251,6 +257,7 @@ function inicializarSheets() {
   const r2 = ensureSheet(ss, SHEET_NAMES.USUARIOS, HEADERS_USUARIOS);
   const r3 = ensureSheet(ss, SHEET_NAMES.COMPRAS, HEADERS_COMPRAS);
   const r4 = ensureSheet(ss, SHEET_NAMES.LOGS, HEADERS_LOGS);
+  const r5 = ensureSheet(ss, SHEET_NAMES.CREDENCIALES, HEADERS_CREDENCIALES);
 
   // Borra la hoja por defecto si quedo vacia
   const candidatos = ['Sheet1', 'Hoja 1', 'Hoja1'];
@@ -277,7 +284,8 @@ function inicializarSheets() {
       { name: SHEET_NAMES.PLATAFORMAS, created: r1.created },
       { name: SHEET_NAMES.USUARIOS, created: r2.created },
       { name: SHEET_NAMES.COMPRAS, created: r3.created },
-      { name: SHEET_NAMES.LOGS, created: r4.created }
+      { name: SHEET_NAMES.LOGS, created: r4.created },
+      { name: SHEET_NAMES.CREDENCIALES, created: r5.created }
     ],
     seeded: seeded
   };
@@ -295,32 +303,34 @@ function seedPlataformas(sheet) {
   const URL_DEMO = 'https://canazachyub.github.io/simulaencib/';
   const data = [
     // Las 6 originales
+    // Cols: id_plataforma, nombre, slug, descripcion, url_real,
+    //       precio, duracion_dias, activo, precio_promocional, etiqueta, orden, url_sheet_plataforma
     ['P-001', 'ENAM', 'enam',
       'Examen Nacional de Medicina. Banco de preguntas con justificaciones y simulacros cronometrados.',
-      URL_DEMO, 49, 30, true, '', 'Destacado', 1],
+      URL_DEMO, 49, 30, true, '', 'Destacado', 1, ''],
     ['P-002', 'ENCIB', 'encib',
       'Examen Nacional de Ciencias Basicas. Mas de 1500 preguntas explicadas, organizadas por curso.',
-      URL_DEMO, 49, 30, true, '', '', 2],
+      URL_DEMO, 49, 30, true, '', '', 2, ''],
     ['P-003', 'ENCAPS', 'encaps',
       'Evaluacion Nacional de Capacidades Clinicas. Casos clinicos con retroalimentacion detallada.',
-      URL_DEMO, 49, 30, true, '', '', 3],
+      URL_DEMO, 49, 30, true, '', '', 3, ''],
     ['P-004', 'Residentado Medico', 'rm',
       'Preparacion integral para el examen de residentado. Cobertura por especialidades.',
-      URL_DEMO, 79, 30, true, '', 'Premium', 4],
+      URL_DEMO, 79, 30, true, '', 'Premium', 4, ''],
     ['P-005', 'EsSalud', 'essalud',
       'Plataforma para concursos EsSalud y SERUMS. Material actualizado y simulacros.',
-      URL_DEMO, 59, 30, true, '', '', 5],
+      URL_DEMO, 59, 30, true, '', '', 5, ''],
     ['P-006', 'Biblioteca Medica', 'biblioteca',
       'Acceso a libros, guias clinicas y material complementario para tu carrera medica.',
-      URL_DEMO, 39, 30, true, '', '', 6],
+      URL_DEMO, 39, 30, true, '', '', 6, ''],
 
     // Nuevas: Anatomia (compra por segmento) y Coleccion CTO
     ['P-007', 'Anatomia de Testut', 'anatomia',
       'Resumenes teoricos basados en Testut. Material por segmentos anatomicos. Bancos UNAP y 5 simulacros por segmento. Formato fisico disponible.',
-      URL_DEMO, 30, 30, true, '', 'Nuevo', 7],
+      URL_DEMO, 30, 30, true, '', 'Nuevo', 7, ''],
     ['P-008', 'Coleccion CTO', 'cto',
       'Programa completo CTO, referente en Espana y Latinoamerica. Manuales, videos, casos y plataforma online.',
-      URL_DEMO, 299, 365, true, 50, 'Premium', 8]
+      URL_DEMO, 299, 365, true, 50, 'Premium', 8, '']
   ];
 
   // Leer IDs existentes para evitar duplicados.
@@ -799,11 +809,282 @@ function listarPlataformasPublicas(req) {
   }
 }
 
-// Stubs Fase 4 (admin)
-function adminLogin(req)           { return ok(undefined, 'pendiente Fase 4'); }
-function listarSolicitudes(req)    { return ok([],        'pendiente Fase 4'); }
-function aprobarPago(req)          { return ok(undefined, 'pendiente Fase 4'); }
-function rechazarPago(req)         { return ok(undefined, 'pendiente Fase 4'); }
+// ─── Admin: sesión ───────────────────────────────────────────
+
+const ADMIN_SESSION_TTL = 21600; // 6h (tope de CacheService)
+
+function validateAdminSession(token) {
+  if (!token) return false;
+  return CacheService.getScriptCache().get('admin_sess_' + token) === '1';
+}
+
+function requireAdmin(req) {
+  if (!validateAdminSession(req.adminToken)) {
+    throw new Error('Sesión admin inválida o expirada. Inicia sesión de nuevo.');
+  }
+}
+
+// ─── Admin: handlers ─────────────────────────────────────────
+
+function adminLogin(req) {
+  try {
+    const password = String(req.password || '').trim();
+    if (!isNonEmptyString(password)) return fail('Falta la contraseña');
+
+    const storedPass = getProperty('ADMIN_PASSWORD');
+    if (!storedPass) {
+      return fail('ADMIN_PASSWORD no configurado. Agrégalo en Configuración del Proyecto → Propiedades del script.');
+    }
+    if (password !== storedPass) {
+      log({ accion: 'adminLogin', nivel: 'warning', detalle: 'contraseña admin incorrecta' });
+      return fail('Credenciales incorrectas');
+    }
+
+    const token = randomToken(32);
+    CacheService.getScriptCache().put('admin_sess_' + token, '1', ADMIN_SESSION_TTL);
+    log({ accion: 'adminLogin', nivel: 'info', detalle: 'login admin OK' });
+    return ok({ token: token });
+  } catch (err) {
+    return fail('Error interno: ' + (err instanceof Error ? err.message : String(err)));
+  }
+}
+
+function listarSolicitudes(req) {
+  try {
+    requireAdmin(req);
+    const estado = String(req.estado || 'pendiente');
+    const compras = readAll(SHEET_NAMES.COMPRAS);
+    const usuarios = readAll(SHEET_NAMES.USUARIOS);
+    const plataformas = readAll(SHEET_NAMES.PLATAFORMAS);
+
+    const userMap = {};
+    for (let i = 0; i < usuarios.length; i++) {
+      userMap[String(usuarios[i].id_usuario)] = usuarios[i];
+    }
+    const platMap = {};
+    for (let i = 0; i < plataformas.length; i++) {
+      platMap[String(plataformas[i].id_plataforma)] = plataformas[i];
+    }
+
+    let filtered = compras;
+    if (estado !== 'todos') {
+      filtered = compras.filter(function (c) {
+        return String(c.estado_pago) === estado;
+      });
+    }
+
+    const result = filtered.map(function (c) {
+      const u = userMap[String(c.id_usuario)] || {};
+      const p = platMap[String(c.id_plataforma)] || {};
+      return {
+        id_compra: String(c.id_compra),
+        id_usuario: String(c.id_usuario),
+        nombre: String(u.nombre || ''),
+        correo: String(u.correo || ''),
+        whatsapp: String(u.whatsapp || ''),
+        plataforma: String(p.nombre || c.id_plataforma),
+        slug: String(p.slug || ''),
+        monto: Number(c.monto) || 0,
+        metodo_pago: String(c.metodo_pago || ''),
+        fecha_solicitud: String(c.fecha_solicitud ? toIsoDate(c.fecha_solicitud) || String(c.fecha_solicitud) : ''),
+        voucher_url: String(c.voucher_url || ''),
+        estado_pago: String(c.estado_pago || ''),
+        estado_acceso: String(c.estado_acceso || ''),
+        fecha_fin: toIsoDate(c.fecha_fin) || '',
+        detalle_extra: String(c.detalle_extra || ''),
+        tiene_password: !!(u.password_hash && String(u.password_hash).trim().length > 0),
+        url_sheet_plataforma: p.url_sheet_plataforma ? String(p.url_sheet_plataforma) : ''
+      };
+    });
+
+    result.sort(function (a, b) {
+      return a.fecha_solicitud < b.fecha_solicitud ? 1 : -1;
+    });
+
+    return ok(result);
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'listarSolicitudes', nivel: 'error', detalle: detalle });
+    return fail('Error al listar solicitudes: ' + detalle);
+  }
+}
+
+function aprobarPago(req) {
+  try {
+    requireAdmin(req);
+    const idCompra = String(req.id_compra || '').trim();
+    if (!isNonEmptyString(idCompra)) return fail('Falta id_compra');
+
+    const compraRow = findRowIndex(SHEET_NAMES.COMPRAS, 1, idCompra);
+    if (compraRow < 0) return fail('Compra no encontrada: ' + idCompra);
+
+    const compras = readAll(SHEET_NAMES.COMPRAS);
+    let compra = null;
+    for (let i = 0; i < compras.length; i++) {
+      if (String(compras[i].id_compra) === idCompra) { compra = compras[i]; break; }
+    }
+    if (!compra) return fail('Compra no encontrada');
+    if (String(compra.estado_pago) === 'aprobado') return fail('Esta compra ya fue aprobada');
+
+    const usuarios = readAll(SHEET_NAMES.USUARIOS);
+    let usuario = null;
+    for (let i = 0; i < usuarios.length; i++) {
+      if (String(usuarios[i].id_usuario) === String(compra.id_usuario)) { usuario = usuarios[i]; break; }
+    }
+    if (!usuario) return fail('Usuario no encontrado');
+
+    const sheetUsuarios = getSheet(SHEET_NAMES.USUARIOS);
+    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+
+    // Generar password solo si el usuario aún no tiene uno
+    let plainPassword = null;
+    if (!usuario.password_hash || String(usuario.password_hash).trim() === '') {
+      plainPassword = randomToken(10);
+      const salt = generateSalt();
+      const hash = hashPassword(plainPassword, salt);
+      const userRow = findRowIndex(SHEET_NAMES.USUARIOS, 1, String(compra.id_usuario));
+      if (userRow > 0) {
+        sheetUsuarios.getRange(userRow, 5).setValue(hash);
+        sheetUsuarios.getRange(userRow, 6).setValue(salt);
+      }
+    }
+
+    const plat = findPlataformaById(String(compra.id_plataforma));
+    const duracion = plat ? (Number(plat.duracion_dias) || 30) : 30;
+    const hoy = todayIso();
+    const fechaFin = addDaysIso(duracion);
+
+    // Cols: estado_pago=8, fecha_aprobacion=9, fecha_inicio=10, fecha_fin=11, estado_acceso=12
+    sheetCompras.getRange(compraRow, 8).setValue('aprobado');
+    sheetCompras.getRange(compraRow, 9).setValue(hoy);
+    sheetCompras.getRange(compraRow, 10).setValue(hoy);
+    sheetCompras.getRange(compraRow, 11).setValue(fechaFin);
+    sheetCompras.getRange(compraRow, 12).setValue('activo');
+
+    // Email al alumno
+    try {
+      const portalUrl = 'https://sinapsisedu.com/#/login';
+      const platNombre = plat ? String(plat.nombre) : String(compra.id_plataforma);
+      const correo = String(usuario.correo);
+      const nombre = String(usuario.nombre);
+
+      let emailBody =
+        '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
+        '<h2 style="color:#10312D;margin:0 0 16px">¡Tu acceso fue aprobado! ✅</h2>' +
+        '<p>Hola <strong>' + nombre + '</strong>,</p>' +
+        '<p>Tu pago para <strong>' + platNombre + '</strong> fue verificado. Ya puedes acceder.</p>' +
+        '<hr style="border:none;border-top:1px solid rgba(16,49,45,.1);margin:20px 0">' +
+        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + correo + '</code></p>';
+      if (plainPassword) {
+        emailBody += '<p><strong>🔑 Contraseña:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + plainPassword + '</code></p>' +
+          '<p style="font-size:13px;color:#3D5752"><em>Guarda esta contraseña. No se la volveremos a enviar.</em></p>';
+      } else {
+        emailBody += '<p><strong>🔑 Contraseña:</strong> la que ya tenías registrada.</p>';
+      }
+      emailBody +=
+        '<p><strong>📅 Vigencia:</strong> hasta el <strong>' + fechaFin + '</strong> (' + duracion + ' días)</p>' +
+        '<div style="margin:28px 0">' +
+        '<a href="' + portalUrl + '" style="background:#10312D;color:#C2E476;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Entrar al Portal →</a>' +
+        '</div>' +
+        '<p style="font-size:12px;color:#3D5752">¿Problemas? WhatsApp: <a href="https://wa.me/51984300510">+51 984 300 510</a></p>' +
+        '</div>';
+
+      enviarCorreo(correo, '✅ Acceso aprobado — ' + platNombre + ' | SINAPSIS EDU', emailBody);
+    } catch (emailErr) {
+      log({ accion: 'aprobarPago', nivel: 'warning', detalle: 'falla email alumno: ' + emailErr });
+    }
+
+    // Registrar en hoja Credenciales (plainPassword o nota si ya tenía contraseña)
+    try {
+      const sheetCred = getSheet(SHEET_NAMES.CREDENCIALES);
+      const platNombreLog = plat ? String(plat.nombre) : String(compra.id_plataforma);
+      sheetCred.appendRow([
+        idCompra,
+        String(compra.id_usuario),
+        String(usuario.correo),
+        platNombreLog,
+        plainPassword || '(contraseña existente, no se regeneró)',
+        hoy
+      ]);
+    } catch (credErr) {
+      log({ accion: 'aprobarPago', nivel: 'warning', detalle: 'falla al escribir Credenciales: ' + credErr });
+    }
+
+    log({
+      accion: 'aprobarPago', nivel: 'info',
+      detalle: idCompra + ' aprobado password_generado=' + !!plainPassword
+    });
+
+    return ok({
+      id_compra: idCompra,
+      correo: String(usuario.correo),
+      fecha_fin: fechaFin,
+      password_generado: !!plainPassword
+    }, 'Pago aprobado. ' + (plainPassword ? 'Credenciales enviadas al alumno.' : 'Confirmación enviada al alumno.'));
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'aprobarPago', nivel: 'error', detalle: detalle });
+    return fail('Error al aprobar: ' + detalle);
+  }
+}
+
+function rechazarPago(req) {
+  try {
+    requireAdmin(req);
+    const idCompra = String(req.id_compra || '').trim();
+    const motivo = String(req.motivo || 'No especificado').trim();
+    if (!isNonEmptyString(idCompra)) return fail('Falta id_compra');
+
+    const compraRow = findRowIndex(SHEET_NAMES.COMPRAS, 1, idCompra);
+    if (compraRow < 0) return fail('Compra no encontrada');
+
+    const compras = readAll(SHEET_NAMES.COMPRAS);
+    let compra = null;
+    for (let i = 0; i < compras.length; i++) {
+      if (String(compras[i].id_compra) === idCompra) { compra = compras[i]; break; }
+    }
+    if (!compra) return fail('Compra no encontrada');
+    if (String(compra.estado_pago) === 'rechazado') return fail('Ya fue rechazada anteriormente');
+
+    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+    sheetCompras.getRange(compraRow, 8).setValue('rechazado');
+    sheetCompras.getRange(compraRow, 12).setValue('revocado');
+
+    try {
+      const usuarios = readAll(SHEET_NAMES.USUARIOS);
+      for (let i = 0; i < usuarios.length; i++) {
+        if (String(usuarios[i].id_usuario) === String(compra.id_usuario)) {
+          const correo = String(usuarios[i].correo);
+          const nombre = String(usuarios[i].nombre);
+          const plat = findPlataformaById(String(compra.id_plataforma));
+          const platNombre = plat ? String(plat.nombre) : String(compra.id_plataforma);
+          enviarCorreo(
+            correo,
+            '❌ Pago no verificado — ' + platNombre + ' | SINAPSIS EDU',
+            '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
+            '<h2 style="color:#10312D;margin:0 0 16px">Tu pago no pudo verificarse ❌</h2>' +
+            '<p>Hola <strong>' + nombre + '</strong>,</p>' +
+            '<p>Lamentablemente no pudimos verificar tu pago para <strong>' + platNombre + '</strong>.</p>' +
+            '<p><strong>Motivo:</strong> ' + motivo + '</p>' +
+            '<p>Por favor comunícate con nosotros para solucionarlo:</p>' +
+            '<p><a href="https://wa.me/51984300510?text=Hola%2C%20mi%20pago%20' + idCompra + '%20fue%20rechazado%2C%20quisiera%20aclarar." style="background:#10312D;color:#C2E476;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Escribir por WhatsApp →</a></p>' +
+            '</div>'
+          );
+          break;
+        }
+      }
+    } catch (emailErr) {
+      log({ accion: 'rechazarPago', nivel: 'warning', detalle: 'falla email: ' + emailErr });
+    }
+
+    log({ accion: 'rechazarPago', nivel: 'info', detalle: idCompra + ' motivo: ' + motivo });
+    return ok({ id_compra: idCompra }, 'Pago rechazado. Alumno notificado por correo.');
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'rechazarPago', nivel: 'error', detalle: detalle });
+    return fail('Error al rechazar: ' + detalle);
+  }
+}
 
 // ─── Fase 2: registrar compra + subir voucher ────────────────
 
@@ -1103,6 +1384,98 @@ function obtenerUrlPlataforma(req) {
   return ok({ url: String(plat.url_real) });
 }
 
+// ─── misSolicitudes: historial completo del alumno ───────────
+
+/**
+ * Devuelve todas las compras del usuario (activas, pendientes, rechazadas).
+ * El alumno puede ver el estado de sus solicitudes desde el portal.
+ */
+function misSolicitudes(req) {
+  const session = validateSession(req.token);
+  if (!session) return fail('Sesión inválida o expirada');
+
+  try {
+    const compras = readAll(SHEET_NAMES.COMPRAS);
+    const resultado = compras
+      .filter(function (c) {
+        return String(c.id_usuario) === String(session.id_usuario);
+      })
+      .map(function (c) {
+        const plat = findPlataformaById(String(c.id_plataforma));
+        return {
+          id_compra: String(c.id_compra),
+          plataforma: plat ? String(plat.nombre) : String(c.id_plataforma),
+          slug: plat ? String(plat.slug) : '',
+          monto: Number(c.monto) || 0,
+          metodo_pago: String(c.metodo_pago || ''),
+          fecha_solicitud: String(c.fecha_solicitud ? toIsoDate(c.fecha_solicitud) || String(c.fecha_solicitud) : ''),
+          estado_pago: String(c.estado_pago || ''),
+          estado_acceso: String(c.estado_acceso || ''),
+          fecha_fin: toIsoDate(c.fecha_fin) || ''
+        };
+      });
+
+    resultado.sort(function (a, b) {
+      return a.fecha_solicitud < b.fecha_solicitud ? 1 : -1;
+    });
+
+    return ok(resultado);
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'misSolicitudes', idUsuario: String(session.id_usuario), nivel: 'error', detalle: detalle });
+    return fail('No se pudieron obtener las solicitudes');
+  }
+}
+
+// ─── Wrappers para google.script.run (llamados desde admin.html) ──
+
+function gs_adminLogin(password) {
+  return adminLogin({ password: password });
+}
+
+function gs_listarSolicitudes(adminToken, estado) {
+  return listarSolicitudes({ adminToken: adminToken, estado: estado || 'pendiente' });
+}
+
+function gs_aprobarPago(adminToken, idCompra) {
+  return aprobarPago({ adminToken: adminToken, id_compra: idCompra });
+}
+
+function gs_rechazarPago(adminToken, idCompra, motivo) {
+  return rechazarPago({ adminToken: adminToken, id_compra: idCompra, motivo: motivo });
+}
+
+function gs_listarLogs(adminToken, n) {
+  if (!validateAdminSession(adminToken)) return fail('Sesión admin inválida');
+  try {
+    const sheet = getSheet(SHEET_NAMES.LOGS);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return ok([]);
+    const cantidad = Math.min(Number(n) || 50, 200);
+    const startRow = Math.max(2, lastRow - cantidad + 1);
+    const rows = sheet.getRange(startRow, 1, lastRow - startRow + 1, 5).getValues();
+    const logs = rows.reverse().map(function (r) {
+      return { timestamp: String(r[0]), accion: String(r[1]), id_usuario: String(r[2]), nivel: String(r[3]), detalle: String(r[4]) };
+    });
+    return ok(logs);
+  } catch (err) {
+    return fail('Error al leer logs: ' + (err instanceof Error ? err.message : String(err)));
+  }
+}
+
+function gs_listarCredenciales(adminToken) {
+  if (!validateAdminSession(adminToken)) return fail('Sesión admin inválida');
+  try {
+    const rows = readAll(SHEET_NAMES.CREDENCIALES);
+    rows.sort(function (a, b) {
+      return String(a.fecha_asignacion) < String(b.fecha_asignacion) ? 1 : -1;
+    });
+    return ok(rows);
+  } catch (err) {
+    return fail('Error al leer credenciales: ' + (err instanceof Error ? err.message : String(err)));
+  }
+}
+
 // ─── Crear usuario de prueba (correr desde editor) ───────────
 
 /**
@@ -1211,6 +1584,7 @@ function dispatchPublic(req) {
     case 'subirVoucher':             return subirVoucher(req);
     case 'loginAlumno':              return loginAlumno(req);
     case 'misAccesos':               return misAccesos(req);
+    case 'misSolicitudes':           return misSolicitudes(req);
     case 'obtenerUrlPlataforma':     return obtenerUrlPlataforma(req);
     default:                         return fail('Accion desconocida: ' + action);
   }
@@ -1241,10 +1615,10 @@ function doGet(e) {
   }
 
   if (params.page === 'admin') {
-    return HtmlService.createTemplateFromFile('views/admin')
-      .evaluate()
-      .setTitle('Portal Central — Admin')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return HtmlService.createHtmlOutputFromFile('admin')
+      .setTitle('SINAPSIS EDU — Admin')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   return jsonResponse({

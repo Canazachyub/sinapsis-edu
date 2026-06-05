@@ -1,6 +1,340 @@
 <script>
-  // Stub Fase 0. La lógica real (login admin, listar/aprobar solicitudes,
-  // ver vouchers) se implementa en Fase 4 y se comunica con el backend
-  // vía google.script.run.
-  console.log('[admin] stub Fase 0 cargado');
+(function () {
+  'use strict';
+
+  // ── Estado global ──────────────────────────────────────────
+  let adminToken = sessionStorage.getItem('admin_token') || null;
+  let currentTab = 'pendiente';
+  let solicitudes = [];
+
+  // ── DOM refs ───────────────────────────────────────────────
+  const loginSection   = document.getElementById('login-section');
+  const adminSection   = document.getElementById('admin-section');
+  const loginForm      = document.getElementById('login-form');
+  const loginError     = document.getElementById('login-error');
+  const loginBtn       = document.getElementById('login-btn');
+  const adminUserEl    = document.getElementById('admin-user');
+  const listContainer  = document.getElementById('list-container');
+  const logsContainer  = document.getElementById('logs-container');
+  const statPendiente  = document.getElementById('stat-pendiente');
+  const statAprobado   = document.getElementById('stat-aprobado');
+  const statTotal      = document.getElementById('stat-total');
+
+  // Modal aprobar
+  const modalAprobar   = document.getElementById('modal-aprobar');
+  const modalAprobarId = document.getElementById('modal-aprobar-id');
+  const modalAprobarInfo = document.getElementById('modal-aprobar-info');
+  const btnConfAprobar = document.getElementById('btn-conf-aprobar');
+
+  // Modal rechazar
+  const modalRechazar  = document.getElementById('modal-rechazar');
+  const modalRechazarId= document.getElementById('modal-rechazar-id');
+  const modalRechazarInfo= document.getElementById('modal-rechazar-info');
+  const inputMotivo    = document.getElementById('input-motivo');
+  const btnConfRechazar= document.getElementById('btn-conf-rechazar');
+
+  // ── Init ───────────────────────────────────────────────────
+  function init() {
+    if (adminToken) {
+      showAdmin();
+      loadSolicitudes();
+    } else {
+      showLogin();
+    }
+  }
+
+  // ── Vista ──────────────────────────────────────────────────
+  function showLogin() {
+    loginSection.classList.remove('hidden');
+    adminSection.classList.add('hidden');
+  }
+
+  function showAdmin() {
+    loginSection.classList.add('hidden');
+    adminSection.classList.remove('hidden');
+    adminUserEl.textContent = 'Admin activo';
+  }
+
+  function showToast(msg, isError) {
+    const t = document.createElement('div');
+    t.className = 'toast' + (isError ? ' error' : '');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 3500);
+  }
+
+  // ── Login ──────────────────────────────────────────────────
+  loginForm && loginForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const password = document.getElementById('admin-password').value;
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Verificando…';
+    loginError.textContent = '';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Entrar';
+        if (!res || !res.ok || !res.data || !res.data.token) {
+          loginError.textContent = (res && res.error) ? res.error : 'Error de autenticación';
+          return;
+        }
+        adminToken = res.data.token;
+        sessionStorage.setItem('admin_token', adminToken);
+        showAdmin();
+        loadSolicitudes();
+      })
+      .withFailureHandler(function (err) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Entrar';
+        loginError.textContent = 'Error: ' + (err.message || String(err));
+      })
+      .gs_adminLogin(password);
+  });
+
+  // ── Logout ─────────────────────────────────────────────────
+  document.getElementById('btn-logout') && document.getElementById('btn-logout').addEventListener('click', function () {
+    adminToken = null;
+    sessionStorage.removeItem('admin_token');
+    solicitudes = [];
+    showLogin();
+  });
+
+  // ── Tabs ───────────────────────────────────────────────────
+  document.querySelectorAll('.tab[data-tab]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      currentTab = this.dataset.tab;
+      document.querySelectorAll('.tab[data-tab]').forEach(function (t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      if (currentTab === 'logs') {
+        renderLogs();
+      } else {
+        loadSolicitudes();
+      }
+    });
+  });
+
+  // ── Cargar solicitudes ─────────────────────────────────────
+  function loadSolicitudes() {
+    if (currentTab === 'logs') { renderLogs(); return; }
+    listContainer.innerHTML = '<div class="empty-state"><div class="spinner"></div> Cargando…</div>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) {
+          if (res && (res.error || '').toLowerCase().indexOf('sesión') !== -1) {
+            adminToken = null;
+            sessionStorage.removeItem('admin_token');
+            showLogin();
+            return;
+          }
+          listContainer.innerHTML = '<div class="empty-state">Error: ' + (res ? res.error : 'sin respuesta') + '</div>';
+          return;
+        }
+        solicitudes = res.data || [];
+        updateStats();
+        renderSolicitudes(solicitudes);
+      })
+      .withFailureHandler(function (err) {
+        listContainer.innerHTML = '<div class="empty-state">Error al cargar: ' + (err.message || String(err)) + '</div>';
+      })
+      .gs_listarSolicitudes(adminToken, currentTab);
+  }
+
+  document.getElementById('btn-reload') && document.getElementById('btn-reload').addEventListener('click', loadSolicitudes);
+
+  // ── Stats ──────────────────────────────────────────────────
+  function updateStats() {
+    const pend = solicitudes.filter(function (s) { return s.estado_pago === 'pendiente'; }).length;
+    const apro = solicitudes.filter(function (s) { return s.estado_pago === 'aprobado'; }).length;
+    if (statPendiente) statPendiente.textContent = pend;
+    if (statAprobado)  statAprobado.textContent  = apro;
+    if (statTotal)     statTotal.textContent      = solicitudes.length;
+
+    // Badge en tab pendiente
+    const tabPend = document.querySelector('.tab[data-tab="pendiente"] .badge');
+    if (tabPend) tabPend.textContent = pend || '';
+  }
+
+  // ── Render cards ───────────────────────────────────────────
+  function estadoBadge(ep) {
+    const cls = { pendiente: 'estado-pendiente', aprobado: 'estado-aprobado', rechazado: 'estado-rechazado' }[ep] || 'estado-pendiente';
+    const label = { pendiente: '⏳ Pendiente', aprobado: '✅ Aprobado', rechazado: '❌ Rechazado' }[ep] || ep;
+    return '<span class="estado-badge ' + cls + '">' + label + '</span>';
+  }
+
+  function renderSolicitudes(list) {
+    if (!list || list.length === 0) {
+      listContainer.innerHTML = '<div class="empty-state"><div class="icon">📭</div>No hay solicitudes en esta categoría.</div>';
+      return;
+    }
+
+    listContainer.innerHTML = list.map(function (s) {
+      const voucherHtml = s.voucher_url
+        ? '<a href="' + s.voucher_url + '" target="_blank" class="voucher-link">📎 Ver voucher</a>'
+        : '<span class="muted" style="font-size:12px">Sin voucher aún</span>';
+
+      const botonesHtml = s.estado_pago === 'pendiente'
+        ? '<button class="btn btn-success btn-aprobar" data-id="' + s.id_compra + '" data-info="' + esc(s.nombre + ' — ' + s.plataforma + ' (S/ ' + s.monto + ')') + '">✅ Aprobar</button>' +
+          '<button class="btn btn-danger btn-rechazar" data-id="' + s.id_compra + '" data-info="' + esc(s.nombre + ' — ' + s.plataforma) + '">❌ Rechazar</button>'
+        : '';
+
+      const detalleHtml = s.detalle_extra
+        ? '<div style="margin-top:10px;padding:8px 12px;background:rgba(16,49,45,.05);border-radius:8px;font-size:12px;color:var(--jungle-light)">📋 ' + esc(s.detalle_extra) + '</div>'
+        : '';
+
+      return '<div class="card">' +
+        '<div class="card-header">' +
+          '<div>' +
+            '<div class="card-id">' + s.id_compra + ' · ' + (s.fecha_solicitud || '').slice(0, 10) + '</div>' +
+            '<div class="card-name">' + esc(s.nombre) + '</div>' +
+            '<div class="card-email">✉️ ' + esc(s.correo) + (s.whatsapp ? ' · 📱 ' + esc(s.whatsapp) : '') + '</div>' +
+          '</div>' +
+          '<div>' + estadoBadge(s.estado_pago) + '</div>' +
+        '</div>' +
+        '<div class="card-meta">' +
+          '<span class="chip chip-plat">🎓 ' + esc(s.plataforma) + '</span>' +
+          '<span class="chip chip-monto">S/ ' + s.monto + '</span>' +
+          '<span class="chip chip-metodo">💳 ' + s.metodo_pago + '</span>' +
+          (s.fecha_fin ? '<span class="chip">📅 Vence ' + s.fecha_fin + '</span>' : '') +
+          (s.tiene_password ? '' : '<span class="chip" style="background:rgba(139,92,246,.1);color:#5b21b6">🔑 Sin password (se generará al aprobar)</span>') +
+        '</div>' +
+        detalleHtml +
+        '<div class="card-footer">' +
+          voucherHtml +
+          botonesHtml +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    // Bind botones
+    listContainer.querySelectorAll('.btn-aprobar').forEach(function (btn) {
+      btn.addEventListener('click', function () { openModalAprobar(this.dataset.id, this.dataset.info); });
+    });
+    listContainer.querySelectorAll('.btn-rechazar').forEach(function (btn) {
+      btn.addEventListener('click', function () { openModalRechazar(this.dataset.id, this.dataset.info); });
+    });
+  }
+
+  // ── Modal Aprobar ──────────────────────────────────────────
+  function openModalAprobar(id, info) {
+    modalAprobarId.value = id;
+    modalAprobarInfo.textContent = info;
+    modalAprobar.classList.remove('hidden');
+  }
+  document.getElementById('btn-cancel-aprobar') && document.getElementById('btn-cancel-aprobar').addEventListener('click', function () {
+    modalAprobar.classList.add('hidden');
+  });
+  btnConfAprobar && btnConfAprobar.addEventListener('click', function () {
+    const id = modalAprobarId.value;
+    btnConfAprobar.disabled = true;
+    btnConfAprobar.textContent = 'Aprobando…';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        btnConfAprobar.disabled = false;
+        btnConfAprobar.textContent = '✅ Confirmar aprobación';
+        modalAprobar.classList.add('hidden');
+        if (!res || !res.ok) {
+          showToast('Error: ' + (res ? res.error : 'sin respuesta'), true);
+          return;
+        }
+        showToast('✅ ' + (res.message || 'Pago aprobado'));
+        loadSolicitudes();
+      })
+      .withFailureHandler(function (err) {
+        btnConfAprobar.disabled = false;
+        btnConfAprobar.textContent = '✅ Confirmar aprobación';
+        showToast('Error: ' + (err.message || String(err)), true);
+      })
+      .gs_aprobarPago(adminToken, id);
+  });
+
+  // ── Modal Rechazar ─────────────────────────────────────────
+  function openModalRechazar(id, info) {
+    modalRechazarId.value = id;
+    modalRechazarInfo.textContent = info;
+    inputMotivo.value = '';
+    modalRechazar.classList.remove('hidden');
+  }
+  document.getElementById('btn-cancel-rechazar') && document.getElementById('btn-cancel-rechazar').addEventListener('click', function () {
+    modalRechazar.classList.add('hidden');
+  });
+  btnConfRechazar && btnConfRechazar.addEventListener('click', function () {
+    const id = modalRechazarId.value;
+    const motivo = inputMotivo.value.trim() || 'No especificado';
+    btnConfRechazar.disabled = true;
+    btnConfRechazar.textContent = 'Rechazando…';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        btnConfRechazar.disabled = false;
+        btnConfRechazar.textContent = '❌ Confirmar rechazo';
+        modalRechazar.classList.add('hidden');
+        if (!res || !res.ok) {
+          showToast('Error: ' + (res ? res.error : 'sin respuesta'), true);
+          return;
+        }
+        showToast(res.message || 'Pago rechazado');
+        loadSolicitudes();
+      })
+      .withFailureHandler(function (err) {
+        btnConfRechazar.disabled = false;
+        btnConfRechazar.textContent = '❌ Confirmar rechazo';
+        showToast('Error: ' + (err.message || String(err)), true);
+      })
+      .gs_rechazarPago(adminToken, id, motivo);
+  });
+
+  // ── Logs ───────────────────────────────────────────────────
+  function renderLogs() {
+    logsContainer.classList.remove('hidden');
+    listContainer.classList.add('hidden');
+    logsContainer.innerHTML = '<div class="empty-state"><div class="spinner"></div> Cargando logs…</div>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) {
+          logsContainer.innerHTML = '<div class="empty-state">Error: ' + (res ? res.error : '') + '</div>';
+          return;
+        }
+        const logs = res.data || [];
+        if (logs.length === 0) {
+          logsContainer.innerHTML = '<div class="empty-state">No hay logs.</div>';
+          return;
+        }
+        logsContainer.innerHTML = '<table class="log-table"><thead><tr><th>Timestamp</th><th>Acción</th><th>Usuario</th><th>Nivel</th><th>Detalle</th></tr></thead><tbody>' +
+          logs.map(function (l) {
+            const cls = l.nivel === 'error' ? 'nivel-error' : l.nivel === 'warning' ? 'nivel-warning' : 'nivel-info';
+            return '<tr><td style="white-space:nowrap">' + esc(l.timestamp) + '</td><td>' + esc(l.accion) + '</td><td>' + esc(l.id_usuario) + '</td><td class="' + cls + '">' + esc(l.nivel) + '</td><td>' + esc(l.detalle) + '</td></tr>';
+          }).join('') +
+          '</tbody></table>';
+      })
+      .withFailureHandler(function (err) {
+        logsContainer.innerHTML = '<div class="empty-state">Error: ' + (err.message || '') + '</div>';
+      })
+      .gs_listarLogs(adminToken, 100);
+  }
+
+  // Mostrar/ocultar logs vs lista
+  document.querySelectorAll('.tab[data-tab]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (this.dataset.tab === 'logs') {
+        listContainer.classList.add('hidden');
+        logsContainer.classList.remove('hidden');
+      } else {
+        listContainer.classList.remove('hidden');
+        logsContainer.classList.add('hidden');
+      }
+    });
+  });
+
+  // ── Helpers ────────────────────────────────────────────────
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Boot ───────────────────────────────────────────────────
+  init();
+})();
 </script>

@@ -2,28 +2,120 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Portal Central — Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SINAPSIS EDU — Admin</title>
   <?!= include('views/adminStyles') ?>
 </head>
 <body>
-  <header class="bar">
-    <div class="brand">Portal Central · Admin</div>
-    <div class="env">Fase 0 · stub</div>
-  </header>
 
-  <main class="container">
-    <h1>Panel administrativo</h1>
-    <p class="muted">
-      El panel completo se implementa en <strong>Fase 4</strong>:
-      login, listado de solicitudes pendientes, aprobación/rechazo y envío de credenciales.
-    </p>
-    <div class="card">
-      <h2>Estado del backend</h2>
-      <p>Si ves esta página, <code>doGet?page=admin</code> está sirviendo HTML correctamente.</p>
-      <p>Para probar la API: <code>GET ?ping=1</code> debe devolver JSON con <code>{"ok":true}</code>.</p>
+<!-- ── Top bar ─────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-brand">SINAPSIS EDU · Admin</div>
+  <div class="topbar-right">
+    <span id="admin-user"></span>
+    <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- LOGIN                                                      -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="login-section" class="login-wrap">
+  <div class="login-card">
+    <h1>Admin</h1>
+    <p>Ingresa la contraseña del panel de administración.</p>
+    <form id="login-form">
+      <label for="admin-password">Contraseña</label>
+      <input type="password" id="admin-password" placeholder="••••••••••" required autocomplete="current-password" />
+      <div id="login-error" style="color:var(--danger);font-size:13px;margin-bottom:10px;min-height:18px"></div>
+      <button type="submit" class="btn btn-primary" id="login-btn" style="width:100%">Entrar →</button>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PANEL PRINCIPAL                                            -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="admin-section" class="hidden">
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-chip">
+        <div class="num" id="stat-pendiente">—</div>
+        <div class="lbl">Pendientes</div>
+      </div>
+      <div class="stat-chip">
+        <div class="num" id="stat-aprobado">—</div>
+        <div class="lbl">Aprobados</div>
+      </div>
+      <div class="stat-chip">
+        <div class="num" id="stat-total">—</div>
+        <div class="lbl">En vista</div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end">
+        <button class="btn btn-ghost" id="btn-reload" style="gap:6px">↺ Actualizar</button>
+      </div>
     </div>
-  </main>
 
-  <?!= include('views/adminScript') ?>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="pendiente">⏳ Pendientes <span class="badge" id="badge-pendiente"></span></button>
+      <button class="tab" data-tab="aprobado">✅ Aprobados</button>
+      <button class="tab" data-tab="rechazado">❌ Rechazados</button>
+      <button class="tab" data-tab="todos">📋 Todos</button>
+      <button class="tab" data-tab="logs">🗂 Logs</button>
+    </div>
+
+    <!-- Lista -->
+    <div id="list-container">
+      <div class="empty-state"><div class="spinner"></div> Cargando…</div>
+    </div>
+
+    <!-- Logs -->
+    <div id="logs-container" class="hidden"></div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- MODAL: APROBAR                                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="modal-aprobar" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>✅ Aprobar pago</h2>
+    <p id="modal-aprobar-info" style="font-weight:600;color:var(--jungle);font-size:15px"></p>
+    <p>Al aprobar:</p>
+    <ul style="color:var(--jungle-light);font-size:13px;padding-left:20px;line-height:2">
+      <li>El acceso se activa inmediatamente.</li>
+      <li>Si es usuario nuevo, se genera contraseña y se envía por correo.</li>
+      <li>El alumno recibe un email con sus credenciales y el enlace al portal.</li>
+    </ul>
+    <input type="hidden" id="modal-aprobar-id" />
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel-aprobar">Cancelar</button>
+      <button class="btn btn-success" id="btn-conf-aprobar">✅ Confirmar aprobación</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- MODAL: RECHAZAR                                            -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="modal-rechazar" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>❌ Rechazar pago</h2>
+    <p id="modal-rechazar-info" style="font-weight:600;color:var(--jungle);font-size:15px"></p>
+    <label for="input-motivo">Motivo del rechazo (se envía al alumno)</label>
+    <textarea id="input-motivo" rows="3" placeholder="Ej: El voucher no es legible. Por favor envía una foto más clara."></textarea>
+    <input type="hidden" id="modal-rechazar-id" />
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel-rechazar">Cancelar</button>
+      <button class="btn btn-danger" id="btn-conf-rechazar">❌ Confirmar rechazo</button>
+    </div>
+  </div>
+</div>
+
+<?!= include('views/adminScript') ?>
 </body>
 </html>
