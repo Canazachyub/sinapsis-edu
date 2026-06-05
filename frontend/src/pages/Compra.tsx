@@ -10,6 +10,7 @@ import { PagarConCripto } from '@/components/PagarConCripto';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { AnatomiaSegmentos } from '@/components/AnatomiaSegmentos';
 import { usePlataformas } from '@/hooks/usePlataformas';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { callApi } from '@/api/client';
 import { BCP_SOLES, YAPE, BINANCE } from '@/config/pago';
 import { PRECIO_POR_SEGMENTO_PEN, SEGMENTOS_ANATOMIA } from '@/data/segmentosAnatomia';
@@ -171,6 +172,7 @@ export function Compra() {
   const { plataformas } = usePlataformas();
   const data = plataformas.find((p) => p.slug === slug);
   const navigate = useNavigate();
+  useDocumentTitle(data ? `Comprar ${data.nombre}` : 'Comprar acceso');
 
   // Estado del flujo
   const [metodo, setMetodo] = useState<MetodoPago>('yape');
@@ -415,7 +417,13 @@ export function Compra() {
 
                     {idCompraCreada && (
                       <div className="mt-4 text-sm bg-success/10 border border-success/30 rounded-lg px-3 py-2">
-                        ✅ Solicitud <strong>{idCompraCreada}</strong> registrada. Solo falta el voucher.
+                        {enviando === 'subiendo' ? (
+                          <>⏳ Compra <strong>{idCompraCreada}</strong> registrada. Subiendo tu voucher…</>
+                        ) : error ? (
+                          <>⚠️ Compra <strong>{idCompraCreada}</strong> registrada, pero el voucher no se subió. Vuelve a intentar (no se cobra de nuevo).</>
+                        ) : (
+                          <>✅ Compra <strong>{idCompraCreada}</strong> registrada. Confirma para subir tu voucher.</>
+                        )}
                       </div>
                     )}
 
@@ -432,7 +440,7 @@ export function Compra() {
                     >
                       {enviando === 'registrando' && (<><Loader2 className="w-4 h-4 animate-spin" /> Registrando…</>)}
                       {enviando === 'subiendo' && (<><Loader2 className="w-4 h-4 animate-spin" /> Subiendo voucher…</>)}
-                      {!enviando && 'Confirmar solicitud'}
+                      {!enviando && (idCompraCreada ? 'Reintentar subir voucher' : 'Confirmar solicitud')}
                     </button>
                   </div>
                 </>

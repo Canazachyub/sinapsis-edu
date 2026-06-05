@@ -125,10 +125,7 @@ export function PlataformaCard({ data }: { data: PlataformaCardData }) {
 
       <div className="mt-5 flex flex-col gap-2">
         <Link to={`/compra/${data.slug}`} className="btn-primary w-full">Comprar acceso</Link>
-        <Link
-          to={`/plataforma/${data.slug}`}
-          className="text-sm text-jungle-light hover:text-jungle text-center underline-offset-4 hover:underline"
-        >
+        <Link to={`/plataforma/${data.slug}`} className="btn-ghost w-full justify-center">
           Ver detalles
         </Link>
       </div>

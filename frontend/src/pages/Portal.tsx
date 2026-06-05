@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Clock, LogOut, AlertCircle, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
+import { Clock, LogOut, AlertCircle, CheckCircle2, XCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { callApi } from '@/api/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 interface AccesoData {
   id_acceso: string;
@@ -44,7 +45,16 @@ function venceTexto(dias: number | null): string {
   return `vence en ${dias} días`;
 }
 
+/** ISO "YYYY-MM-DD" → "DD/MM/AAAA" (sin desfase de zona horaria). */
+function formatFecha(iso: string): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+}
+
 export function Portal() {
+  useDocumentTitle('Mi portal');
   const { user, token, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -127,6 +137,24 @@ export function Portal() {
           </div>
         )}
 
+        {/* ── Skeleton de carga ── */}
+        {loading && (
+          <div className="mt-10">
+            <div className="inline-flex items-center gap-2 text-jungle-light text-sm">
+              <Loader2 className="w-5 h-5 animate-spin" /> Cargando tus accesos…
+            </div>
+            <div className="mt-5 grid gap-6 md:grid-cols-2 lg:grid-cols-3" aria-hidden>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="bg-white border border-jungle/10 rounded-2xl p-6 shadow-card animate-pulse">
+                  <div className="h-6 w-2/3 bg-jungle/10 rounded" />
+                  <div className="mt-3 h-4 w-1/2 bg-jungle/10 rounded" />
+                  <div className="mt-6 h-10 w-full bg-jungle/10 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Accesos activos ── */}
         {!loading && accesos.length > 0 && (
           <section className="mt-10">
@@ -143,6 +171,9 @@ export function Portal() {
                   <div className={`mt-2 inline-flex items-center gap-1.5 text-sm font-medium ${venceColor(a.dias_restantes)}`}>
                     <Clock className="w-4 h-4" /> {venceTexto(a.dias_restantes)}
                   </div>
+                  {a.fecha_fin && (
+                    <div className="mt-1 text-xs text-jungle-light">Vence el {formatFecha(a.fecha_fin)}</div>
+                  )}
                   <Link to={`/aula/${a.slug}`} className="btn-primary w-full mt-5">
                     Entrar al aula
                   </Link>

@@ -37,11 +37,13 @@ export function Navbar() {
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-7 text-sm font-medium text-jungle/80">
+        <div className="hidden md:flex items-center gap-5 lg:gap-6 text-sm font-medium text-jungle/80">
           <ScrollLink to="plataformas" className="hover:text-jungle cursor-pointer">Plataformas</ScrollLink>
+          <ScrollLink to="programa" className="hover:text-jungle cursor-pointer">Programa</ScrollLink>
           <ScrollLink to="beneficios" className="hover:text-jungle cursor-pointer">Beneficios</ScrollLink>
           <ScrollLink to="cursos" className="hover:text-jungle cursor-pointer">Cursos</ScrollLink>
           <ScrollLink to="nosotros" className="hover:text-jungle cursor-pointer">Nosotros</ScrollLink>
+          <ScrollLink to="faq" className="hover:text-jungle cursor-pointer">FAQ</ScrollLink>
           <ScrollLink to="contacto" className="hover:text-jungle cursor-pointer">Contacto</ScrollLink>
         </div>
 
@@ -83,6 +85,9 @@ export function Navbar() {
               <ScrollLink to="plataformas" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
                 Plataformas
               </ScrollLink>
+              <ScrollLink to="programa" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
+                Programa
+              </ScrollLink>
               <ScrollLink to="beneficios" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
                 Beneficios
               </ScrollLink>
@@ -91,6 +96,9 @@ export function Navbar() {
               </ScrollLink>
               <ScrollLink to="nosotros" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
                 Nosotros
+              </ScrollLink>
+              <ScrollLink to="faq" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
+                FAQ
               </ScrollLink>
               <ScrollLink to="contacto" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
                 Contacto

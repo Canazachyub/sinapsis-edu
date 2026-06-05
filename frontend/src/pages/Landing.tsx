@@ -10,7 +10,9 @@ import { ScrollLink } from '@/components/ScrollLink';
 import { CursosCarousel } from '@/components/CursosCarousel';
 import { CursosEspecializados } from '@/components/CursosEspecializados';
 import { MisionVisionValores } from '@/components/MisionVisionValores';
+import { FaqLanding } from '@/components/FaqLanding';
 import { usePlataformas } from '@/hooks/usePlataformas';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { ping } from '@/api/client';
 
 interface BenefitData {
@@ -50,6 +52,7 @@ const STATS: Stat[] = [
 ];
 
 export function Landing() {
+  useDocumentTitle();
   const { plataformas } = usePlataformas();
   const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'setup-pending' | 'down'>('unknown');
   const location = useLocation();
@@ -91,9 +94,12 @@ export function Landing() {
               <strong className="font-bold"> justificaciones</strong>, simulacros y
               <strong className="font-bold"> acceso 24/7</strong>.
             </p>
-            <div className="mt-6 md:mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 md:mt-8 flex flex-wrap items-center gap-3">
               <ScrollLink to="plataformas" className="btn-primary cursor-pointer">Ver plataformas</ScrollLink>
               <ScrollLink to="beneficios" className="btn-ghost cursor-pointer">¿Cómo funciona?</ScrollLink>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-jungle/10 text-jungle border border-jungle/15">
+                ✨ Demo gratuita · Próximamente
+              </span>
             </div>
             <div className="mt-6 md:mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm text-jungle/80">
               <span className="inline-flex items-center gap-2">
@@ -179,6 +185,7 @@ export function Landing() {
       <CursosEspecializados />
       <CursosCarousel />
       <MisionVisionValores />
+      <FaqLanding />
 
       <Footer />
       <WhatsAppFloating />

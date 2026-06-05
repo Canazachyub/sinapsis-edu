@@ -1,16 +1,35 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { Clock, LogOut } from 'lucide-react';
 import { IframeViewer } from '@/components/IframeViewer';
 import { callApi } from '@/api/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+
+interface AulaData {
+  url: string;
+  nombre?: string;
+  fecha_fin?: string;
+  dias_restantes?: number | null;
+}
+
+/** ISO "YYYY-MM-DD" → "DD/MM/AAAA". */
+function formatFecha(iso?: string): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+}
 
 export function Aula() {
   const { slug } = useParams<{ slug: string }>();
   const { token, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
-  const [url, setUrl] = useState<string | null>(null);
+  const [data, setData] = useState<AulaData | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const url = data?.url ?? null;
+  useDocumentTitle(data?.nombre ?? slug ?? 'Aula');
 
   useEffect(() => {
     if (!isAuthenticated || !token) {
@@ -22,7 +41,7 @@ export function Aula() {
       return;
     }
     let cancelled = false;
-    callApi<{ url: string }>('obtenerUrlPlataforma', { token, slug }).then((res) => {
+    callApi<AulaData>('obtenerUrlPlataforma', { token, slug }).then((res) => {
       if (cancelled) return;
       if (!res.ok || !res.data) {
         const expired = (res.error || '').toLowerCase().includes('sesi');
@@ -34,7 +53,7 @@ export function Aula() {
         setError(res.error || 'No se pudo cargar la plataforma');
         return;
       }
-      setUrl(res.data.url);
+      setData(res.data);
     });
     return () => { cancelled = true; };
   }, [slug, isAuthenticated, token, navigate, logout]);
@@ -52,7 +71,12 @@ export function Aula() {
             <img src="/images/logo/logo-blanco.png" alt="SINAPSIS EDU" className="h-7 w-auto" />
           </Link>
           <span className="text-cream/40">|</span>
-          <span className="uppercase text-sm font-medium text-lime">{slug}</span>
+          <span className="uppercase text-sm font-medium text-lime">{data?.nombre ?? slug}</span>
+          {data?.fecha_fin && (
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-cream/70 border-l border-cream/20 pl-3 ml-1">
+              <Clock className="w-3.5 h-3.5" /> Vence: {formatFecha(data.fecha_fin)}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <Link to="/portal" className="text-sm text-cream/80 hover:text-lime">Mis accesos</Link>

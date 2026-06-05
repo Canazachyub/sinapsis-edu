@@ -1,4 +1,14 @@
+import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
+
+const FOOTER_PLATAFORMAS: Array<{ label: string; slug: string }> = [
+  { label: 'Banco ENAM', slug: 'enam' },
+  { label: 'Banco ENCIB', slug: 'encib' },
+  { label: 'Banco ENCAPS', slug: 'encaps' },
+  { label: 'Residentado Médico', slug: 'rm' },
+  { label: 'Banco EsSalud', slug: 'essalud' },
+  { label: 'Biblioteca Médica', slug: 'biblioteca' },
+];
 
 export function Footer() {
   return (
@@ -21,12 +31,13 @@ export function Footer() {
         <div>
           <div className="font-semibold mb-3 text-lime">Plataformas</div>
           <ul className="space-y-2 text-sm opacity-80">
-            <li>Banco ENAM</li>
-            <li>Banco ENCIB</li>
-            <li>Banco ENCAPS</li>
-            <li>Residentado Médico</li>
-            <li>Banco EsSalud</li>
-            <li>Biblioteca Médica</li>
+            {FOOTER_PLATAFORMAS.map((p) => (
+              <li key={p.slug}>
+                <Link to={`/plataforma/${p.slug}`} className="hover:text-lime transition-colors">
+                  {p.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 

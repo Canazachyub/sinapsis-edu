@@ -1,4 +1,5 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { ScrollToTop } from '@/components/ScrollToTop';
 import { Landing } from '@/pages/Landing';
 import { Plataforma } from '@/pages/Plataforma';
 import { Compra } from '@/pages/Compra';
@@ -11,6 +12,7 @@ import { Aula } from '@/pages/Aula';
 export function Router() {
   return (
     <HashRouter>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/plataforma/:slug" element={<Plataforma />} />

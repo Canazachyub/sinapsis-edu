@@ -3,8 +3,10 @@ import { Check, Mail, MessageCircle, Clock } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export function Gracias() {
+  useDocumentTitle('¡Gracias!');
   const location = useLocation();
   // Con HashRouter el query string vive después de un segundo `?`.
   // Ej: /#/gracias?id=C-001 → location.search = "?id=C-001"

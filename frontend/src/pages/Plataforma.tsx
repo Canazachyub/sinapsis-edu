@@ -7,6 +7,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { usePlataformas } from '@/hooks/usePlataformas';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { LucideIcon } from 'lucide-react';
 import { SEGMENTOS_ANATOMIA, PRECIO_POR_SEGMENTO_PEN } from '@/data/segmentosAnatomia';
 
@@ -204,6 +205,15 @@ const INFO: Record<string, PlataformaInfo> = {
   },
 };
 
+// Alias de slugs: URLs alternativas que la gente comparte/recuerda → slug canónico.
+const SLUG_ALIASES: Record<string, string> = {
+  residentado: 'rm',
+  'residentado-medico': 'rm',
+  'ciencias-basicas': 'encib',
+  cb: 'encib',
+  testut: 'anatomia',
+};
+
 // ── Componente principal ───────────────────────────────────────
 
 function formatDuracion(dias: number): string {
@@ -225,10 +235,14 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 export function Plataforma() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: rawSlug } = useParams<{ slug: string }>();
+  // Normaliza alias (ej. "residentado" → "rm") antes de buscar.
+  const slug = rawSlug ? (SLUG_ALIASES[rawSlug] ?? rawSlug) : undefined;
   const { plataformas } = usePlataformas();
   const data = plataformas.find((p) => p.slug === slug);
   const info = slug ? INFO[slug] : undefined;
+
+  useDocumentTitle(data?.nombre);
 
   if (!data) {
     return (
