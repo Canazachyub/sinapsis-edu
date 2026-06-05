@@ -1,7 +1,9 @@
 # Auditoría UX/QA — SINAPSIS EDU
 
-> Backlog vivo del test E2E por fases (agente de navegador + revisión de código).
-> Estado: **Fase 1 recibida y verificada en código.** Fases 2-4 pendientes.
+> Backlog del test E2E por fases (agente de navegador + revisión de código).
+> Estado: **✅ 4 fases completas. Grupo A + decisiones del Grupo B implementados
+> y desplegados (2026-06-05).** Ver el detalle de cambios en `CHANGELOG.md`.
+> Quedan: B3 pricing, A5 acentos en Sheet, y la deuda de seguridad (#2–#7).
 
 ---
 
