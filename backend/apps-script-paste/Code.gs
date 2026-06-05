@@ -1370,7 +1370,23 @@ function obtenerUrlPlataforma(req) {
   const plat = findPlataformaBySlug(slug);
   if (!plat) return fail('Plataforma no encontrada');
 
-  if (!hasActiveAccess(String(session.id_usuario), String(plat.id_plataforma))) {
+  // Buscar la compra activa del usuario para esta plataforma (para devolver el vencimiento).
+  const compras = readAll(SHEET_NAMES.COMPRAS);
+  const today = todayIso();
+  let acceso = null;
+  for (let i = 0; i < compras.length; i++) {
+    const c = compras[i];
+    if (String(c.id_usuario) !== String(session.id_usuario)) continue;
+    if (String(c.id_plataforma) !== String(plat.id_plataforma)) continue;
+    if (String(c.estado_pago) !== 'aprobado') continue;
+    if (String(c.estado_acceso) !== 'activo') continue;
+    const finIso = toIsoDate(c.fecha_fin);
+    if (finIso && finIso < today) continue;
+    acceso = c;
+    break;
+  }
+
+  if (!acceso) {
     log({
       accion: 'obtenerUrlPlataforma',
       idUsuario: String(session.id_usuario),
@@ -1381,7 +1397,73 @@ function obtenerUrlPlataforma(req) {
   }
 
   log({ accion: 'obtenerUrlPlataforma', idUsuario: String(session.id_usuario), nivel: 'info', detalle: slug });
-  return ok({ url: String(plat.url_real) });
+  return ok({
+    url: String(plat.url_real),
+    nombre: String(plat.nombre),
+    fecha_fin: toIsoDate(acceso.fecha_fin),
+    dias_restantes: daysUntil(acceso.fecha_fin)
+  });
+}
+
+// ─── recuperarPassword: reset self-service por correo ────────
+
+/**
+ * Genera una nueva contraseña para el usuario, la hashea, actualiza Usuarios
+ * y la envía por correo. La respuesta es SIEMPRE genérica: no revela si el
+ * correo existe (evita enumeración de cuentas).
+ */
+function recuperarPassword(req) {
+  const correo = String(req.correo || '').trim().toLowerCase();
+  const generico = ok({}, 'Si el correo está registrado, te enviamos una nueva contraseña.');
+  try {
+    if (!isEmail(correo)) return generico;
+
+    const user = findUsuarioByCorreo(correo);
+    if (!user) {
+      log({ accion: 'recuperarPassword', nivel: 'warning', detalle: 'correo no registrado: ' + correo });
+      return generico;
+    }
+    if (String(user.estado) !== 'activo') {
+      log({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'cuenta no activa' });
+      return generico;
+    }
+
+    const nuevaPass = randomToken(10);
+    const salt = generateSalt();
+    const hash = hashPassword(nuevaPass, salt);
+    const userRow = findRowIndex(SHEET_NAMES.USUARIOS, 1, String(user.id_usuario));
+    if (userRow > 0) {
+      const sheetUsuarios = getSheet(SHEET_NAMES.USUARIOS);
+      sheetUsuarios.getRange(userRow, 5).setValue(hash);
+      sheetUsuarios.getRange(userRow, 6).setValue(salt);
+    }
+
+    try {
+      const portalUrl = 'https://sinapsisedu.com/#/login';
+      const emailBody =
+        '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
+        '<h2 style="color:#10312D;margin:0 0 16px">Recuperación de contraseña 🔑</h2>' +
+        '<p>Hola <strong>' + String(user.nombre) + '</strong>,</p>' +
+        '<p>Generamos una nueva contraseña para tu cuenta:</p>' +
+        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + String(user.correo) + '</code></p>' +
+        '<p><strong>🔑 Nueva contraseña:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + nuevaPass + '</code></p>' +
+        '<div style="margin:28px 0">' +
+        '<a href="' + portalUrl + '" style="background:#10312D;color:#C2E476;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Entrar al Portal →</a>' +
+        '</div>' +
+        '<p style="font-size:12px;color:#3D5752">Si no pediste esto, escríbenos por WhatsApp: <a href="https://wa.me/51984300510">+51 984 300 510</a></p>' +
+        '</div>';
+      enviarCorreo(String(user.correo), '🔑 Nueva contraseña — SINAPSIS EDU', emailBody);
+    } catch (emailErr) {
+      log({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'falla email: ' + emailErr });
+    }
+
+    log({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'password regenerada' });
+    return generico;
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log({ accion: 'recuperarPassword', nivel: 'error', detalle: detalle });
+    return generico;
+  }
 }
 
 // ─── misSolicitudes: historial completo del alumno ───────────
@@ -1586,6 +1668,7 @@ function dispatchPublic(req) {
     case 'misAccesos':               return misAccesos(req);
     case 'misSolicitudes':           return misSolicitudes(req);
     case 'obtenerUrlPlataforma':     return obtenerUrlPlataforma(req);
+    case 'recuperarPassword':        return recuperarPassword(req);
     default:                         return fail('Accion desconocida: ' + action);
   }
 }
