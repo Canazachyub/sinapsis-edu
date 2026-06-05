@@ -43,4 +43,13 @@
   .container-x {
     @apply mx-auto max-w-[1280px] px-6 md:px-20;
   }
+  .btn-primary-lime {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-3
+           font-semibold text-jungle bg-lime
+           transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-cta;
+  }
+  .pill-lime {
+    @apply inline-flex items-center gap-2 rounded-pill px-4 py-1.5
+           text-sm font-semibold bg-lime/15 text-lime border border-lime/20;
+  }
 }
