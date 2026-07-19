@@ -79,11 +79,48 @@ function nextId(prefix, lastNumber) {
 
 function randomToken(length) {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  // CSPRNG: Utilities.getUuid() usa java.security.SecureRandom por debajo.
+  // Concatenamos UUIDs sin guiones hasta tener 2 hex chars (1 byte) por
+  // caracter de salida, y mapeamos cada byte al charset alfanumerico.
+  let hex = '';
+  while (hex.length < length * 2) {
+    hex += Utilities.getUuid().replace(/-/g, '');
+  }
   let out = '';
   for (let i = 0; i < length; i++) {
-    out += chars.charAt(Math.floor(Math.random() * chars.length));
+    const byte = parseInt(hex.substr(i * 2, 2), 16);
+    out += chars.charAt(byte % chars.length);
   }
   return out;
+}
+
+/** Escapa & < > " ' para interpolar valores de origen usuario en htmlBody. */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Rate limit real por bucket usando CacheService (TTL 1 hora).
+ * Limite = Property RATE_LIMIT_PER_HOUR (default 10).
+ * Devuelve true si el bucket YA excedio el limite (bloquear request).
+ * Fail-open: si CacheService falla, no bloquea.
+ */
+function checkRateLimit(bucketKey) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const limit = Number(getProperty('RATE_LIMIT_PER_HOUR')) || 10;
+    const current = Number(cache.get(bucketKey)) || 0;
+    if (current >= limit) return true;
+    cache.put(bucketKey, String(current + 1), 3600);
+    return false;
+  } catch (e) {
+    return false;
+  }
 }
 
 function hashPassword(password, salt) {
@@ -831,11 +868,27 @@ function adminLogin(req) {
     const password = String(req.password || '').trim();
     if (!isNonEmptyString(password)) return fail('Falta la contraseña');
 
-    const storedPass = getProperty('ADMIN_PASSWORD');
-    if (!storedPass) {
+    const storedHash = getProperty('ADMIN_PASSWORD_HASH');
+    const storedSalt = getProperty('ADMIN_PASSWORD_SALT');
+    const legacyPass = getProperty('ADMIN_PASSWORD');
+
+    let valid = false;
+    if (storedHash && storedSalt) {
+      valid = hashPassword(password, storedSalt) === storedHash;
+    } else if (legacyPass) {
+      valid = password === legacyPass;
+      if (valid) {
+        // Migracion en caliente: texto plano legado → hash+salt, sin reconfigurar nada.
+        const salt = generateSalt();
+        setProperty('ADMIN_PASSWORD_HASH', hashPassword(password, salt));
+        setProperty('ADMIN_PASSWORD_SALT', salt);
+        PropertiesService.getScriptProperties().deleteProperty('ADMIN_PASSWORD');
+        log({ accion: 'adminLogin', nivel: 'info', detalle: 'ADMIN_PASSWORD migrado a hash+salt' });
+      }
+    } else {
       return fail('ADMIN_PASSWORD no configurado. Agrégalo en Configuración del Proyecto → Propiedades del script.');
     }
-    if (password !== storedPass) {
+    if (!valid) {
       log({ accion: 'adminLogin', nivel: 'warning', detalle: 'contraseña admin incorrecta' });
       return fail('Credenciales incorrectas');
     }
@@ -847,6 +900,23 @@ function adminLogin(req) {
   } catch (err) {
     return fail('Error interno: ' + (err instanceof Error ? err.message : String(err)));
   }
+}
+
+/**
+ * EDITOR-ONLY: rota la contraseña admin desde el editor de Apps Script.
+ * Uso: setAdminPassword('MiNuevaClave'). Genera salt+hash, los guarda en
+ * Properties y borra cualquier ADMIN_PASSWORD en texto plano.
+ * No se expone en ningún dispatcher.
+ */
+function setAdminPassword(plain) {
+  const password = String(plain || '').trim();
+  if (!password) return { ok: false, error: 'Contraseña vacía' };
+  const salt = generateSalt();
+  setProperty('ADMIN_PASSWORD_HASH', hashPassword(password, salt));
+  setProperty('ADMIN_PASSWORD_SALT', salt);
+  PropertiesService.getScriptProperties().deleteProperty('ADMIN_PASSWORD');
+  log({ accion: 'setAdminPassword', nivel: 'info', detalle: 'contraseña admin rotada desde el editor' });
+  return { ok: true };
 }
 
 function listarSolicitudes(req) {
@@ -971,10 +1041,10 @@ function aprobarPago(req) {
       let emailBody =
         '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
         '<h2 style="color:#10312D;margin:0 0 16px">¡Tu acceso fue aprobado! ✅</h2>' +
-        '<p>Hola <strong>' + nombre + '</strong>,</p>' +
-        '<p>Tu pago para <strong>' + platNombre + '</strong> fue verificado. Ya puedes acceder.</p>' +
+        '<p>Hola <strong>' + escapeHtml(nombre) + '</strong>,</p>' +
+        '<p>Tu pago para <strong>' + escapeHtml(platNombre) + '</strong> fue verificado. Ya puedes acceder.</p>' +
         '<hr style="border:none;border-top:1px solid rgba(16,49,45,.1);margin:20px 0">' +
-        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + correo + '</code></p>';
+        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + escapeHtml(correo) + '</code></p>';
       if (plainPassword) {
         emailBody += '<p><strong>🔑 Contraseña:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + plainPassword + '</code></p>' +
           '<p style="font-size:13px;color:#3D5752"><em>Guarda esta contraseña. No se la volveremos a enviar.</em></p>';
@@ -1066,9 +1136,9 @@ function rechazarPago(req) {
             '❌ Pago no verificado — ' + platNombre + ' | SINAPSIS EDU',
             '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
             '<h2 style="color:#10312D;margin:0 0 16px">Tu pago no pudo verificarse ❌</h2>' +
-            '<p>Hola <strong>' + nombre + '</strong>,</p>' +
-            '<p>Lamentablemente no pudimos verificar tu pago para <strong>' + platNombre + '</strong>.</p>' +
-            '<p><strong>Motivo:</strong> ' + motivo + '</p>' +
+            '<p>Hola <strong>' + escapeHtml(nombre) + '</strong>,</p>' +
+            '<p>Lamentablemente no pudimos verificar tu pago para <strong>' + escapeHtml(platNombre) + '</strong>.</p>' +
+            '<p><strong>Motivo:</strong> ' + escapeHtml(motivo) + '</p>' +
             '<p>Por favor comunícate con nosotros para solucionarlo:</p>' +
             '<p><a href="https://wa.me/51984300510?text=Hola%2C%20mi%20pago%20' + idCompra + '%20fue%20rechazado%2C%20quisiera%20aclarar." style="background:#10312D;color:#C2E476;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Escribir por WhatsApp →</a></p>' +
             '</div>'
@@ -1107,6 +1177,11 @@ function registrarCompra(req) {
     const idPlataforma = String(req.id_plataforma || '').trim();
     const metodoPago = String(req.metodo_pago || '').trim().toLowerCase();
     const monto = Number(req.monto || 0);
+
+    if (checkRateLimit('rl_compra_' + correo)) {
+      log({ accion: 'registrarCompra', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
+      return fail('Demasiados intentos. Espera unos minutos.');
+    }
 
     if (!isNonEmptyString(nombre) || nombre.length < 3) return fail('Nombre invalido');
     if (!isEmail(correo)) return fail('Correo invalido');
@@ -1167,15 +1242,31 @@ function registrarCompra(req) {
     try {
       const ssUrl = getSpreadsheet().getUrl();
       const detalleHtml = detalleExtra
-        ? `<p><strong>Detalles:</strong> <code>${detalleExtra}</code></p>`
+        ? `<p><strong>Detalles:</strong> <code>${escapeHtml(detalleExtra)}</code></p>`
         : '';
+      // Alerta de monto: solo si NO hay detalle_extra (precio fijo) y el monto
+      // reportado no coincide con el precio esperado (promocional si existe).
+      let alertaMonto = '';
+      if (!detalleExtra) {
+        const promoNum = (plat.precio_promocional === undefined || plat.precio_promocional === '')
+          ? NaN : Number(plat.precio_promocional);
+        const precioBase = Number(plat.precio);
+        const precioEsperado = (!isNaN(promoNum) && promoNum > 0) ? promoNum : precioBase;
+        const coincide = (monto === precioEsperado) || (isFinite(precioBase) && monto === precioBase);
+        if (isFinite(precioEsperado) && !coincide) {
+          alertaMonto = '<p style="color:#b45309"><strong>⚠️ Monto reportado S/' + monto.toFixed(2) +
+            ' no coincide con el precio base S/' + precioEsperado.toFixed(2) +
+            ' — verificar voucher.</strong></p>';
+        }
+      }
       notificarAdmin(
         '[SINAPSIS EDU] Nueva compra ' + idCompra + ' - ' + plat.nombre,
         '<h2 style="color:#10312D">Nueva solicitud de compra</h2>' +
         '<p><strong>ID compra:</strong> ' + idCompra + '</p>' +
-        '<p><strong>Alumno:</strong> ' + nombre + ' (' + correo + ', WhatsApp ' + whatsapp + ')</p>' +
+        '<p><strong>Alumno:</strong> ' + escapeHtml(nombre) + ' (' + escapeHtml(correo) + ', WhatsApp ' + escapeHtml(whatsapp) + ')</p>' +
         '<p><strong>Plataforma:</strong> ' + plat.nombre + ' (' + idPlataforma + ')</p>' +
         '<p><strong>Monto:</strong> S/ ' + monto.toFixed(2) + '</p>' +
+        alertaMonto +
         '<p><strong>Metodo:</strong> ' + metodoPago + '</p>' +
         detalleHtml +
         '<p>El alumno subira el voucher en los proximos minutos.</p>' +
@@ -1218,6 +1309,12 @@ function subirVoucher(req) {
     const filename = String(req.nombre || req.filename || 'voucher.png').trim();
 
     if (!isNonEmptyString(idCompra)) return fail('Falta id_compra');
+
+    if (checkRateLimit('rl_voucher_' + idCompra)) {
+      log({ accion: 'subirVoucher', nivel: 'warning', detalle: 'rate limit excedido: ' + idCompra });
+      return fail('Demasiados intentos. Espera unos minutos.');
+    }
+
     if (!isNonEmptyString(archivoBase64)) return fail('Falta archivo');
 
     const v = validateVoucher(mime, archivoBase64);
@@ -1226,12 +1323,27 @@ function subirVoucher(req) {
     const rowIndex = findRowIndex(SHEET_NAMES.COMPRAS, 1, idCompra);
     if (rowIndex < 0) return fail('Compra no encontrada');
 
+    // Guard: solo compras pendientes y sin voucher previo admiten subida.
+    // (El reintento legitimo pasa: si la primera subida fallo, voucher_url
+    // quedo vacio y estado_pago sigue 'pendiente'.)
+    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+    const filaCompra = sheetCompras.getRange(rowIndex, 1, 1, HEADERS_COMPRAS.length).getValues()[0];
+    const estadoPagoActual = String(filaCompra[7] || '').trim();   // col 8: estado_pago
+    const voucherActual = String(filaCompra[6] || '').trim();      // col 7: voucher_url
+    if (estadoPagoActual !== 'pendiente') {
+      log({ accion: 'subirVoucher', nivel: 'warning', detalle: idCompra + ' rechazado: estado_pago=' + estadoPagoActual });
+      return fail('Esta solicitud ya no admite voucher.');
+    }
+    if (voucherActual) {
+      log({ accion: 'subirVoucher', nivel: 'warning', detalle: idCompra + ' rechazado: ya tiene voucher' });
+      return fail('Esta compra ya tiene un voucher.');
+    }
+
     // Subir a Drive
     const safeName = idCompra + '_' + Date.now() + '_' + filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const subida = subirVoucherDrive(archivoBase64, mime, safeName);
 
     // Actualizar columna voucher_url (columna 7 en HEADERS_COMPRAS)
-    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
     sheetCompras.getRange(rowIndex, 7).setValue(subida.fileUrl);
 
     // Leer la compra completa para el email
@@ -1263,9 +1375,9 @@ function subirVoucher(req) {
         '[SINAPSIS EDU] Voucher subido: ' + idCompra,
         '<h2 style="color:#10312D">Voucher recibido</h2>' +
         '<p><strong>Compra:</strong> ' + idCompra + '</p>' +
-        '<p><strong>Plataforma:</strong> ' + plataforma + '</p>' +
-        '<p><strong>Monto:</strong> S/ ' + monto + '</p>' +
-        '<p><strong>Alumno:</strong> ' + alumnoCorreo + '</p>' +
+        '<p><strong>Plataforma:</strong> ' + escapeHtml(plataforma) + '</p>' +
+        '<p><strong>Monto:</strong> S/ ' + escapeHtml(monto) + '</p>' +
+        '<p><strong>Alumno:</strong> ' + escapeHtml(alumnoCorreo) + '</p>' +
         '<p><a href="' + subida.fileUrl + '">Ver voucher en Drive</a></p>' +
         '<p>Revisa y aprueba desde el panel admin.</p>'
       );
@@ -1289,6 +1401,12 @@ function loginAlumno(req) {
   try {
     const correo = String(req.correo || '').trim();
     const password = String(req.password || '');
+
+    if (checkRateLimit('rl_login_' + correo.toLowerCase())) {
+      log({ accion: 'loginAlumno', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
+      return fail('Demasiados intentos. Espera unos minutos.');
+    }
+
     if (!isEmail(correo)) return fail('Correo invalido');
     if (!isNonEmptyString(password)) return fail('Falta la contrasena');
 
@@ -1422,6 +1540,12 @@ function recuperarPassword(req) {
   const correo = String(req.correo || '').trim().toLowerCase();
   const generico = ok({}, 'Si el correo está registrado, te enviamos una nueva contraseña.');
   try {
+    // Rate limit: si se excede, devolvemos el MISMO objeto generico (no revelar).
+    if (checkRateLimit('rl_recu_' + correo)) {
+      log({ accion: 'recuperarPassword', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
+      return generico;
+    }
+
     if (!isEmail(correo)) return generico;
 
     const user = findUsuarioByCorreo(correo);
@@ -1449,9 +1573,9 @@ function recuperarPassword(req) {
       const emailBody =
         '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
         '<h2 style="color:#10312D;margin:0 0 16px">Recuperación de contraseña 🔑</h2>' +
-        '<p>Hola <strong>' + String(user.nombre) + '</strong>,</p>' +
+        '<p>Hola <strong>' + escapeHtml(String(user.nombre)) + '</strong>,</p>' +
         '<p>Generamos una nueva contraseña para tu cuenta:</p>' +
-        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + String(user.correo) + '</code></p>' +
+        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + escapeHtml(String(user.correo)) + '</code></p>' +
         '<p><strong>🔑 Nueva contraseña:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + nuevaPass + '</code></p>' +
         '<div style="margin:28px 0">' +
         '<a href="' + portalUrl + '" style="background:#10312D;color:#C2E476;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Entrar al Portal →</a>' +
@@ -1780,3 +1904,23 @@ function healthcheck() {
 
   return result;
 }
+
+// ── SECURITY BATCH 2026 ──
+// #2 Rate limit real: checkRateLimit(bucketKey) con CacheService (TTL 3600s,
+//    limite = RATE_LIMIT_PER_HOUR o 10). Aplicado a loginAlumno (rl_login_*),
+//    registrarCompra (rl_compra_*), subirVoucher (rl_voucher_*) y
+//    recuperarPassword (rl_recu_*, respuesta generica intacta).
+// #3 randomToken(length) ahora es CSPRNG: deriva bytes de Utilities.getUuid()
+//    (SecureRandom) en vez de Math.random(). Misma firma y salida alfanumerica.
+// #4 registrarCompra: si no hay detalle_extra y el monto reportado no coincide
+//    con precio/precio_promocional, el correo al admin incluye una alerta
+//    visible "verificar voucher". No se rechaza ni se recalcula el monto.
+// #5 subirVoucher: guard antes de subir a Drive — rechaza si estado_pago no es
+//    'pendiente' o si la compra ya tiene voucher_url. El reintento tras una
+//    subida fallida sigue funcionando.
+// #6 escapeHtml(s): todo valor de origen usuario interpolado en htmlBody de
+//    correos (registrarCompra, subirVoucher, aprobarPago, rechazarPago,
+//    recuperarPassword) se escapa. URLs propias y passwords generadas no.
+// #7 adminLogin: valida contra ADMIN_PASSWORD_HASH+SALT; si solo existe
+//    ADMIN_PASSWORD legado y acierta, migra en caliente a hash+salt y borra el
+//    texto plano. setAdminPassword(plain) (editor-only) rota la clave.
