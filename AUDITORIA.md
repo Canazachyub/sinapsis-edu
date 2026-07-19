@@ -1,9 +1,11 @@
 # Auditoría UX/QA — SINAPSIS EDU
 
 > Backlog del test E2E por fases (agente de navegador + revisión de código).
-> Estado: **✅ 4 fases completas. Grupo A + decisiones del Grupo B implementados
-> y desplegados (2026-06-05).** Ver el detalle de cambios en `CHANGELOG.md`.
-> Quedan: B3 pricing, A5 acentos en Sheet, y la deuda de seguridad (#2–#7).
+> Estado: **✅ 4 fases completas. Grupo A + Grupo B desplegados (2026-06-05).
+> Deuda de seguridad #2–#7 cerrada y desplegada (2026-07-19), + fix del slug `cb`
+> (plataforma propia, ya no alias de ENCIB).** Ver el detalle en `CHANGELOG.md`.
+> Quedan: B3 pricing, A5 acentos en Sheet, limpieza de datos de prueba y el
+> contenido opcional `INFO['cb']`.
 
 ---
 

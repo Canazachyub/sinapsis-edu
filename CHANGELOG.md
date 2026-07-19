@@ -33,6 +33,25 @@
 
 ## 📋 Changelog
 
+### 2026-07-19 — Batch de seguridad backend + fix de slug `cb`
+
+Orquestado por Opus (lee/verifica) + Fable (ejecuta). Backend re-deployado a
+mano (Nueva versión, misma URL) y frontend desplegado por push a `main`.
+Verificado: `?ping=1` online con todas las Properties; `url_real` no se filtra.
+
+**Seguridad (`Code.gs`) — deuda #2–#7 cerrada**
+- **#2 Rate limit real** por correo/`id_compra` en `CacheService` (10/h, `RATE_LIMIT_PER_HOUR`), aplicado en `loginAlumno`, `registrarCompra`, `subirVoucher` y `recuperarPassword` (este último devuelve la respuesta genérica al exceder, sin enumerar).
+- **#3 Tokens CSPRNG:** `randomToken` ahora deriva de `Utilities.getUuid()` (SecureRandom) en vez de `Math.random()`. Misma firma/longitud/charset → sesión, salt, password y `SESSION_SECRET` intactos.
+- **#5 Guard de `subirVoucher`:** solo acepta subida si la compra está `pendiente` y sin `voucher_url`. Bloquea manipular compras aprobadas/rechazadas y el doble-spam; el reintento legítimo (voucher vacío) sigue pasando.
+- **#6 Escape HTML** (`escapeHtml`) en todos los correos (admin y alumno): `nombre`, `correo`, `whatsapp`, `detalle_extra`, `motivo`, `plataforma`. Cierra la inyección HTML en la bandeja del admin.
+- **#7 `ADMIN_PASSWORD` → hash+salt:** `adminLogin` valida contra `ADMIN_PASSWORD_HASH`/`ADMIN_PASSWORD_SALT`; migra el valor legado en texto plano **en caliente** en el primer login y borra la Property vieja. Nuevo helper editor-only `setAdminPassword(plain)` para rotarla.
+- **#4 Alerta de monto:** el `monto` del cliente se conserva (aprobación manual mitiga), pero el correo al admin **avisa** si difiere del precio base; no aplica a anatomía/CTO (precio por segmento). Se optó por *registrar y alertar*, no rechazar ni recalcular.
+- Riesgo residual documentado: los `id_compra` siguen siendo enumerables; el rate limit lo mitiga. Vincular la subida a un token de identidad queda como follow-up. Tokens de sesión/admin viven 6h (tope de `CacheService`), no 24h (preexistente).
+
+**Frontend**
+- **Fix `cb`:** se quitó el alias `cb`/`ciencias-basicas`→`encib` en `pages/Plataforma.tsx`. `cb` (P-009 "Qx Ciencias Básicas", plataforma de videos, distinta de ENCIB) ahora abre su propia página de detalle. Pendiente opcional: contenido `INFO['cb']`.
+- **A13 sandbox:** `IframeViewer.tsx` recortado a `allow-same-origin allow-scripts allow-forms allow-popups` (spec §10; se quitó `allow-downloads`).
+
 ### 2026-06-05 — Auditoría E2E + batch de mejoras
 
 Test completo (4 fases) con agente de navegador → backlog en `AUDITORIA.md`.
@@ -85,14 +104,10 @@ Implementado y desplegado:
 - **A5 — Acentos en el Sheet:** corregir en hoja `Plataformas` (datos, no código):
   `RESIDENTADO MEDICO`→`Residentado Médico`, `Ciencias Basicas`→`Ciencias Básicas`, `Preparacion`→`Preparación`.
 
-**Seguridad (de la auditoría, aún sin aplicar)**
-- **#2 Rate limiting:** `RATE_LIMIT_PER_HOUR` se configura pero no se aplica en ningún endpoint. Riesgo de spam/abuso desde terminal. Implementar contador en `CacheService` por correo/IP.
-- **#3 Tokens con `Math.random()`:** no es CSPRNG (sesión, admin, passwords). Migrar a `Utilities.getUuid()` + hash.
-- **#4 `monto` lo controla el cliente** en `registrarCompra`. Validar contra `plat.precio`.
-- **#5 `subirVoucher` sin auth + IDs predecibles** (`C-001`...): permitir subir solo si la compra está `pendiente` y sin voucher.
-- **#6 Inyección HTML en emails al admin:** escapar inputs del usuario.
-- **#7 `ADMIN_PASSWORD` en texto plano** (Script Properties): hashear como el resto.
-- Informativo: `hashPassword` es SHA-256 de una ronda (coincide con el spec MVP; para prod real considerar key-stretching).
+**Seguridad**
+- ✅ **#2–#7 resueltos y desplegados (2026-07-19).** Ver la entrada de esa fecha arriba.
+- Informativo (sin cambiar): `hashPassword` es SHA-256 de una ronda (coincide con el spec MVP; para prod real considerar key-stretching).
+- Follow-up abierto: vincular `subirVoucher` a un token de identidad (los `id_compra` siguen siendo enumerables; el rate limit lo mitiga por ahora).
 
 ---
 
