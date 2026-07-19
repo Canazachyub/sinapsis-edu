@@ -209,8 +209,6 @@ const INFO: Record<string, PlataformaInfo> = {
 const SLUG_ALIASES: Record<string, string> = {
   residentado: 'rm',
   'residentado-medico': 'rm',
-  'ciencias-basicas': 'encib',
-  cb: 'encib',
   testut: 'anatomia',
 };
 
