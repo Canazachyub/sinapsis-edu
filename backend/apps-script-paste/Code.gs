@@ -2763,7 +2763,6 @@ function crearPreferenciaMP_(idCompra, plat, monto, correo, nombre, expiraIso) {
       unit_price: Number(monto),
       currency_id: 'PEN'
     }],
-    payer: { email: correo, name: nombre },
     external_reference: idCompra,
     metadata: { id_compra: idCompra },
     back_urls: { success: retorno, pending: retorno, failure: retorno },
@@ -2774,6 +2773,9 @@ function crearPreferenciaMP_(idCompra, plat, monto, correo, nombre, expiraIso) {
     // Sin cuotas. No se excluye ningun medio (tarjetas, Yape, saldo MP).
     payment_methods: { installments: 1 }
   };
+  // En pruebas (MP_SANDBOX=true) NO se envía el correo del alumno: si no es el de un
+  // usuario de prueba, MP responde "Una de las partes ... es de prueba".
+  if (!mpSandbox_()) body.payer = { email: correo, name: nombre };
   // MP rechaza auto_return si la URL de vuelta no es https (p. ej. localhost en pruebas):
   // en ese caso el alumno vuelve con el botón "Volver al sitio" de Mercado Pago.
   if (/^https:\/\//.test(retorno)) body.auto_return = 'approved';
