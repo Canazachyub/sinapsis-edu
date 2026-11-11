@@ -2,54 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
+/* DESIGN.md v3 — "Clínico y confiable" */
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    scroll-padding-top: 88px;
   }
   body {
-    @apply font-sans bg-cream text-jungle;
+    @apply font-sans bg-white text-ink;
   }
-  h1, h2, h3 {
-    @apply font-display uppercase tracking-tight;
+  h1, h2, h3, h4 {
+    @apply font-display text-ink;
+    letter-spacing: -0.02em;
+  }
+  h1 { @apply font-extrabold; }
+  h2, h3 { @apply font-bold; }
+  ::selection {
+    @apply bg-lime-300 text-jungle-900;
   }
 }
 
 @layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-site px-5 md:px-8;
+  }
+
+  /* ── Botones ─────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-3
+           text-[15px] font-semibold transition-colors duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jungle-600/40 focus-visible:ring-offset-2;
+  }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-3
-           font-semibold text-jungle bg-cta-lime
-           transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-cta;
+    @apply btn bg-jungle-800 text-white hover:bg-jungle-600;
   }
   .btn-dark {
-    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-3
-           font-semibold text-white bg-jungle
-           transition-transform duration-200 hover:-translate-y-0.5;
+    @apply btn bg-jungle-900 text-white hover:bg-jungle-700;
   }
+  .btn-spark,
+  .btn-primary-lime {
+    @apply btn bg-lime-400 text-jungle-900 hover:bg-lime-500 focus-visible:ring-lime-400/60 focus-visible:ring-offset-jungle-900;
+  }
+  .btn-secondary,
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-3
-           font-semibold text-jungle border-[1.5px] border-jungle bg-transparent
-           transition-colors duration-200 hover:bg-jungle hover:text-lime;
+    @apply btn border border-line bg-white text-ink hover:border-jungle-600 hover:text-jungle-800;
+  }
+  .btn-ghost-dark {
+    @apply btn border border-white/25 text-white hover:bg-white/10 focus-visible:ring-white/50 focus-visible:ring-offset-jungle-900;
   }
   .btn-whatsapp {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3
-           font-semibold text-white bg-whatsapp
-           transition-transform duration-200 hover:scale-[1.02];
+    @apply btn bg-whatsapp text-white hover:bg-[#1fb959];
+  }
+
+  /* ── Etiquetas ───────────────────────────────────────── */
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.12em] text-jungle-600;
   }
   .pill {
-    @apply inline-flex items-center gap-2 rounded-pill px-4 py-1.5
-           text-sm font-medium bg-offwhite text-jungle border border-jungle/10;
-  }
-  .container-x {
-    @apply mx-auto max-w-[1280px] px-6 md:px-20;
-  }
-  .btn-primary-lime {
-    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-3
-           font-semibold text-jungle bg-lime
-           transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-cta;
+    @apply inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5
+           text-sm font-medium text-jungle-800;
   }
   .pill-lime {
-    @apply inline-flex items-center gap-2 rounded-pill px-4 py-1.5
-           text-sm font-semibold bg-lime/15 text-lime border border-lime/20;
+    @apply inline-flex items-center gap-2 rounded-full border border-lime-400/25 bg-lime-400/10 px-3.5 py-1.5
+           text-sm font-semibold text-lime-400;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  /* ── Superficies ─────────────────────────────────────── */
+  .card {
+    @apply rounded-2xl border border-line bg-white;
+  }
+  .section-title {
+    @apply mt-3 text-[28px] leading-[1.15] md:text-[40px];
+  }
+  .section-lead {
+    @apply mt-4 max-w-[640px] text-[17px] leading-relaxed text-muted md:text-lg;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Revelado al entrar en pantalla (ver hooks/useReveal) */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
