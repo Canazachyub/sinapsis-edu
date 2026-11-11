@@ -807,16 +807,11 @@ function hasActiveAccess_(idUsuario, idPlataforma) {
 function ping_() {
   const missing = checkRequiredProperties_();
   const isOk = missing.length === 0;
-  let sheetUrl;
-  if (isOk) {
-    try { sheetUrl = getSpreadsheet_().getUrl(); } catch (e) { /* ignorar */ }
-  }
+  // Seguridad: endpoint público. No exponer la URL de la hoja ni los nombres de propiedades faltantes.
   return ok_(
     {
       status: isOk ? 'online' : 'setup-pending',
-      timestamp: new Date().toISOString(),
-      properties: { ok: isOk, missing: missing },
-      sheetUrl: sheetUrl
+      timestamp: new Date().toISOString()
     },
     isOk ? 'Portal Central backend OK' : 'Backend respondiendo. Falta correr setup().'
   );
