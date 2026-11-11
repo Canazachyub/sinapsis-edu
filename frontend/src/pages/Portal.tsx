@@ -7,6 +7,7 @@ import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { callApi } from '@/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { simulacroHref } from '@/config';
 
 interface AccesoData {
   id_acceso: string;
@@ -174,9 +175,20 @@ export function Portal() {
                   {a.fecha_fin && (
                     <div className="mt-1 text-xs text-jungle-light">Vence el {formatFecha(a.fecha_fin)}</div>
                   )}
-                  <Link to={`/aula/${a.slug}`} className="btn-primary w-full mt-5">
-                    Entrar al aula
-                  </Link>
+                  {simulacroHref(a.slug) ? (
+                    <div className="mt-5 grid gap-2">
+                      <a href={simulacroHref(a.slug, 'registro')!} className="btn-primary w-full">
+                        Rendir simulacro
+                      </a>
+                      <Link to={`/aula/${a.slug}`} className="btn-secondary w-full">
+                        Entrar al aula
+                      </Link>
+                    </div>
+                  ) : (
+                    <Link to={`/aula/${a.slug}`} className="btn-primary w-full mt-5">
+                      Entrar al aula
+                    </Link>
+                  )}
                 </article>
               ))}
             </div>

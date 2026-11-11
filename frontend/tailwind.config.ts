@@ -1,66 +1,86 @@
 import type { Config } from 'tailwindcss';
 
-// Paleta y tipografías de DESIGN.md (sección 1 y 2). No improvisar.
+// Tokens de DESIGN.md v3 ("Clínico y confiable").
+// Los alias legacy (jungle.DEFAULT/dark/light, lime.DEFAULT, cream, offwhite, purple)
+// se mantienen mientras se migran las páginas internas.
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
+        jungle: {
+          DEFAULT: '#10312D',
+          900: '#0B211F',
+          800: '#10312D',
+          700: '#174540',
+          600: '#1F5B52',
+          100: '#E3EEEC',
+          50: '#F1F7F5',
+          dark: '#0B211F',
+          light: '#51625E',
+        },
         lime: {
           DEFAULT: '#C2E476',
+          300: '#D6EE9F',
+          400: '#C2E476',
+          500: '#AACF57',
           mid: '#B4D864',
           dark: '#AACF57',
         },
-        jungle: {
-          DEFAULT: '#10312D',
-          dark: '#0B211F',
-          light: '#3D5752',
-        },
-        cream: '#F3F1E8',
-        offwhite: '#FCFCFB',
-        purple: {
-          DEFAULT: '#795BC2',
-          dark: '#473392',
-        },
-        success: '#10B981',
-        warning: '#F59E0B',
-        danger: '#EF4444',
-        info: '#3B82F6',
+        paper: '#F6F8F7',
+        line: '#E2E8E6',
+        ink: '#0F1A18',
+        muted: '#51625E',
+        subtle: '#8A9A96',
+        correct: '#16A34A',
+        wrong: '#DC2626',
+        cream: '#F6F8F7',
+        offwhite: '#FFFFFF',
+        purple: { DEFAULT: '#1F5B52', dark: '#10312D' },
+        success: '#16A34A',
+        warning: '#D97706',
+        danger: '#DC2626',
+        info: '#2563EB',
         whatsapp: '#25D366',
       },
       fontFamily: {
-        display: ['"Barlow Condensed"', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
         sans: ['Inter', 'sans-serif'],
       },
-      backgroundImage: {
-        'cta-lime': 'linear-gradient(to bottom, #C2E476 0%, #B4D864 59%, #AACF57 100%)',
-      },
       boxShadow: {
-        card: '0 4px 16px rgba(16, 49, 45, 0.08)',
-        'card-hover': '0 16px 40px rgba(16, 49, 45, 0.12)',
-        cta: '0 10px 24px rgba(170, 207, 87, 0.45)',
+        card: '0 1px 2px rgba(15, 26, 24, 0.04), 0 1px 3px rgba(15, 26, 24, 0.04)',
+        'card-hover': '0 12px 32px -8px rgba(15, 26, 24, 0.14)',
+        mock: '0 30px 60px -20px rgba(15, 26, 24, 0.35), 0 0 0 1px rgba(15, 26, 24, 0.04)',
+        'mock-dark': '0 40px 80px -24px rgba(0, 0, 0, 0.6)',
+        cta: '0 8px 24px -6px rgba(194, 228, 118, 0.55)',
       },
       borderRadius: {
         pill: '999px',
       },
+      maxWidth: {
+        site: '1200px',
+      },
+      transitionTimingFunction: {
+        expo: 'cubic-bezier(0.16, 1, 0.3, 1)',
+      },
       keyframes: {
-        fadeSlideUp: {
-          '0%': { opacity: '0', transform: 'translateY(24px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+        twinkle: {
+          '0%, 100%': { opacity: '0.35', transform: 'scale(0.8) rotate(0deg)' },
+          '50%': { opacity: '1', transform: 'scale(1.15) rotate(20deg)' },
         },
-        pulseLime: {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(194,228,118,.5)' },
-          '50%': { boxShadow: '0 0 0 12px rgba(194,228,118,0)' },
+        floatY: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
         },
-        carousel: {
-          '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-50%)' },
+        progress: {
+          '0%': { width: '18%' },
+          '100%': { width: '62%' },
         },
       },
       animation: {
-        'fade-slide-up': 'fadeSlideUp .5s ease forwards',
-        'pulse-lime': 'pulseLime 2s infinite',
-        carousel: 'carousel 60s linear infinite',
+        twinkle: 'twinkle 2.4s ease-in-out infinite',
+        'float-y': 'floatY 6s ease-in-out infinite',
+        progress: 'progress 14s linear infinite',
       },
     },
   },

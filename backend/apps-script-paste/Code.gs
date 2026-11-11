@@ -30,14 +30,14 @@ const PRECONFIGURED_WHATSAPP = '51984300510';
 // ║                          UTILS                                ║
 // ╚═══════════════════════════════════════════════════════════════╝
 
-function ok(data, message) {
+function ok_(data, message) {
   const res = { ok: true };
   if (data !== undefined) res.data = data;
   if (message) res.message = message;
   return res;
 }
 
-function fail(error, message) {
+function fail_(error, message) {
   const res = { ok: false, error: error };
   if (message) res.message = message;
   return res;
@@ -48,19 +48,19 @@ const RE_WHATSAPP = /^\+?\d{8,15}$/;
 const VOUCHER_TYPES_OK = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 const VOUCHER_MAX_BYTES = 5 * 1024 * 1024;
 
-function isEmail(value) {
+function isEmail_(value) {
   return typeof value === 'string' && RE_EMAIL.test(value);
 }
 
-function isWhatsapp(value) {
+function isWhatsapp_(value) {
   return typeof value === 'string' && RE_WHATSAPP.test(value.replace(/\s|-/g, ''));
 }
 
-function isNonEmptyString(value) {
+function isNonEmptyString_(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function validateVoucher(mime, base64) {
+function validateVoucher_(mime, base64) {
   if (VOUCHER_TYPES_OK.indexOf(mime) === -1) {
     return { ok: false, error: 'Tipo de archivo no permitido. Solo jpg, png o pdf.' };
   }
@@ -71,13 +71,13 @@ function validateVoucher(mime, base64) {
   return { ok: true };
 }
 
-function nextId(prefix, lastNumber) {
+function nextId_(prefix, lastNumber) {
   const n = (lastNumber + 1).toString();
   const padded = n.length >= 3 ? n : ('000' + n).slice(-3);
   return prefix + '-' + padded;
 }
 
-function randomToken(length) {
+function randomToken_(length) {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   // CSPRNG: Utilities.getUuid() usa java.security.SecureRandom por debajo.
   // Concatenamos UUIDs sin guiones hasta tener 2 hex chars (1 byte) por
@@ -95,7 +95,7 @@ function randomToken(length) {
 }
 
 /** Escapa & < > " ' para interpolar valores de origen usuario en htmlBody. */
-function escapeHtml(s) {
+function escapeHtml_(s) {
   return String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -110,10 +110,10 @@ function escapeHtml(s) {
  * Devuelve true si el bucket YA excedio el limite (bloquear request).
  * Fail-open: si CacheService falla, no bloquea.
  */
-function checkRateLimit(bucketKey) {
+function checkRateLimit_(bucketKey) {
   try {
     const cache = CacheService.getScriptCache();
-    const limit = Number(getProperty('RATE_LIMIT_PER_HOUR')) || 10;
+    const limit = Number(getProperty_('RATE_LIMIT_PER_HOUR')) || 10;
     const current = Number(cache.get(bucketKey)) || 0;
     if (current >= limit) return true;
     cache.put(bucketKey, String(current + 1), 3600);
@@ -123,7 +123,7 @@ function checkRateLimit(bucketKey) {
   }
 }
 
-function hashPassword(password, salt) {
+function hashPassword_(password, salt) {
   const bytes = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
     password + salt,
@@ -138,19 +138,19 @@ function hashPassword(password, salt) {
   return hex;
 }
 
-function generateSalt() {
-  return randomToken(16);
+function generateSalt_() {
+  return randomToken_(16);
 }
 
-function nowIso() {
+function nowIso_() {
   return new Date().toISOString();
 }
 
-function todayIso() {
+function todayIso_() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addDaysIso(daysFromToday) {
+function addDaysIso_(daysFromToday) {
   const d = new Date();
   d.setDate(d.getDate() + daysFromToday);
   return d.toISOString().slice(0, 10);
@@ -207,25 +207,25 @@ const REQUIRED_PROPS = [
 
 // ─── Properties ──────────────────────────────────────────────
 
-function getProperty(key) {
+function getProperty_(key) {
   const v = PropertiesService.getScriptProperties().getProperty(key);
   return v === null ? undefined : v;
 }
 
-function setProperty(key, value) {
+function setProperty_(key, value) {
   PropertiesService.getScriptProperties().setProperty(key, value);
 }
 
-function getRequired(key) {
-  const v = getProperty(key);
+function getRequired_(key) {
+  const v = getProperty_(key);
   if (!v) throw new Error('Falta la Property requerida: ' + key + '. Corre setup() primero.');
   return v;
 }
 
-function checkRequiredProperties() {
+function checkRequiredProperties_() {
   const missing = [];
   for (let i = 0; i < REQUIRED_PROPS.length; i++) {
-    if (!getProperty(REQUIRED_PROPS[i])) missing.push(REQUIRED_PROPS[i]);
+    if (!getProperty_(REQUIRED_PROPS[i])) missing.push(REQUIRED_PROPS[i]);
   }
   return missing;
 }
@@ -241,7 +241,7 @@ function checkRequiredProperties() {
  *   3. PRECONFIGURED_SHEET_ID hardcoded arriba en este archivo.
  *   4. Si nada existe, lanza error pidiendo correr setup().
  */
-function getSpreadsheet() {
+function getSpreadsheet_() {
   // 1) Container-bound (modo normal): no requiere permisos de Drive externos
   try {
     const active = SpreadsheetApp.getActiveSpreadsheet();
@@ -249,7 +249,7 @@ function getSpreadsheet() {
   } catch (e) { /* no es bound, seguir */ }
 
   // 2) ID en Properties
-  const propId = getProperty('SHEET_ID');
+  const propId = getProperty_('SHEET_ID');
   if (propId) {
     try { return SpreadsheetApp.openById(propId); }
     catch (e) { /* ID invalido, seguir */ }
@@ -264,14 +264,14 @@ function getSpreadsheet() {
   throw new Error('No hay Spreadsheet asociado. Corre setup() desde el editor.');
 }
 
-function getSheet(name) {
-  const ss = getSpreadsheet();
+function getSheet_(name) {
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(name);
   if (!sheet) throw new Error('Hoja no encontrada: ' + name + '. Corre setup() primero.');
   return sheet;
 }
 
-function ensureSheet(ss, name, headers) {
+function ensureSheet_(ss, name, headers) {
   let sheet = ss.getSheetByName(name);
   let created = false;
   if (!sheet) {
@@ -287,14 +287,14 @@ function ensureSheet(ss, name, headers) {
   return { sheet: sheet, created: created };
 }
 
-function inicializarSheets() {
-  const ss = getSpreadsheet();
+function inicializarSheets_() {
+  const ss = getSpreadsheet_();
 
-  const r1 = ensureSheet(ss, SHEET_NAMES.PLATAFORMAS, HEADERS_PLATAFORMAS);
-  const r2 = ensureSheet(ss, SHEET_NAMES.USUARIOS, HEADERS_USUARIOS);
-  const r3 = ensureSheet(ss, SHEET_NAMES.COMPRAS, HEADERS_COMPRAS);
-  const r4 = ensureSheet(ss, SHEET_NAMES.LOGS, HEADERS_LOGS);
-  const r5 = ensureSheet(ss, SHEET_NAMES.CREDENCIALES, HEADERS_CREDENCIALES);
+  const r1 = ensureSheet_(ss, SHEET_NAMES.PLATAFORMAS, HEADERS_PLATAFORMAS);
+  const r2 = ensureSheet_(ss, SHEET_NAMES.USUARIOS, HEADERS_USUARIOS);
+  const r3 = ensureSheet_(ss, SHEET_NAMES.COMPRAS, HEADERS_COMPRAS);
+  const r4 = ensureSheet_(ss, SHEET_NAMES.LOGS, HEADERS_LOGS);
+  const r5 = ensureSheet_(ss, SHEET_NAMES.CREDENCIALES, HEADERS_CREDENCIALES);
 
   // Borra la hoja por defecto si quedo vacia
   const candidatos = ['Sheet1', 'Hoja 1', 'Hoja1'];
@@ -311,7 +311,7 @@ function inicializarSheets() {
 
   // Seed plataformas: idempotente, agrega solo las filas faltantes por id_plataforma.
   const plat = ss.getSheetByName(SHEET_NAMES.PLATAFORMAS);
-  const cuantasNuevas = seedPlataformas(plat);
+  const cuantasNuevas = seedPlataformas_(plat);
   const seeded = cuantasNuevas > 0;
 
   return {
@@ -336,7 +336,7 @@ function inicializarSheets() {
  *           precio, duracion_dias, activo,
  *           precio_promocional, etiqueta, orden
  */
-function seedPlataformas(sheet) {
+function seedPlataformas_(sheet) {
   const URL_DEMO = 'https://canazachyub.github.io/simulaencib/';
   const data = [
     // Las 6 originales
@@ -391,8 +391,8 @@ function seedPlataformas(sheet) {
   return aAgregar.length;
 }
 
-function readAll(sheetName) {
-  const sheet = getSheet(sheetName);
+function readAll_(sheetName) {
+  const sheet = getSheet_(sheetName);
   const lastRow = sheet.getLastRow();
   const lastCol = sheet.getLastColumn();
   if (lastRow < 2) return [];
@@ -410,8 +410,8 @@ function readAll(sheetName) {
   return rows;
 }
 
-function nextSequenceFromColumn(sheetName, columnIndex) {
-  const sheet = getSheet(sheetName);
+function nextSequenceFromColumn_(sheetName, columnIndex) {
+  const sheet = getSheet_(sheetName);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return 0;
   const values = sheet.getRange(2, columnIndex, lastRow - 1, 1).getValues();
@@ -431,8 +431,8 @@ function nextSequenceFromColumn(sheetName, columnIndex) {
  * Devuelve el numero de fila (1-indexed, considerando header) donde la columna
  * `columnIndex` (1-indexed) tiene el valor `value`. -1 si no se encuentra.
  */
-function findRowIndex(sheetName, columnIndex, value) {
-  const sheet = getSheet(sheetName);
+function findRowIndex_(sheetName, columnIndex, value) {
+  const sheet = getSheet_(sheetName);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return -1;
   const values = sheet.getRange(2, columnIndex, lastRow - 1, 1).getValues();
@@ -445,13 +445,13 @@ function findRowIndex(sheetName, columnIndex, value) {
 
 // ─── Drive ───────────────────────────────────────────────────
 
-function getCarpetaVouchers() {
-  return DriveApp.getFolderById(getRequired('DRIVE_FOLDER_VOUCHERS'));
+function getCarpetaVouchers_() {
+  return DriveApp.getFolderById(getRequired_('DRIVE_FOLDER_VOUCHERS'));
 }
 
-function subirVoucherDrive(base64, mime, filename) {
+function subirVoucherDrive_(base64, mime, filename) {
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), mime, filename);
-  const folder = getCarpetaVouchers();
+  const folder = getCarpetaVouchers_();
   const file = folder.createFile(blob);
   try {
     file.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
@@ -461,8 +461,8 @@ function subirVoucherDrive(base64, mime, filename) {
 
 // ─── Gmail ───────────────────────────────────────────────────
 
-function notificarAdmin(asunto, cuerpoHtml) {
-  const to = getProperty('NOTIFICACION_EMAIL') || getProperty('ADMIN_EMAIL');
+function notificarAdmin_(asunto, cuerpoHtml) {
+  const to = getProperty_('NOTIFICACION_EMAIL') || getProperty_('ADMIN_EMAIL');
   if (!to) {
     Logger.log('notificarAdmin: sin destinatario configurado. Asunto: ' + asunto);
     return;
@@ -470,15 +470,15 @@ function notificarAdmin(asunto, cuerpoHtml) {
   MailApp.sendEmail({ to: to, subject: asunto, htmlBody: cuerpoHtml });
 }
 
-function enviarCorreo(to, asunto, cuerpoHtml) {
+function enviarCorreo_(to, asunto, cuerpoHtml) {
   MailApp.sendEmail({ to: to, subject: asunto, htmlBody: cuerpoHtml });
 }
 
 // ─── Logs ────────────────────────────────────────────────────
 
-function log(ctx) {
+function log_(ctx) {
   try {
-    const ss = getSpreadsheet();
+    const ss = getSpreadsheet_();
     const sheet = ss.getSheetByName(SHEET_NAMES.LOGS);
     if (!sheet) {
       Logger.log('[log] hoja Logs no existe | ' + JSON.stringify(ctx));
@@ -496,6 +496,24 @@ function log(ctx) {
   }
 }
 
+// ─── Guard: herramientas que solo deben correrse desde el editor ─────
+
+/**
+ * Lanza error si la llamada NO viene del dueño del script desde el editor.
+ * Desde el editor, el usuario activo es el dueño (= usuario efectivo).
+ * Un visitante del Web App que intente llamar la función con
+ * google.script.run llega con usuario activo vacío o distinto, y se bloquea.
+ */
+function requireEditor_() {
+  let activo = '';
+  let efectivo = '';
+  try { activo = Session.getActiveUser().getEmail() || ''; } catch (e) { /* sin identidad */ }
+  try { efectivo = Session.getEffectiveUser().getEmail() || ''; } catch (e) { /* sin identidad */ }
+  if (!activo || !efectivo || activo.toLowerCase() !== efectivo.toLowerCase()) {
+    throw new Error('Esta función solo puede ejecutarse desde el editor de Apps Script.');
+  }
+}
+
 // ─── setup() — instalador idempotente ────────────────────────
 
 /**
@@ -510,6 +528,7 @@ function log(ctx) {
  * Es idempotente: correr setup() varias veces no duplica nada.
  */
 function setup() {
+  requireEditor_();
   const props = PropertiesService.getScriptProperties();
   const added = [];
   const existing = [];
@@ -563,7 +582,7 @@ function setup() {
     sheetSource = 'created';
   }
 
-  // Persistir el ID en Properties para que log() y otras llamadas lo conozcan
+  // Persistir el ID en Properties para que log_() y otras llamadas lo conozcan
   if (props.getProperty('SHEET_ID') !== sheetId) {
     props.setProperty('SHEET_ID', sheetId);
     added.push('SHEET_ID (' + sheetSource + ')');
@@ -613,7 +632,7 @@ function setup() {
 
   // 4. Session secret
   if (!props.getProperty('SESSION_SECRET')) {
-    props.setProperty('SESSION_SECRET', randomToken(64));
+    props.setProperty('SESSION_SECRET', randomToken_(64));
     added.push('SESSION_SECRET');
   } else {
     existing.push('SESSION_SECRET');
@@ -634,10 +653,10 @@ function setup() {
   }
 
   // 6. Sheets + seed
-  const init = inicializarSheets();
+  const init = inicializarSheets_();
 
   // 7. Audit log
-  log({
+  log_({
     accion: 'setup',
     nivel: 'info',
     detalle: 'sheetCreated=' + sheetCreated +
@@ -659,13 +678,13 @@ function setup() {
 
 // ─── Integraciones futuras (Fase 7+) ─────────────────────────
 
-function extraerDatosVoucherOCR(base64, mime) {
-  if (!getProperty('OPENAI_API_KEY') && !getProperty('GEMINI_API_KEY')) return null;
+function extraerDatosVoucherOCR_(base64, mime) {
+  if (!getProperty_('OPENAI_API_KEY') && !getProperty_('GEMINI_API_KEY')) return null;
   return null;
 }
 
-function verificarPagoBinanceAuto(idCompra) {
-  if (!getProperty('BINANCE_API_KEY') || !getProperty('BINANCE_API_SECRET')) return null;
+function verificarPagoBinanceAuto_(idCompra) {
+  if (!getProperty_('BINANCE_API_KEY') || !getProperty_('BINANCE_API_SECRET')) return null;
   return null;
 }
 
@@ -678,8 +697,8 @@ function verificarPagoBinanceAuto(idCompra) {
 const SESSION_TTL_SECONDS = 21600; // 6h (max de CacheService)
 
 /** Crea una sesion para el usuario y devuelve el token. */
-function createSession(usuario) {
-  const token = randomToken(32);
+function createSession_(usuario) {
+  const token = randomToken_(32);
   const payload = JSON.stringify({
     id_usuario: usuario.id_usuario,
     correo: usuario.correo,
@@ -691,7 +710,7 @@ function createSession(usuario) {
 }
 
 /** Devuelve los datos de la sesion si el token es valido, null en caso contrario. */
-function validateSession(token) {
+function validateSession_(token) {
   if (!token) return null;
   const raw = CacheService.getScriptCache().get('session_' + token);
   if (!raw) return null;
@@ -699,8 +718,8 @@ function validateSession(token) {
 }
 
 /** Lookup por id_plataforma en la hoja Plataformas. */
-function findPlataformaById(id) {
-  const all = readAll(SHEET_NAMES.PLATAFORMAS);
+function findPlataformaById_(id) {
+  const all = readAll_(SHEET_NAMES.PLATAFORMAS);
   for (let i = 0; i < all.length; i++) {
     if (String(all[i].id_plataforma) === String(id)) return all[i];
   }
@@ -708,8 +727,8 @@ function findPlataformaById(id) {
 }
 
 /** Lookup por slug en la hoja Plataformas. */
-function findPlataformaBySlug(slug) {
-  const all = readAll(SHEET_NAMES.PLATAFORMAS);
+function findPlataformaBySlug_(slug) {
+  const all = readAll_(SHEET_NAMES.PLATAFORMAS);
   for (let i = 0; i < all.length; i++) {
     if (String(all[i].slug) === String(slug)) return all[i];
   }
@@ -717,8 +736,8 @@ function findPlataformaBySlug(slug) {
 }
 
 /** Lookup por correo en la hoja Usuarios (case-insensitive). */
-function findUsuarioByCorreo(correo) {
-  const all = readAll(SHEET_NAMES.USUARIOS);
+function findUsuarioByCorreo_(correo) {
+  const all = readAll_(SHEET_NAMES.USUARIOS);
   const c = String(correo).toLowerCase();
   for (let i = 0; i < all.length; i++) {
     if (String(all[i].correo).toLowerCase() === c) return all[i];
@@ -731,7 +750,7 @@ function findUsuarioByCorreo(correo) {
  * (puede ser Date object, string ISO, o string Date.toString verbose)
  * a un string YYYY-MM-DD. Devuelve '' si no es parseable.
  */
-function toIsoDate(value) {
+function toIsoDate_(value) {
   if (value === null || value === undefined || value === '') return '';
   if (value instanceof Date) {
     if (isNaN(value.getTime())) return '';
@@ -751,8 +770,8 @@ function toIsoDate(value) {
 }
 
 /** Dias restantes hasta una fecha (puede ser negativo si ya paso). Acepta Date o string. */
-function daysUntil(value) {
-  const iso = toIsoDate(value);
+function daysUntil_(value) {
+  const iso = toIsoDate_(value);
   if (!iso) return null;
   const target = new Date(iso + 'T00:00:00');
   if (isNaN(target.getTime())) return null;
@@ -763,16 +782,16 @@ function daysUntil(value) {
 }
 
 /** Verifica si un usuario tiene acceso activo a una plataforma dada. */
-function hasActiveAccess(idUsuario, idPlataforma) {
-  const compras = readAll(SHEET_NAMES.COMPRAS);
-  const today = todayIso();
+function hasActiveAccess_(idUsuario, idPlataforma) {
+  const compras = readAll_(SHEET_NAMES.COMPRAS);
+  const today = todayIso_();
   for (let i = 0; i < compras.length; i++) {
     const c = compras[i];
     if (String(c.id_usuario) !== String(idUsuario)) continue;
     if (String(c.id_plataforma) !== String(idPlataforma)) continue;
     if (String(c.estado_pago) !== 'aprobado') continue;
     if (String(c.estado_acceso) !== 'activo') continue;
-    const finIso = toIsoDate(c.fecha_fin);
+    const finIso = toIsoDate_(c.fecha_fin);
     if (finIso && finIso < today) continue;
     return true;
   }
@@ -785,14 +804,14 @@ function hasActiveAccess(idUsuario, idPlataforma) {
 // ║  Handlers publicos y de admin + dispatcher                    ║
 // ╚═══════════════════════════════════════════════════════════════╝
 
-function ping() {
-  const missing = checkRequiredProperties();
+function ping_() {
+  const missing = checkRequiredProperties_();
   const isOk = missing.length === 0;
   let sheetUrl;
   if (isOk) {
-    try { sheetUrl = getSpreadsheet().getUrl(); } catch (e) { /* ignorar */ }
+    try { sheetUrl = getSpreadsheet_().getUrl(); } catch (e) { /* ignorar */ }
   }
-  return ok(
+  return ok_(
     {
       status: isOk ? 'online' : 'setup-pending',
       timestamp: new Date().toISOString(),
@@ -803,9 +822,9 @@ function ping() {
   );
 }
 
-function listarPlataformasPublicas(req) {
+function listarPlataformasPublicas_(req) {
   try {
-    const all = readAll(SHEET_NAMES.PLATAFORMAS);
+    const all = readAll_(SHEET_NAMES.PLATAFORMAS);
     // Nunca devolvemos url_real al cliente publico (regla §2.2 de CLAUDE.md).
     const safe = all
       .filter(function (p) {
@@ -838,11 +857,11 @@ function listarPlataformasPublicas(req) {
       return a.id_plataforma < b.id_plataforma ? -1 : 1;
     });
 
-    return ok(safe);
+    return ok_(safe);
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'listarPlataformasPublicas', nivel: 'error', detalle: detalle });
-    return fail('No se pudo leer plataformas', 'Intentalo en unos segundos.');
+    log_({ accion: 'listarPlataformasPublicas', nivel: 'error', detalle: detalle });
+    return fail_('No se pudo leer plataformas', 'Intentalo en unos segundos.');
   }
 }
 
@@ -850,55 +869,59 @@ function listarPlataformasPublicas(req) {
 
 const ADMIN_SESSION_TTL = 21600; // 6h (tope de CacheService)
 
-function validateAdminSession(token) {
+function validateAdminSession_(token) {
   if (!token) return false;
   return CacheService.getScriptCache().get('admin_sess_' + token) === '1';
 }
 
-function requireAdmin(req) {
-  if (!validateAdminSession(req.adminToken)) {
+function requireAdmin_(req) {
+  if (!validateAdminSession_(req.adminToken)) {
     throw new Error('Sesión admin inválida o expirada. Inicia sesión de nuevo.');
   }
 }
 
 // ─── Admin: handlers ─────────────────────────────────────────
 
-function adminLogin(req) {
+function adminLogin_(req) {
   try {
+    if (checkRateLimit_('rl_admin_login')) {
+      log_({ accion: 'adminLogin', nivel: 'warning', detalle: 'rate limit de login admin excedido' });
+      return fail_('Demasiados intentos. Espera unos minutos.');
+    }
     const password = String(req.password || '').trim();
-    if (!isNonEmptyString(password)) return fail('Falta la contraseña');
+    if (!isNonEmptyString_(password)) return fail_('Falta la contraseña');
 
-    const storedHash = getProperty('ADMIN_PASSWORD_HASH');
-    const storedSalt = getProperty('ADMIN_PASSWORD_SALT');
-    const legacyPass = getProperty('ADMIN_PASSWORD');
+    const storedHash = getProperty_('ADMIN_PASSWORD_HASH');
+    const storedSalt = getProperty_('ADMIN_PASSWORD_SALT');
+    const legacyPass = getProperty_('ADMIN_PASSWORD');
 
     let valid = false;
     if (storedHash && storedSalt) {
-      valid = hashPassword(password, storedSalt) === storedHash;
+      valid = hashPassword_(password, storedSalt) === storedHash;
     } else if (legacyPass) {
       valid = password === legacyPass;
       if (valid) {
         // Migracion en caliente: texto plano legado → hash+salt, sin reconfigurar nada.
-        const salt = generateSalt();
-        setProperty('ADMIN_PASSWORD_HASH', hashPassword(password, salt));
-        setProperty('ADMIN_PASSWORD_SALT', salt);
+        const salt = generateSalt_();
+        setProperty_('ADMIN_PASSWORD_HASH', hashPassword_(password, salt));
+        setProperty_('ADMIN_PASSWORD_SALT', salt);
         PropertiesService.getScriptProperties().deleteProperty('ADMIN_PASSWORD');
-        log({ accion: 'adminLogin', nivel: 'info', detalle: 'ADMIN_PASSWORD migrado a hash+salt' });
+        log_({ accion: 'adminLogin', nivel: 'info', detalle: 'ADMIN_PASSWORD migrado a hash+salt' });
       }
     } else {
-      return fail('ADMIN_PASSWORD no configurado. Agrégalo en Configuración del Proyecto → Propiedades del script.');
+      return fail_('ADMIN_PASSWORD no configurado. Agrégalo en Configuración del Proyecto → Propiedades del script.');
     }
     if (!valid) {
-      log({ accion: 'adminLogin', nivel: 'warning', detalle: 'contraseña admin incorrecta' });
-      return fail('Credenciales incorrectas');
+      log_({ accion: 'adminLogin', nivel: 'warning', detalle: 'contraseña admin incorrecta' });
+      return fail_('Credenciales incorrectas');
     }
 
-    const token = randomToken(32);
+    const token = randomToken_(32);
     CacheService.getScriptCache().put('admin_sess_' + token, '1', ADMIN_SESSION_TTL);
-    log({ accion: 'adminLogin', nivel: 'info', detalle: 'login admin OK' });
-    return ok({ token: token });
+    log_({ accion: 'adminLogin', nivel: 'info', detalle: 'login admin OK' });
+    return ok_({ token: token });
   } catch (err) {
-    return fail('Error interno: ' + (err instanceof Error ? err.message : String(err)));
+    return fail_('Error interno: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -909,23 +932,24 @@ function adminLogin(req) {
  * No se expone en ningún dispatcher.
  */
 function setAdminPassword(plain) {
+  requireEditor_();
   const password = String(plain || '').trim();
   if (!password) return { ok: false, error: 'Contraseña vacía' };
-  const salt = generateSalt();
-  setProperty('ADMIN_PASSWORD_HASH', hashPassword(password, salt));
-  setProperty('ADMIN_PASSWORD_SALT', salt);
+  const salt = generateSalt_();
+  setProperty_('ADMIN_PASSWORD_HASH', hashPassword_(password, salt));
+  setProperty_('ADMIN_PASSWORD_SALT', salt);
   PropertiesService.getScriptProperties().deleteProperty('ADMIN_PASSWORD');
-  log({ accion: 'setAdminPassword', nivel: 'info', detalle: 'contraseña admin rotada desde el editor' });
+  log_({ accion: 'setAdminPassword', nivel: 'info', detalle: 'contraseña admin rotada desde el editor' });
   return { ok: true };
 }
 
-function listarSolicitudes(req) {
+function listarSolicitudes_(req) {
   try {
-    requireAdmin(req);
+    requireAdmin_(req);
     const estado = String(req.estado || 'pendiente');
-    const compras = readAll(SHEET_NAMES.COMPRAS);
-    const usuarios = readAll(SHEET_NAMES.USUARIOS);
-    const plataformas = readAll(SHEET_NAMES.PLATAFORMAS);
+    const compras = readAll_(SHEET_NAMES.COMPRAS);
+    const usuarios = readAll_(SHEET_NAMES.USUARIOS);
+    const plataformas = readAll_(SHEET_NAMES.PLATAFORMAS);
 
     const userMap = {};
     for (let i = 0; i < usuarios.length; i++) {
@@ -956,14 +980,20 @@ function listarSolicitudes(req) {
         slug: String(p.slug || ''),
         monto: Number(c.monto) || 0,
         metodo_pago: String(c.metodo_pago || ''),
-        fecha_solicitud: String(c.fecha_solicitud ? toIsoDate(c.fecha_solicitud) || String(c.fecha_solicitud) : ''),
+        fecha_solicitud: String(c.fecha_solicitud ? toIsoDate_(c.fecha_solicitud) || String(c.fecha_solicitud) : ''),
         voucher_url: String(c.voucher_url || ''),
         estado_pago: String(c.estado_pago || ''),
         estado_acceso: String(c.estado_acceso || ''),
-        fecha_fin: toIsoDate(c.fecha_fin) || '',
+        fecha_fin: toIsoDate_(c.fecha_fin) || '',
         detalle_extra: String(c.detalle_extra || ''),
         tiene_password: !!(u.password_hash && String(u.password_hash).trim().length > 0),
-        url_sheet_plataforma: p.url_sheet_plataforma ? String(p.url_sheet_plataforma) : ''
+        url_sheet_plataforma: p.url_sheet_plataforma ? String(p.url_sheet_plataforma) : '',
+        // Para el panel: comparar monto vs precio y mostrar la vigencia antes de aprobar.
+        precio_esperado: (function () {
+          const promo = (p.precio_promocional === undefined || p.precio_promocional === '') ? NaN : Number(p.precio_promocional);
+          return (!isNaN(promo) && promo > 0) ? promo : (Number(p.precio) || 0);
+        })(),
+        duracion_dias: Number(p.duracion_dias) || 30
       };
     });
 
@@ -971,58 +1001,58 @@ function listarSolicitudes(req) {
       return a.fecha_solicitud < b.fecha_solicitud ? 1 : -1;
     });
 
-    return ok(result);
+    return ok_(result);
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'listarSolicitudes', nivel: 'error', detalle: detalle });
-    return fail('Error al listar solicitudes: ' + detalle);
+    log_({ accion: 'listarSolicitudes', nivel: 'error', detalle: detalle });
+    return fail_('Error al listar solicitudes: ' + detalle);
   }
 }
 
-function aprobarPago(req) {
+function aprobarPago_(req) {
   try {
-    requireAdmin(req);
+    requireAdmin_(req);
     const idCompra = String(req.id_compra || '').trim();
-    if (!isNonEmptyString(idCompra)) return fail('Falta id_compra');
+    if (!isNonEmptyString_(idCompra)) return fail_('Falta id_compra');
 
-    const compraRow = findRowIndex(SHEET_NAMES.COMPRAS, 1, idCompra);
-    if (compraRow < 0) return fail('Compra no encontrada: ' + idCompra);
+    const compraRow = findRowIndex_(SHEET_NAMES.COMPRAS, 1, idCompra);
+    if (compraRow < 0) return fail_('Compra no encontrada: ' + idCompra);
 
-    const compras = readAll(SHEET_NAMES.COMPRAS);
+    const compras = readAll_(SHEET_NAMES.COMPRAS);
     let compra = null;
     for (let i = 0; i < compras.length; i++) {
       if (String(compras[i].id_compra) === idCompra) { compra = compras[i]; break; }
     }
-    if (!compra) return fail('Compra no encontrada');
-    if (String(compra.estado_pago) === 'aprobado') return fail('Esta compra ya fue aprobada');
+    if (!compra) return fail_('Compra no encontrada');
+    if (String(compra.estado_pago) === 'aprobado') return fail_('Esta compra ya fue aprobada');
 
-    const usuarios = readAll(SHEET_NAMES.USUARIOS);
+    const usuarios = readAll_(SHEET_NAMES.USUARIOS);
     let usuario = null;
     for (let i = 0; i < usuarios.length; i++) {
       if (String(usuarios[i].id_usuario) === String(compra.id_usuario)) { usuario = usuarios[i]; break; }
     }
-    if (!usuario) return fail('Usuario no encontrado');
+    if (!usuario) return fail_('Usuario no encontrado');
 
-    const sheetUsuarios = getSheet(SHEET_NAMES.USUARIOS);
-    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+    const sheetUsuarios = getSheet_(SHEET_NAMES.USUARIOS);
+    const sheetCompras = getSheet_(SHEET_NAMES.COMPRAS);
 
     // Generar password solo si el usuario aún no tiene uno
     let plainPassword = null;
     if (!usuario.password_hash || String(usuario.password_hash).trim() === '') {
-      plainPassword = randomToken(10);
-      const salt = generateSalt();
-      const hash = hashPassword(plainPassword, salt);
-      const userRow = findRowIndex(SHEET_NAMES.USUARIOS, 1, String(compra.id_usuario));
+      plainPassword = randomToken_(10);
+      const salt = generateSalt_();
+      const hash = hashPassword_(plainPassword, salt);
+      const userRow = findRowIndex_(SHEET_NAMES.USUARIOS, 1, String(compra.id_usuario));
       if (userRow > 0) {
         sheetUsuarios.getRange(userRow, 5).setValue(hash);
         sheetUsuarios.getRange(userRow, 6).setValue(salt);
       }
     }
 
-    const plat = findPlataformaById(String(compra.id_plataforma));
+    const plat = findPlataformaById_(String(compra.id_plataforma));
     const duracion = plat ? (Number(plat.duracion_dias) || 30) : 30;
-    const hoy = todayIso();
-    const fechaFin = addDaysIso(duracion);
+    const hoy = todayIso_();
+    const fechaFin = addDaysIso_(duracion);
 
     // Cols: estado_pago=8, fecha_aprobacion=9, fecha_inicio=10, fecha_fin=11, estado_acceso=12
     sheetCompras.getRange(compraRow, 8).setValue('aprobado');
@@ -1041,10 +1071,10 @@ function aprobarPago(req) {
       let emailBody =
         '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
         '<h2 style="color:#10312D;margin:0 0 16px">¡Tu acceso fue aprobado! ✅</h2>' +
-        '<p>Hola <strong>' + escapeHtml(nombre) + '</strong>,</p>' +
-        '<p>Tu pago para <strong>' + escapeHtml(platNombre) + '</strong> fue verificado. Ya puedes acceder.</p>' +
+        '<p>Hola <strong>' + escapeHtml_(nombre) + '</strong>,</p>' +
+        '<p>Tu pago para <strong>' + escapeHtml_(platNombre) + '</strong> fue verificado. Ya puedes acceder.</p>' +
         '<hr style="border:none;border-top:1px solid rgba(16,49,45,.1);margin:20px 0">' +
-        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + escapeHtml(correo) + '</code></p>';
+        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + escapeHtml_(correo) + '</code></p>';
       if (plainPassword) {
         emailBody += '<p><strong>🔑 Contraseña:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + plainPassword + '</code></p>' +
           '<p style="font-size:13px;color:#3D5752"><em>Guarda esta contraseña. No se la volveremos a enviar.</em></p>';
@@ -1059,14 +1089,14 @@ function aprobarPago(req) {
         '<p style="font-size:12px;color:#3D5752">¿Problemas? WhatsApp: <a href="https://wa.me/51984300510">+51 984 300 510</a></p>' +
         '</div>';
 
-      enviarCorreo(correo, '✅ Acceso aprobado — ' + platNombre + ' | SINAPSIS EDU', emailBody);
+      enviarCorreo_(correo, '✅ Acceso aprobado — ' + platNombre + ' | SINAPSIS EDU', emailBody);
     } catch (emailErr) {
-      log({ accion: 'aprobarPago', nivel: 'warning', detalle: 'falla email alumno: ' + emailErr });
+      log_({ accion: 'aprobarPago', nivel: 'warning', detalle: 'falla email alumno: ' + emailErr });
     }
 
     // Registrar en hoja Credenciales (plainPassword o nota si ya tenía contraseña)
     try {
-      const sheetCred = getSheet(SHEET_NAMES.CREDENCIALES);
+      const sheetCred = getSheet_(SHEET_NAMES.CREDENCIALES);
       const platNombreLog = plat ? String(plat.nombre) : String(compra.id_plataforma);
       sheetCred.appendRow([
         idCompra,
@@ -1080,15 +1110,15 @@ function aprobarPago(req) {
         hoy
       ]);
     } catch (credErr) {
-      log({ accion: 'aprobarPago', nivel: 'warning', detalle: 'falla al escribir Credenciales: ' + credErr });
+      log_({ accion: 'aprobarPago', nivel: 'warning', detalle: 'falla al escribir Credenciales: ' + credErr });
     }
 
-    log({
+    log_({
       accion: 'aprobarPago', nivel: 'info',
       detalle: idCompra + ' aprobado password_generado=' + !!plainPassword
     });
 
-    return ok({
+    return ok_({
       id_compra: idCompra,
       correo: String(usuario.correo),
       fecha_fin: fechaFin,
@@ -1096,49 +1126,49 @@ function aprobarPago(req) {
     }, 'Pago aprobado. ' + (plainPassword ? 'Credenciales enviadas al alumno.' : 'Confirmación enviada al alumno.'));
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'aprobarPago', nivel: 'error', detalle: detalle });
-    return fail('Error al aprobar: ' + detalle);
+    log_({ accion: 'aprobarPago', nivel: 'error', detalle: detalle });
+    return fail_('Error al aprobar: ' + detalle);
   }
 }
 
-function rechazarPago(req) {
+function rechazarPago_(req) {
   try {
-    requireAdmin(req);
+    requireAdmin_(req);
     const idCompra = String(req.id_compra || '').trim();
     const motivo = String(req.motivo || 'No especificado').trim();
-    if (!isNonEmptyString(idCompra)) return fail('Falta id_compra');
+    if (!isNonEmptyString_(idCompra)) return fail_('Falta id_compra');
 
-    const compraRow = findRowIndex(SHEET_NAMES.COMPRAS, 1, idCompra);
-    if (compraRow < 0) return fail('Compra no encontrada');
+    const compraRow = findRowIndex_(SHEET_NAMES.COMPRAS, 1, idCompra);
+    if (compraRow < 0) return fail_('Compra no encontrada');
 
-    const compras = readAll(SHEET_NAMES.COMPRAS);
+    const compras = readAll_(SHEET_NAMES.COMPRAS);
     let compra = null;
     for (let i = 0; i < compras.length; i++) {
       if (String(compras[i].id_compra) === idCompra) { compra = compras[i]; break; }
     }
-    if (!compra) return fail('Compra no encontrada');
-    if (String(compra.estado_pago) === 'rechazado') return fail('Ya fue rechazada anteriormente');
+    if (!compra) return fail_('Compra no encontrada');
+    if (String(compra.estado_pago) === 'rechazado') return fail_('Ya fue rechazada anteriormente');
 
-    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+    const sheetCompras = getSheet_(SHEET_NAMES.COMPRAS);
     sheetCompras.getRange(compraRow, 8).setValue('rechazado');
     sheetCompras.getRange(compraRow, 12).setValue('revocado');
 
     try {
-      const usuarios = readAll(SHEET_NAMES.USUARIOS);
+      const usuarios = readAll_(SHEET_NAMES.USUARIOS);
       for (let i = 0; i < usuarios.length; i++) {
         if (String(usuarios[i].id_usuario) === String(compra.id_usuario)) {
           const correo = String(usuarios[i].correo);
           const nombre = String(usuarios[i].nombre);
-          const plat = findPlataformaById(String(compra.id_plataforma));
+          const plat = findPlataformaById_(String(compra.id_plataforma));
           const platNombre = plat ? String(plat.nombre) : String(compra.id_plataforma);
-          enviarCorreo(
+          enviarCorreo_(
             correo,
             '❌ Pago no verificado — ' + platNombre + ' | SINAPSIS EDU',
             '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
             '<h2 style="color:#10312D;margin:0 0 16px">Tu pago no pudo verificarse ❌</h2>' +
-            '<p>Hola <strong>' + escapeHtml(nombre) + '</strong>,</p>' +
-            '<p>Lamentablemente no pudimos verificar tu pago para <strong>' + escapeHtml(platNombre) + '</strong>.</p>' +
-            '<p><strong>Motivo:</strong> ' + escapeHtml(motivo) + '</p>' +
+            '<p>Hola <strong>' + escapeHtml_(nombre) + '</strong>,</p>' +
+            '<p>Lamentablemente no pudimos verificar tu pago para <strong>' + escapeHtml_(platNombre) + '</strong>.</p>' +
+            '<p><strong>Motivo:</strong> ' + escapeHtml_(motivo) + '</p>' +
             '<p>Por favor comunícate con nosotros para solucionarlo:</p>' +
             '<p><a href="https://wa.me/51984300510?text=Hola%2C%20mi%20pago%20' + idCompra + '%20fue%20rechazado%2C%20quisiera%20aclarar." style="background:#10312D;color:#C2E476;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Escribir por WhatsApp →</a></p>' +
             '</div>'
@@ -1147,15 +1177,15 @@ function rechazarPago(req) {
         }
       }
     } catch (emailErr) {
-      log({ accion: 'rechazarPago', nivel: 'warning', detalle: 'falla email: ' + emailErr });
+      log_({ accion: 'rechazarPago', nivel: 'warning', detalle: 'falla email: ' + emailErr });
     }
 
-    log({ accion: 'rechazarPago', nivel: 'info', detalle: idCompra + ' motivo: ' + motivo });
-    return ok({ id_compra: idCompra }, 'Pago rechazado. Alumno notificado por correo.');
+    log_({ accion: 'rechazarPago', nivel: 'info', detalle: idCompra + ' motivo: ' + motivo });
+    return ok_({ id_compra: idCompra }, 'Pago rechazado. Alumno notificado por correo.');
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'rechazarPago', nivel: 'error', detalle: detalle });
-    return fail('Error al rechazar: ' + detalle);
+    log_({ accion: 'rechazarPago', nivel: 'error', detalle: detalle });
+    return fail_('Error al rechazar: ' + detalle);
   }
 }
 
@@ -1169,7 +1199,7 @@ const METODOS_PAGO_VALIDOS = ['yape', 'transferencia', 'binance', 'whatsapp'];
  *  { action, nombre, correo, whatsapp, id_plataforma, metodo_pago, monto, detalle_extra? }
  * Devuelve { id_compra, id_usuario }.
  */
-function registrarCompra(req) {
+function registrarCompra_(req) {
   try {
     const nombre = String(req.nombre || '').trim();
     const correo = String(req.correo || '').trim().toLowerCase();
@@ -1178,22 +1208,22 @@ function registrarCompra(req) {
     const metodoPago = String(req.metodo_pago || '').trim().toLowerCase();
     const monto = Number(req.monto || 0);
 
-    if (checkRateLimit('rl_compra_' + correo)) {
-      log({ accion: 'registrarCompra', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
-      return fail('Demasiados intentos. Espera unos minutos.');
+    if (checkRateLimit_('rl_compra_' + correo)) {
+      log_({ accion: 'registrarCompra', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
+      return fail_('Demasiados intentos. Espera unos minutos.');
     }
 
-    if (!isNonEmptyString(nombre) || nombre.length < 3) return fail('Nombre invalido');
-    if (!isEmail(correo)) return fail('Correo invalido');
-    if (!isWhatsapp(whatsapp)) return fail('WhatsApp invalido');
-    if (!isNonEmptyString(idPlataforma)) return fail('Falta plataforma');
-    if (METODOS_PAGO_VALIDOS.indexOf(metodoPago) === -1) return fail('Metodo de pago invalido');
-    if (!isFinite(monto) || monto <= 0) return fail('Monto invalido');
+    if (!isNonEmptyString_(nombre) || nombre.length < 3) return fail_('Nombre invalido');
+    if (!isEmail_(correo)) return fail_('Correo invalido');
+    if (!isWhatsapp_(whatsapp)) return fail_('WhatsApp invalido');
+    if (!isNonEmptyString_(idPlataforma)) return fail_('Falta plataforma');
+    if (METODOS_PAGO_VALIDOS.indexOf(metodoPago) === -1) return fail_('Metodo de pago invalido');
+    if (!isFinite(monto) || monto <= 0) return fail_('Monto invalido');
 
-    const plat = findPlataformaById(idPlataforma);
-    if (!plat) return fail('Plataforma no encontrada');
+    const plat = findPlataformaById_(idPlataforma);
+    if (!plat) return fail_('Plataforma no encontrada');
     const activo = plat.activo === true || String(plat.activo).toLowerCase() === 'true';
-    if (!activo) return fail('Plataforma no disponible');
+    if (!activo) return fail_('Plataforma no disponible');
 
     // Serializar detalle_extra (puede venir como objeto o string).
     let detalleExtra = '';
@@ -1204,8 +1234,8 @@ function registrarCompra(req) {
     }
 
     // Find or create user
-    const sheetUsuarios = getSheet(SHEET_NAMES.USUARIOS);
-    const userExistente = findUsuarioByCorreo(correo);
+    const sheetUsuarios = getSheet_(SHEET_NAMES.USUARIOS);
+    const userExistente = findUsuarioByCorreo_(correo);
     let userId;
     if (userExistente) {
       // La cuenta se identifica por el correo. El nombre/WhatsApp se conservan
@@ -1213,22 +1243,22 @@ function registrarCompra(req) {
       // gestionar todos los accesos del alumno bajo su identidad original.
       userId = String(userExistente.id_usuario);
     } else {
-      userId = nextId('U', nextSequenceFromColumn(SHEET_NAMES.USUARIOS, 1));
+      userId = nextId_('U', nextSequenceFromColumn_(SHEET_NAMES.USUARIOS, 1));
       // Password se genera y envia en aprobarPago. Por ahora password_hash vacio.
       sheetUsuarios.appendRow([
         userId, nombre, correo, whatsapp,
         '', '',        // password_hash, password_salt
-        nowIso(),      // fecha_registro
+        nowIso_(),      // fecha_registro
         'activo'
       ]);
     }
 
     // Crear compra (estado pendiente)
-    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
-    const idCompra = nextId('C', nextSequenceFromColumn(SHEET_NAMES.COMPRAS, 1));
+    const sheetCompras = getSheet_(SHEET_NAMES.COMPRAS);
+    const idCompra = nextId_('C', nextSequenceFromColumn_(SHEET_NAMES.COMPRAS, 1));
     sheetCompras.appendRow([
       idCompra, userId, idPlataforma, monto, metodoPago,
-      nowIso(),       // fecha_solicitud
+      nowIso_(),       // fecha_solicitud
       '',             // voucher_url
       'pendiente',    // estado_pago
       '',             // fecha_aprobacion
@@ -1240,9 +1270,9 @@ function registrarCompra(req) {
 
     // Notificar admin por email
     try {
-      const ssUrl = getSpreadsheet().getUrl();
+      const ssUrl = getSpreadsheet_().getUrl();
       const detalleHtml = detalleExtra
-        ? `<p><strong>Detalles:</strong> <code>${escapeHtml(detalleExtra)}</code></p>`
+        ? `<p><strong>Detalles:</strong> <code>${escapeHtml_(detalleExtra)}</code></p>`
         : '';
       // Alerta de monto: solo si NO hay detalle_extra (precio fijo) y el monto
       // reportado no coincide con el precio esperado (promocional si existe).
@@ -1259,11 +1289,11 @@ function registrarCompra(req) {
             ' — verificar voucher.</strong></p>';
         }
       }
-      notificarAdmin(
+      notificarAdmin_(
         '[SINAPSIS EDU] Nueva compra ' + idCompra + ' - ' + plat.nombre,
         '<h2 style="color:#10312D">Nueva solicitud de compra</h2>' +
         '<p><strong>ID compra:</strong> ' + idCompra + '</p>' +
-        '<p><strong>Alumno:</strong> ' + escapeHtml(nombre) + ' (' + escapeHtml(correo) + ', WhatsApp ' + escapeHtml(whatsapp) + ')</p>' +
+        '<p><strong>Alumno:</strong> ' + escapeHtml_(nombre) + ' (' + escapeHtml_(correo) + ', WhatsApp ' + escapeHtml_(whatsapp) + ')</p>' +
         '<p><strong>Plataforma:</strong> ' + plat.nombre + ' (' + idPlataforma + ')</p>' +
         '<p><strong>Monto:</strong> S/ ' + monto.toFixed(2) + '</p>' +
         alertaMonto +
@@ -1274,25 +1304,25 @@ function registrarCompra(req) {
       );
     } catch (e) {
       // El email es best-effort. No bloquear la compra si falla.
-      log({ accion: 'notificarAdmin', nivel: 'warning', detalle: 'falla email: ' + e });
+      log_({ accion: 'notificarAdmin', nivel: 'warning', detalle: 'falla email: ' + e });
     }
 
-    log({
+    log_({
       accion: 'registrarCompra',
       idUsuario: userId,
       nivel: 'info',
       detalle: idCompra + ' ' + plat.nombre + ' S/' + monto + ' ' + metodoPago
     });
 
-    return ok({
+    return ok_({
       id_compra: idCompra,
       id_usuario: userId,
       message: 'Solicitud registrada. Ahora sube tu voucher.'
     });
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'registrarCompra', nivel: 'error', detalle: detalle });
-    return fail('Error interno', 'No se pudo registrar tu compra. Intenta de nuevo.');
+    log_({ accion: 'registrarCompra', nivel: 'error', detalle: detalle });
+    return fail_('Error interno', 'No se pudo registrar tu compra. Intenta de nuevo.');
   }
 }
 
@@ -1301,47 +1331,47 @@ function registrarCompra(req) {
  * Body esperado:
  *  { action, id_compra, archivo_base64, tipo (mime), nombre (filename) }
  */
-function subirVoucher(req) {
+function subirVoucher_(req) {
   try {
     const idCompra = String(req.id_compra || '').trim();
     const archivoBase64 = String(req.archivo_base64 || '');
     const mime = String(req.tipo || req.mime || '').trim();
     const filename = String(req.nombre || req.filename || 'voucher.png').trim();
 
-    if (!isNonEmptyString(idCompra)) return fail('Falta id_compra');
+    if (!isNonEmptyString_(idCompra)) return fail_('Falta id_compra');
 
-    if (checkRateLimit('rl_voucher_' + idCompra)) {
-      log({ accion: 'subirVoucher', nivel: 'warning', detalle: 'rate limit excedido: ' + idCompra });
-      return fail('Demasiados intentos. Espera unos minutos.');
+    if (checkRateLimit_('rl_voucher_' + idCompra)) {
+      log_({ accion: 'subirVoucher', nivel: 'warning', detalle: 'rate limit excedido: ' + idCompra });
+      return fail_('Demasiados intentos. Espera unos minutos.');
     }
 
-    if (!isNonEmptyString(archivoBase64)) return fail('Falta archivo');
+    if (!isNonEmptyString_(archivoBase64)) return fail_('Falta archivo');
 
-    const v = validateVoucher(mime, archivoBase64);
-    if (!v.ok) return fail(v.error);
+    const v = validateVoucher_(mime, archivoBase64);
+    if (!v.ok) return fail_(v.error);
 
-    const rowIndex = findRowIndex(SHEET_NAMES.COMPRAS, 1, idCompra);
-    if (rowIndex < 0) return fail('Compra no encontrada');
+    const rowIndex = findRowIndex_(SHEET_NAMES.COMPRAS, 1, idCompra);
+    if (rowIndex < 0) return fail_('Compra no encontrada');
 
     // Guard: solo compras pendientes y sin voucher previo admiten subida.
     // (El reintento legitimo pasa: si la primera subida fallo, voucher_url
     // quedo vacio y estado_pago sigue 'pendiente'.)
-    const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+    const sheetCompras = getSheet_(SHEET_NAMES.COMPRAS);
     const filaCompra = sheetCompras.getRange(rowIndex, 1, 1, HEADERS_COMPRAS.length).getValues()[0];
     const estadoPagoActual = String(filaCompra[7] || '').trim();   // col 8: estado_pago
     const voucherActual = String(filaCompra[6] || '').trim();      // col 7: voucher_url
     if (estadoPagoActual !== 'pendiente') {
-      log({ accion: 'subirVoucher', nivel: 'warning', detalle: idCompra + ' rechazado: estado_pago=' + estadoPagoActual });
-      return fail('Esta solicitud ya no admite voucher.');
+      log_({ accion: 'subirVoucher', nivel: 'warning', detalle: idCompra + ' rechazado: estado_pago=' + estadoPagoActual });
+      return fail_('Esta solicitud ya no admite voucher.');
     }
     if (voucherActual) {
-      log({ accion: 'subirVoucher', nivel: 'warning', detalle: idCompra + ' rechazado: ya tiene voucher' });
-      return fail('Esta compra ya tiene un voucher.');
+      log_({ accion: 'subirVoucher', nivel: 'warning', detalle: idCompra + ' rechazado: ya tiene voucher' });
+      return fail_('Esta compra ya tiene un voucher.');
     }
 
     // Subir a Drive
     const safeName = idCompra + '_' + Date.now() + '_' + filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const subida = subirVoucherDrive(archivoBase64, mime, safeName);
+    const subida = subirVoucherDrive_(archivoBase64, mime, safeName);
 
     // Actualizar columna voucher_url (columna 7 en HEADERS_COMPRAS)
     sheetCompras.getRange(rowIndex, 7).setValue(subida.fileUrl);
@@ -1351,14 +1381,14 @@ function subirVoucher(req) {
     let plataforma = '';
     let alumnoCorreo = '';
     try {
-      const all = readAll(SHEET_NAMES.COMPRAS);
+      const all = readAll_(SHEET_NAMES.COMPRAS);
       const compra = null;
       for (let i = 0; i < all.length; i++) {
         if (String(all[i].id_compra) === idCompra) {
           monto = String(all[i].monto);
-          const plat = findPlataformaById(String(all[i].id_plataforma));
+          const plat = findPlataformaById_(String(all[i].id_plataforma));
           plataforma = plat ? String(plat.nombre) : String(all[i].id_plataforma);
-          const usuarios = readAll(SHEET_NAMES.USUARIOS);
+          const usuarios = readAll_(SHEET_NAMES.USUARIOS);
           for (let j = 0; j < usuarios.length; j++) {
             if (String(usuarios[j].id_usuario) === String(all[i].id_usuario)) {
               alumnoCorreo = String(usuarios[j].correo);
@@ -1371,132 +1401,132 @@ function subirVoucher(req) {
     } catch (_) { /* email best-effort */ }
 
     try {
-      notificarAdmin(
+      notificarAdmin_(
         '[SINAPSIS EDU] Voucher subido: ' + idCompra,
         '<h2 style="color:#10312D">Voucher recibido</h2>' +
         '<p><strong>Compra:</strong> ' + idCompra + '</p>' +
-        '<p><strong>Plataforma:</strong> ' + escapeHtml(plataforma) + '</p>' +
-        '<p><strong>Monto:</strong> S/ ' + escapeHtml(monto) + '</p>' +
-        '<p><strong>Alumno:</strong> ' + escapeHtml(alumnoCorreo) + '</p>' +
+        '<p><strong>Plataforma:</strong> ' + escapeHtml_(plataforma) + '</p>' +
+        '<p><strong>Monto:</strong> S/ ' + escapeHtml_(monto) + '</p>' +
+        '<p><strong>Alumno:</strong> ' + escapeHtml_(alumnoCorreo) + '</p>' +
         '<p><a href="' + subida.fileUrl + '">Ver voucher en Drive</a></p>' +
         '<p>Revisa y aprueba desde el panel admin.</p>'
       );
     } catch (e) {
-      log({ accion: 'notificarAdmin', nivel: 'warning', detalle: 'falla email voucher: ' + e });
+      log_({ accion: 'notificarAdmin', nivel: 'warning', detalle: 'falla email voucher: ' + e });
     }
 
-    log({ accion: 'subirVoucher', nivel: 'info', detalle: idCompra + ' ' + safeName });
+    log_({ accion: 'subirVoucher', nivel: 'info', detalle: idCompra + ' ' + safeName });
 
-    return ok({ message: 'Voucher recibido. Te avisaremos por correo cuando aprobemos.' });
+    return ok_({ message: 'Voucher recibido. Te avisaremos por correo cuando aprobemos.' });
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'subirVoucher', nivel: 'error', detalle: detalle });
-    return fail('Error interno', 'No se pudo subir el voucher. Intenta de nuevo o envialo por WhatsApp.');
+    log_({ accion: 'subirVoucher', nivel: 'error', detalle: detalle });
+    return fail_('Error interno', 'No se pudo subir el voucher. Intenta de nuevo o envialo por WhatsApp.');
   }
 }
 
 // ─── Fase 5: login alumno + accesos + url plataforma ─────────
 
-function loginAlumno(req) {
+function loginAlumno_(req) {
   try {
     const correo = String(req.correo || '').trim();
     const password = String(req.password || '');
 
-    if (checkRateLimit('rl_login_' + correo.toLowerCase())) {
-      log({ accion: 'loginAlumno', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
-      return fail('Demasiados intentos. Espera unos minutos.');
+    if (checkRateLimit_('rl_login_' + correo.toLowerCase())) {
+      log_({ accion: 'loginAlumno', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
+      return fail_('Demasiados intentos. Espera unos minutos.');
     }
 
-    if (!isEmail(correo)) return fail('Correo invalido');
-    if (!isNonEmptyString(password)) return fail('Falta la contrasena');
+    if (!isEmail_(correo)) return fail_('Correo invalido');
+    if (!isNonEmptyString_(password)) return fail_('Falta la contrasena');
 
-    const user = findUsuarioByCorreo(correo);
+    const user = findUsuarioByCorreo_(correo);
     if (!user) {
-      log({ accion: 'loginAlumno', nivel: 'warning', detalle: 'correo no existe: ' + correo });
-      return fail('Credenciales invalidas');
+      log_({ accion: 'loginAlumno', nivel: 'warning', detalle: 'correo no existe: ' + correo });
+      return fail_('Credenciales invalidas');
     }
     if (String(user.estado) !== 'activo') {
-      log({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'cuenta no activa' });
-      return fail('Cuenta bloqueada. Contacta soporte.');
+      log_({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'cuenta no activa' });
+      return fail_('Cuenta bloqueada. Contacta soporte.');
     }
     const salt = String(user.password_salt || '');
     const hash = String(user.password_hash || '');
     if (!salt || !hash) {
-      log({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'usuario sin credenciales' });
-      return fail('Cuenta sin contrasena configurada. Contacta soporte.');
+      log_({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'usuario sin credenciales' });
+      return fail_('Cuenta sin contrasena configurada. Contacta soporte.');
     }
-    if (hashPassword(password, salt) !== hash) {
-      log({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'password incorrecta' });
-      return fail('Credenciales invalidas');
+    if (hashPassword_(password, salt) !== hash) {
+      log_({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'password incorrecta' });
+      return fail_('Credenciales invalidas');
     }
 
-    const token = createSession({
+    const token = createSession_({
       id_usuario: String(user.id_usuario),
       correo: String(user.correo),
       nombre: String(user.nombre)
     });
 
-    log({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'login OK' });
-    return ok({
+    log_({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'login OK' });
+    return ok_({
       token: token,
       usuario: { nombre: String(user.nombre), correo: String(user.correo) }
     });
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'loginAlumno', nivel: 'error', detalle: detalle });
-    return fail('Error interno', 'No se pudo procesar el login');
+    log_({ accion: 'loginAlumno', nivel: 'error', detalle: detalle });
+    return fail_('Error interno', 'No se pudo procesar el login');
   }
 }
 
-function misAccesos(req) {
-  const session = validateSession(req.token);
-  if (!session) return fail('Sesion invalida o expirada');
+function misAccesos_(req) {
+  const session = validateSession_(req.token);
+  if (!session) return fail_('Sesion invalida o expirada');
 
   try {
-    const today = todayIso();
-    const compras = readAll(SHEET_NAMES.COMPRAS);
+    const today = todayIso_();
+    const compras = readAll_(SHEET_NAMES.COMPRAS);
     const accesos = compras
       .filter(function (c) {
         if (String(c.id_usuario) !== String(session.id_usuario)) return false;
         if (String(c.estado_pago) !== 'aprobado') return false;
         if (String(c.estado_acceso) !== 'activo') return false;
-        const finIso = toIsoDate(c.fecha_fin);
+        const finIso = toIsoDate_(c.fecha_fin);
         return !finIso || finIso >= today;
       })
       .map(function (c) {
-        const plat = findPlataformaById(String(c.id_plataforma));
+        const plat = findPlataformaById_(String(c.id_plataforma));
         return {
           id_acceso: String(c.id_compra),
           id_plataforma: String(c.id_plataforma),
           plataforma: plat ? String(plat.nombre) : '',
           slug: plat ? String(plat.slug) : '',
-          fecha_inicio: toIsoDate(c.fecha_inicio),
-          fecha_fin: toIsoDate(c.fecha_fin),
-          dias_restantes: daysUntil(c.fecha_fin)
+          fecha_inicio: toIsoDate_(c.fecha_inicio),
+          fecha_fin: toIsoDate_(c.fecha_fin),
+          dias_restantes: daysUntil_(c.fecha_fin)
         };
       });
 
-    return ok(accesos);
+    return ok_(accesos);
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'misAccesos', idUsuario: String(session.id_usuario), nivel: 'error', detalle: detalle });
-    return fail('No se pudieron obtener los accesos');
+    log_({ accion: 'misAccesos', idUsuario: String(session.id_usuario), nivel: 'error', detalle: detalle });
+    return fail_('No se pudieron obtener los accesos');
   }
 }
 
-function obtenerUrlPlataforma(req) {
-  const session = validateSession(req.token);
-  if (!session) return fail('Sesion invalida o expirada');
+function obtenerUrlPlataforma_(req) {
+  const session = validateSession_(req.token);
+  if (!session) return fail_('Sesion invalida o expirada');
 
   const slug = String(req.slug || '').trim();
-  if (!slug) return fail('Falta el slug');
+  if (!slug) return fail_('Falta el slug');
 
-  const plat = findPlataformaBySlug(slug);
-  if (!plat) return fail('Plataforma no encontrada');
+  const plat = findPlataformaBySlug_(slug);
+  if (!plat) return fail_('Plataforma no encontrada');
 
   // Buscar la compra activa del usuario para esta plataforma (para devolver el vencimiento).
-  const compras = readAll(SHEET_NAMES.COMPRAS);
-  const today = todayIso();
+  const compras = readAll_(SHEET_NAMES.COMPRAS);
+  const today = todayIso_();
   let acceso = null;
   for (let i = 0; i < compras.length; i++) {
     const c = compras[i];
@@ -1504,28 +1534,28 @@ function obtenerUrlPlataforma(req) {
     if (String(c.id_plataforma) !== String(plat.id_plataforma)) continue;
     if (String(c.estado_pago) !== 'aprobado') continue;
     if (String(c.estado_acceso) !== 'activo') continue;
-    const finIso = toIsoDate(c.fecha_fin);
+    const finIso = toIsoDate_(c.fecha_fin);
     if (finIso && finIso < today) continue;
     acceso = c;
     break;
   }
 
   if (!acceso) {
-    log({
+    log_({
       accion: 'obtenerUrlPlataforma',
       idUsuario: String(session.id_usuario),
       nivel: 'warning',
       detalle: 'intento de acceso sin permiso: ' + slug
     });
-    return fail('No tienes acceso activo a esta plataforma');
+    return fail_('No tienes acceso activo a esta plataforma');
   }
 
-  log({ accion: 'obtenerUrlPlataforma', idUsuario: String(session.id_usuario), nivel: 'info', detalle: slug });
-  return ok({
+  log_({ accion: 'obtenerUrlPlataforma', idUsuario: String(session.id_usuario), nivel: 'info', detalle: slug });
+  return ok_({
     url: String(plat.url_real),
     nombre: String(plat.nombre),
-    fecha_fin: toIsoDate(acceso.fecha_fin),
-    dias_restantes: daysUntil(acceso.fecha_fin)
+    fecha_fin: toIsoDate_(acceso.fecha_fin),
+    dias_restantes: daysUntil_(acceso.fecha_fin)
   });
 }
 
@@ -1536,34 +1566,34 @@ function obtenerUrlPlataforma(req) {
  * y la envía por correo. La respuesta es SIEMPRE genérica: no revela si el
  * correo existe (evita enumeración de cuentas).
  */
-function recuperarPassword(req) {
+function recuperarPassword_(req) {
   const correo = String(req.correo || '').trim().toLowerCase();
-  const generico = ok({}, 'Si el correo está registrado, te enviamos una nueva contraseña.');
+  const generico = ok_({}, 'Si el correo está registrado, te enviamos una nueva contraseña.');
   try {
     // Rate limit: si se excede, devolvemos el MISMO objeto generico (no revelar).
-    if (checkRateLimit('rl_recu_' + correo)) {
-      log({ accion: 'recuperarPassword', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
+    if (checkRateLimit_('rl_recu_' + correo)) {
+      log_({ accion: 'recuperarPassword', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
       return generico;
     }
 
-    if (!isEmail(correo)) return generico;
+    if (!isEmail_(correo)) return generico;
 
-    const user = findUsuarioByCorreo(correo);
+    const user = findUsuarioByCorreo_(correo);
     if (!user) {
-      log({ accion: 'recuperarPassword', nivel: 'warning', detalle: 'correo no registrado: ' + correo });
+      log_({ accion: 'recuperarPassword', nivel: 'warning', detalle: 'correo no registrado: ' + correo });
       return generico;
     }
     if (String(user.estado) !== 'activo') {
-      log({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'cuenta no activa' });
+      log_({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'cuenta no activa' });
       return generico;
     }
 
-    const nuevaPass = randomToken(10);
-    const salt = generateSalt();
-    const hash = hashPassword(nuevaPass, salt);
-    const userRow = findRowIndex(SHEET_NAMES.USUARIOS, 1, String(user.id_usuario));
+    const nuevaPass = randomToken_(10);
+    const salt = generateSalt_();
+    const hash = hashPassword_(nuevaPass, salt);
+    const userRow = findRowIndex_(SHEET_NAMES.USUARIOS, 1, String(user.id_usuario));
     if (userRow > 0) {
-      const sheetUsuarios = getSheet(SHEET_NAMES.USUARIOS);
+      const sheetUsuarios = getSheet_(SHEET_NAMES.USUARIOS);
       sheetUsuarios.getRange(userRow, 5).setValue(hash);
       sheetUsuarios.getRange(userRow, 6).setValue(salt);
     }
@@ -1573,25 +1603,25 @@ function recuperarPassword(req) {
       const emailBody =
         '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
         '<h2 style="color:#10312D;margin:0 0 16px">Recuperación de contraseña 🔑</h2>' +
-        '<p>Hola <strong>' + escapeHtml(String(user.nombre)) + '</strong>,</p>' +
+        '<p>Hola <strong>' + escapeHtml_(String(user.nombre)) + '</strong>,</p>' +
         '<p>Generamos una nueva contraseña para tu cuenta:</p>' +
-        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + escapeHtml(String(user.correo)) + '</code></p>' +
+        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + escapeHtml_(String(user.correo)) + '</code></p>' +
         '<p><strong>🔑 Nueva contraseña:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + nuevaPass + '</code></p>' +
         '<div style="margin:28px 0">' +
         '<a href="' + portalUrl + '" style="background:#10312D;color:#C2E476;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Entrar al Portal →</a>' +
         '</div>' +
         '<p style="font-size:12px;color:#3D5752">Si no pediste esto, escríbenos por WhatsApp: <a href="https://wa.me/51984300510">+51 984 300 510</a></p>' +
         '</div>';
-      enviarCorreo(String(user.correo), '🔑 Nueva contraseña — SINAPSIS EDU', emailBody);
+      enviarCorreo_(String(user.correo), '🔑 Nueva contraseña — SINAPSIS EDU', emailBody);
     } catch (emailErr) {
-      log({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'falla email: ' + emailErr });
+      log_({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'falla email: ' + emailErr });
     }
 
-    log({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'password regenerada' });
+    log_({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'password regenerada' });
     return generico;
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'recuperarPassword', nivel: 'error', detalle: detalle });
+    log_({ accion: 'recuperarPassword', nivel: 'error', detalle: detalle });
     return generico;
   }
 }
@@ -1602,28 +1632,28 @@ function recuperarPassword(req) {
  * Devuelve todas las compras del usuario (activas, pendientes, rechazadas).
  * El alumno puede ver el estado de sus solicitudes desde el portal.
  */
-function misSolicitudes(req) {
-  const session = validateSession(req.token);
-  if (!session) return fail('Sesión inválida o expirada');
+function misSolicitudes_(req) {
+  const session = validateSession_(req.token);
+  if (!session) return fail_('Sesión inválida o expirada');
 
   try {
-    const compras = readAll(SHEET_NAMES.COMPRAS);
+    const compras = readAll_(SHEET_NAMES.COMPRAS);
     const resultado = compras
       .filter(function (c) {
         return String(c.id_usuario) === String(session.id_usuario);
       })
       .map(function (c) {
-        const plat = findPlataformaById(String(c.id_plataforma));
+        const plat = findPlataformaById_(String(c.id_plataforma));
         return {
           id_compra: String(c.id_compra),
           plataforma: plat ? String(plat.nombre) : String(c.id_plataforma),
           slug: plat ? String(plat.slug) : '',
           monto: Number(c.monto) || 0,
           metodo_pago: String(c.metodo_pago || ''),
-          fecha_solicitud: String(c.fecha_solicitud ? toIsoDate(c.fecha_solicitud) || String(c.fecha_solicitud) : ''),
+          fecha_solicitud: String(c.fecha_solicitud ? toIsoDate_(c.fecha_solicitud) || String(c.fecha_solicitud) : ''),
           estado_pago: String(c.estado_pago || ''),
           estado_acceso: String(c.estado_acceso || ''),
-          fecha_fin: toIsoDate(c.fecha_fin) || ''
+          fecha_fin: toIsoDate_(c.fecha_fin) || ''
         };
       });
 
@@ -1631,60 +1661,60 @@ function misSolicitudes(req) {
       return a.fecha_solicitud < b.fecha_solicitud ? 1 : -1;
     });
 
-    return ok(resultado);
+    return ok_(resultado);
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: 'misSolicitudes', idUsuario: String(session.id_usuario), nivel: 'error', detalle: detalle });
-    return fail('No se pudieron obtener las solicitudes');
+    log_({ accion: 'misSolicitudes', idUsuario: String(session.id_usuario), nivel: 'error', detalle: detalle });
+    return fail_('No se pudieron obtener las solicitudes');
   }
 }
 
 // ─── Wrappers para google.script.run (llamados desde admin.html) ──
 
 function gs_adminLogin(password) {
-  return adminLogin({ password: password });
+  return adminLogin_({ password: password });
 }
 
 function gs_listarSolicitudes(adminToken, estado) {
-  return listarSolicitudes({ adminToken: adminToken, estado: estado || 'pendiente' });
+  return listarSolicitudes_({ adminToken: adminToken, estado: estado || 'pendiente' });
 }
 
 function gs_aprobarPago(adminToken, idCompra) {
-  return aprobarPago({ adminToken: adminToken, id_compra: idCompra });
+  return aprobarPago_({ adminToken: adminToken, id_compra: idCompra });
 }
 
 function gs_rechazarPago(adminToken, idCompra, motivo) {
-  return rechazarPago({ adminToken: adminToken, id_compra: idCompra, motivo: motivo });
+  return rechazarPago_({ adminToken: adminToken, id_compra: idCompra, motivo: motivo });
 }
 
 function gs_listarLogs(adminToken, n) {
-  if (!validateAdminSession(adminToken)) return fail('Sesión admin inválida');
+  if (!validateAdminSession_(adminToken)) return fail_('Sesión admin inválida');
   try {
-    const sheet = getSheet(SHEET_NAMES.LOGS);
+    const sheet = getSheet_(SHEET_NAMES.LOGS);
     const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return ok([]);
+    if (lastRow < 2) return ok_([]);
     const cantidad = Math.min(Number(n) || 50, 200);
     const startRow = Math.max(2, lastRow - cantidad + 1);
     const rows = sheet.getRange(startRow, 1, lastRow - startRow + 1, 5).getValues();
     const logs = rows.reverse().map(function (r) {
       return { timestamp: String(r[0]), accion: String(r[1]), id_usuario: String(r[2]), nivel: String(r[3]), detalle: String(r[4]) };
     });
-    return ok(logs);
+    return ok_(logs);
   } catch (err) {
-    return fail('Error al leer logs: ' + (err instanceof Error ? err.message : String(err)));
+    return fail_('Error al leer logs: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
 function gs_listarCredenciales(adminToken) {
-  if (!validateAdminSession(adminToken)) return fail('Sesión admin inválida');
+  if (!validateAdminSession_(adminToken)) return fail_('Sesión admin inválida');
   try {
-    const rows = readAll(SHEET_NAMES.CREDENCIALES);
+    const rows = readAll_(SHEET_NAMES.CREDENCIALES);
     rows.sort(function (a, b) {
       return String(a.fecha_asignacion) < String(b.fecha_asignacion) ? 1 : -1;
     });
-    return ok(rows);
+    return ok_(rows);
   } catch (err) {
-    return fail('Error al leer credenciales: ' + (err instanceof Error ? err.message : String(err)));
+    return fail_('Error al leer credenciales: ' + (err instanceof Error ? err.message : String(err)));
   }
 }
 
@@ -1698,23 +1728,24 @@ function gs_listarCredenciales(adminToken) {
  * Credenciales por defecto: canazach12@gmail.com / Test1234
  */
 function createTestUser() {
+  requireEditor_();
   const correo = 'canazach12@gmail.com';
   const password = 'Test1234';
   const nombre = 'Yubert Canaza (Test)';
 
-  const sheetUsuarios = getSheet(SHEET_NAMES.USUARIOS);
-  const sheetCompras = getSheet(SHEET_NAMES.COMPRAS);
+  const sheetUsuarios = getSheet_(SHEET_NAMES.USUARIOS);
+  const sheetCompras = getSheet_(SHEET_NAMES.COMPRAS);
 
   // 1. Usuario
-  const existing = findUsuarioByCorreo(correo);
+  const existing = findUsuarioByCorreo_(correo);
   let userId;
   let userCreated = false;
   if (existing) {
     userId = String(existing.id_usuario);
   } else {
-    userId = nextId('U', nextSequenceFromColumn(SHEET_NAMES.USUARIOS, 1));
-    const salt = generateSalt();
-    const hash = hashPassword(password, salt);
+    userId = nextId_('U', nextSequenceFromColumn_(SHEET_NAMES.USUARIOS, 1));
+    const salt = generateSalt_();
+    const hash = hashPassword_(password, salt);
     sheetUsuarios.appendRow([
       userId,
       nombre,
@@ -1722,14 +1753,14 @@ function createTestUser() {
       '51984300510',
       hash,
       salt,
-      nowIso(),
+      nowIso_(),
       'activo'
     ]);
     userCreated = true;
   }
 
   // 2. Compras de prueba (idempotentes por id_usuario + id_plataforma + activo)
-  const compras = readAll(SHEET_NAMES.COMPRAS);
+  const compras = readAll_(SHEET_NAMES.COMPRAS);
   function yaTieneActiva(idPlat) {
     for (let i = 0; i < compras.length; i++) {
       if (String(compras[i].id_usuario) === userId
@@ -1743,11 +1774,11 @@ function createTestUser() {
 
   // ENCIB: comprada hoy, vence en 30 dias
   if (!yaTieneActiva('P-002')) {
-    const id = nextId('C', nextSequenceFromColumn(SHEET_NAMES.COMPRAS, 1));
+    const id = nextId_('C', nextSequenceFromColumn_(SHEET_NAMES.COMPRAS, 1));
     sheetCompras.appendRow([
       id, userId, 'P-002', 49, 'yape',
-      addDaysIso(0), '',
-      'aprobado', addDaysIso(0), addDaysIso(0), addDaysIso(30),
+      addDaysIso_(0), '',
+      'aprobado', addDaysIso_(0), addDaysIso_(0), addDaysIso_(30),
       'activo'
     ]);
     created.push(id + ' = ENCIB (vence en 30 dias)');
@@ -1756,17 +1787,17 @@ function createTestUser() {
 
   // ENAM: comprada hace 25 dias, vence en 5 dias (probar warning de "vence pronto")
   if (!yaTieneActiva('P-001')) {
-    const id = nextId('C', nextSequenceFromColumn(SHEET_NAMES.COMPRAS, 1));
+    const id = nextId_('C', nextSequenceFromColumn_(SHEET_NAMES.COMPRAS, 1));
     sheetCompras.appendRow([
       id, userId, 'P-001', 49, 'yape',
-      addDaysIso(-25), '',
-      'aprobado', addDaysIso(-25), addDaysIso(-25), addDaysIso(5),
+      addDaysIso_(-25), '',
+      'aprobado', addDaysIso_(-25), addDaysIso_(-25), addDaysIso_(5),
       'activo'
     ]);
     created.push(id + ' = ENAM (vence en 5 dias)');
   }
 
-  log({
+  log_({
     accion: 'createTestUser',
     idUsuario: userId,
     nivel: 'info',
@@ -1787,30 +1818,30 @@ function createTestUser() {
   };
 }
 
-function dispatchPublic(req) {
+function dispatchPublic_(req) {
   const action = String(req.action);
   switch (action) {
-    case 'ping':                     return ping();
-    case 'listarPlataformasPublicas':return listarPlataformasPublicas(req);
-    case 'registrarCompra':          return registrarCompra(req);
-    case 'subirVoucher':             return subirVoucher(req);
-    case 'loginAlumno':              return loginAlumno(req);
-    case 'misAccesos':               return misAccesos(req);
-    case 'misSolicitudes':           return misSolicitudes(req);
-    case 'obtenerUrlPlataforma':     return obtenerUrlPlataforma(req);
-    case 'recuperarPassword':        return recuperarPassword(req);
-    default:                         return fail('Accion desconocida: ' + action);
+    case 'ping':                     return ping_();
+    case 'listarPlataformasPublicas':return listarPlataformasPublicas_(req);
+    case 'registrarCompra':          return registrarCompra_(req);
+    case 'subirVoucher':             return subirVoucher_(req);
+    case 'loginAlumno':              return loginAlumno_(req);
+    case 'misAccesos':               return misAccesos_(req);
+    case 'misSolicitudes':           return misSolicitudes_(req);
+    case 'obtenerUrlPlataforma':     return obtenerUrlPlataforma_(req);
+    case 'recuperarPassword':        return recuperarPassword_(req);
+    default:                         return fail_('Accion desconocida: ' + action);
   }
 }
 
-function dispatchAdmin(req) {
+function dispatchAdmin_(req) {
   const action = String(req.action);
   switch (action) {
-    case 'adminLogin':         return adminLogin(req);
-    case 'listarSolicitudes':  return listarSolicitudes(req);
-    case 'aprobarPago':        return aprobarPago(req);
-    case 'rechazarPago':       return rechazarPago(req);
-    default:                   return fail('Accion admin desconocida: ' + action);
+    case 'adminLogin':         return adminLogin_(req);
+    case 'listarSolicitudes':  return listarSolicitudes_(req);
+    case 'aprobarPago':        return aprobarPago_(req);
+    case 'rechazarPago':       return rechazarPago_(req);
+    default:                   return fail_('Accion admin desconocida: ' + action);
   }
 }
 
@@ -1824,17 +1855,17 @@ function doGet(e) {
   const params = (e && e.parameter) ? e.parameter : {};
 
   if (params.ping === '1') {
-    return jsonResponse(ping());
+    return jsonResponse_(ping_());
   }
 
   if (params.page === 'admin') {
     return HtmlService.createHtmlOutputFromFile('admin')
       .setTitle('SINAPSIS EDU — Admin')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
   }
 
-  return jsonResponse({
+  return jsonResponse_({
     ok: true,
     message: 'Portal Central backend. Usa POST con {"action":"ping"} para JSON, ' +
              '?ping=1 via GET, o ?page=admin para el panel.'
@@ -1847,11 +1878,11 @@ function doPost(e) {
     const raw = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
     req = JSON.parse(raw);
   } catch (err) {
-    return jsonResponse(fail('JSON invalido en el body'));
+    return jsonResponse_(fail_('JSON invalido en el body'));
   }
 
   if (!req || !req.action) {
-    return jsonResponse(fail('Falta el campo "action"'));
+    return jsonResponse_(fail_('Falta el campo "action"'));
   }
 
   try {
@@ -1859,22 +1890,22 @@ function doPost(e) {
     const isAdmin = fullAction.indexOf('admin.') === 0;
     const action = isAdmin ? fullAction.substring('admin.'.length) : fullAction;
     const innerReq = Object.assign({}, req, { action: action });
-    const response = isAdmin ? dispatchAdmin(innerReq) : dispatchPublic(innerReq);
-    return jsonResponse(response);
+    const response = isAdmin ? dispatchAdmin_(innerReq) : dispatchPublic_(innerReq);
+    return jsonResponse_(response);
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
-    log({ accion: String(req.action), nivel: 'error', detalle: detalle });
-    return jsonResponse(fail('Error interno', 'Ocurrio un problema. Intenta de nuevo.'));
+    log_({ accion: String(req.action), nivel: 'error', detalle: detalle });
+    return jsonResponse_(fail_('Error interno', 'Ocurrio un problema. Intenta de nuevo.'));
   }
 }
 
-function jsonResponse(payload) {
+function jsonResponse_(payload) {
   return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(
     ContentService.MimeType.JSON
   );
 }
 
-function include(filename) {
+function include_(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
@@ -1883,10 +1914,11 @@ function include(filename) {
  * Util para correr desde el editor tras un deploy.
  */
 function healthcheck() {
-  const missing = checkRequiredProperties();
+  requireEditor_();
+  const missing = checkRequiredProperties_();
   const result = { ok: missing.length === 0, missingProperties: missing };
 
-  const sheetId = getProperty('SHEET_ID');
+  const sheetId = getProperty_('SHEET_ID');
   if (sheetId) {
     try {
       const ss = SpreadsheetApp.openById(sheetId);
@@ -1894,7 +1926,7 @@ function healthcheck() {
     } catch (e) { /* IDs corruptos */ }
   }
 
-  const folderId = getProperty('DRIVE_FOLDER_VOUCHERS');
+  const folderId = getProperty_('DRIVE_FOLDER_VOUCHERS');
   if (folderId) {
     try {
       const folder = DriveApp.getFolderById(folderId);
@@ -1906,11 +1938,11 @@ function healthcheck() {
 }
 
 // ── SECURITY BATCH 2026 ──
-// #2 Rate limit real: checkRateLimit(bucketKey) con CacheService (TTL 3600s,
-//    limite = RATE_LIMIT_PER_HOUR o 10). Aplicado a loginAlumno (rl_login_*),
-//    registrarCompra (rl_compra_*), subirVoucher (rl_voucher_*) y
-//    recuperarPassword (rl_recu_*, respuesta generica intacta).
-// #3 randomToken(length) ahora es CSPRNG: deriva bytes de Utilities.getUuid()
+// #2 Rate limit real: checkRateLimit_(bucketKey) con CacheService (TTL 3600s,
+//    limite = RATE_LIMIT_PER_HOUR o 10). Aplicado a loginAlumno_ (rl_login_*),
+//    registrarCompra_ (rl_compra_*), subirVoucher_ (rl_voucher_*) y
+//    recuperarPassword_ (rl_recu_*, respuesta generica intacta).
+// #3 randomToken_(length) ahora es CSPRNG: deriva bytes de Utilities.getUuid()
 //    (SecureRandom) en vez de Math.random(). Misma firma y salida alfanumerica.
 // #4 registrarCompra: si no hay detalle_extra y el monto reportado no coincide
 //    con precio/precio_promocional, el correo al admin incluye una alerta
@@ -1918,9 +1950,15 @@ function healthcheck() {
 // #5 subirVoucher: guard antes de subir a Drive — rechaza si estado_pago no es
 //    'pendiente' o si la compra ya tiene voucher_url. El reintento tras una
 //    subida fallida sigue funcionando.
-// #6 escapeHtml(s): todo valor de origen usuario interpolado en htmlBody de
+// #6 escapeHtml_(s): todo valor de origen usuario interpolado en htmlBody de
 //    correos (registrarCompra, subirVoucher, aprobarPago, rechazarPago,
 //    recuperarPassword) se escapa. URLs propias y passwords generadas no.
 // #7 adminLogin: valida contra ADMIN_PASSWORD_HASH+SALT; si solo existe
 //    ADMIN_PASSWORD legado y acierta, migra en caliente a hash+salt y borra el
 //    texto plano. setAdminPassword(plain) (editor-only) rota la clave.
+// #8 (2026-11-02) Superficie de google.script.run: toda funcion interna termina
+//    en "_" (privada en Apps Script, no invocable desde el navegador). Publicas:
+//    doGet, doPost y los gs_* (estos exigen token admin). setup,
+//    setAdminPassword, createTestUser y healthcheck llaman requireEditor_() y
+//    solo corren desde el editor. adminLogin con rate limit global
+//    (rl_admin_login). Panel admin con XFrameOptionsMode.DEFAULT.

@@ -1,10 +1,12 @@
+import { Plus } from 'lucide-react';
+import { SectionHeader } from './landing/SectionHeader';
+
 interface QA {
   q: string;
   a: string;
 }
 
-// FAQ general de la landing (reúne las dudas comunes previas a la compra,
-// reutilizando el estilo del acordeón de las páginas de detalle).
+// FAQ general de la landing (dudas comunes previas a la compra).
 const FAQS: QA[] = [
   {
     q: '¿Cómo compro un acceso?',
@@ -32,27 +34,26 @@ const FAQS: QA[] = [
   },
 ];
 
-function FaqItem({ q, a }: QA) {
-  return (
-    <details className="group border border-jungle/10 rounded-2xl bg-white overflow-hidden">
-      <summary className="cursor-pointer flex items-center justify-between gap-4 px-5 py-4 font-semibold list-none select-none hover:bg-jungle/[.03]">
-        {q}
-        <span className="shrink-0 text-jungle-light group-open:rotate-180 transition-transform">▾</span>
-      </summary>
-      <div className="px-5 pb-4 text-jungle-light text-sm leading-relaxed">{a}</div>
-    </details>
-  );
-}
-
 export function FaqLanding() {
   return (
-    <section id="faq" className="bg-offwhite">
-      <div className="container-x py-20">
-        <span className="pill">Preguntas frecuentes</span>
-        <h2 className="mt-4 text-4xl md:text-5xl">¿Tienes dudas?</h2>
-        <div className="mt-10 grid gap-3 md:grid-cols-2">
-          {FAQS.map((f) => (
-            <FaqItem key={f.q} {...f} />
+    <section id="faq" className="bg-white">
+      <div className="container-x grid gap-12 py-20 md:py-28 lg:grid-cols-12">
+        <div className="lg:col-span-4">
+          <SectionHeader
+            eyebrow="Preguntas frecuentes"
+            title="Resolvemos tus dudas"
+            lead="¿No encuentras tu respuesta? Escríbenos por WhatsApp de lunes a sábado, de 7:30 a 18:00."
+          />
+        </div>
+        <div className="lg:col-span-8" data-reveal>
+          {FAQS.map(({ q, a }) => (
+            <details key={q} className="group border-b border-line first:border-t">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-[17px] font-semibold text-ink marker:hidden [&::-webkit-details-marker]:hidden">
+                {q}
+                <Plus className="h-5 w-5 shrink-0 text-subtle transition-transform duration-200 group-open:rotate-45" aria-hidden />
+              </summary>
+              <p className="-mt-1 pb-5 pr-10 text-[15px] leading-relaxed text-muted">{a}</p>
+            </details>
           ))}
         </div>
       </div>

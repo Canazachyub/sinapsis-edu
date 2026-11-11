@@ -1,119 +1,151 @@
 import { useEffect, useState } from 'react';
+import { simulacroHref } from '@/config';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { ScrollLink } from './ScrollLink';
 
-export function Navbar() {
-  const [open, setOpen] = useState(false);
+const LINKS: Array<{ to: string; label: string }> = [
+  { to: 'banqueo', label: 'Banqueo' },
+  { to: 'videoclases', label: 'Videoclases' },
+  { to: 'plataformas', label: 'Plataformas' },
+  { to: 'como-funciona', label: 'Cómo funciona' },
+  { to: 'faq', label: 'FAQ' },
+];
 
-  // Cerrar al cambiar de viewport a desktop.
+interface Props {
+  /** Transparente sobre un hero oscuro; se vuelve blanca al hacer scroll. */
+  overlay?: boolean;
+}
+
+export function Navbar({ overlay = false }: Props) {
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
   useEffect(() => {
-    function handleResize() {
-      if (window.innerWidth >= 768) setOpen(false);
-    }
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    if (!overlay) return;
+    const onScroll = () => setScrolled(window.scrollY > 64);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [overlay]);
+
+  useEffect(() => {
+    const onResize = () => window.innerWidth >= 1024 && setOpen(false);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Bloquear scroll del body cuando el menu esta abierto.
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
-    }
-    return;
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
 
+  const dark = overlay && !scrolled;
+
   return (
-    <header className="sticky top-0 z-40 backdrop-blur bg-offwhite/90 border-b border-jungle/5">
-      <nav className="container-x flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
+    <header
+      className={`sticky top-0 z-40 transition-colors duration-300 ${
+        dark ? 'bg-transparent' : 'bg-white/95 backdrop-blur border-b border-line'
+      } ${overlay ? '-mb-[72px]' : ''}`}
+    >
+      <nav className="container-x flex h-[72px] items-center justify-between gap-6">
+        <Link to="/" className="flex shrink-0 items-center" onClick={() => setOpen(false)}>
           <img
-            src="/images/logo/logo.png"
+            src={dark ? '/images/logo/logo-blanco-transparente.png' : '/images/logo/logo.png'}
             alt="SINAPSIS EDU"
-            className="h-8 md:h-9 w-auto"
+            className="h-9 w-auto"
             loading="eager"
           />
         </Link>
 
-        {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-5 lg:gap-6 text-sm font-medium text-jungle/80">
-          <ScrollLink to="plataformas" className="hover:text-jungle cursor-pointer">Plataformas</ScrollLink>
-          <ScrollLink to="programa" className="hover:text-jungle cursor-pointer">Programa</ScrollLink>
-          <ScrollLink to="beneficios" className="hover:text-jungle cursor-pointer">Beneficios</ScrollLink>
-          <ScrollLink to="cursos" className="hover:text-jungle cursor-pointer">Cursos</ScrollLink>
-          <ScrollLink to="nosotros" className="hover:text-jungle cursor-pointer">Nosotros</ScrollLink>
-          <ScrollLink to="faq" className="hover:text-jungle cursor-pointer">FAQ</ScrollLink>
-          <ScrollLink to="contacto" className="hover:text-jungle cursor-pointer">Contacto</ScrollLink>
+        <div className={`hidden items-center gap-7 text-[15px] font-medium lg:flex ${dark ? 'text-white/80' : 'text-muted'}`}>
+          {LINKS.map((l) => (
+            <ScrollLink
+              key={l.to}
+              to={l.to}
+              className={`cursor-pointer transition-colors ${dark ? 'hover:text-white' : 'hover:text-ink'}`}
+            >
+              {l.label}
+            </ScrollLink>
+          ))}
         </div>
 
-        {/* Desktop buttons */}
-        <div className="hidden md:flex items-center gap-3">
-          <Link to="/login" className="btn-ghost !py-2 !px-4 text-sm">Login</Link>
-          <ScrollLink to="plataformas" className="btn-primary !py-2 !px-4 text-sm cursor-pointer">
-            Empezar ahora
+        <div className="hidden items-center gap-5 lg:flex">
+          <a
+            href={simulacroHref()!}
+            className={`text-[15px] font-semibold transition-colors ${dark ? 'text-white hover:text-lime-400' : 'text-ink hover:text-jungle-600'}`}
+          >
+            Simulacros
+          </a>
+          <Link
+            to="/login"
+            className={`text-[15px] font-semibold transition-colors ${dark ? 'text-white hover:text-lime-400' : 'text-ink hover:text-jungle-600'}`}
+          >
+            Ingresar
+          </Link>
+          <ScrollLink
+            to="plataformas"
+            className={`cursor-pointer !min-h-[40px] !py-2 ${dark ? 'btn bg-white text-jungle-900 hover:bg-lime-400' : 'btn-primary'}`}
+          >
+            Ver plataformas
           </ScrollLink>
         </div>
 
-        {/* Mobile: hamburger */}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
           aria-expanded={open}
-          className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-jungle hover:bg-jungle/5"
+          className={`grid h-11 w-11 place-items-center rounded-xl lg:hidden ${
+            dark ? 'text-white hover:bg-white/10' : 'text-ink hover:bg-paper'
+          }`}
         >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </nav>
 
-      {/* Mobile drawer */}
-      {open && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="md:hidden fixed inset-0 top-16 bg-jungle/30 backdrop-blur-sm z-30"
+      {/* Menú móvil a pantalla completa */}
+      <div
+        className={`fixed inset-0 top-0 z-50 flex flex-col bg-white transition-opacity duration-300 ease-expo lg:hidden ${
+          open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        aria-hidden={!open}
+      >
+        <div className="container-x flex h-[72px] items-center justify-between border-b border-line">
+          <img src="/images/logo/logo.png" alt="SINAPSIS EDU" className="h-9 w-auto" />
+          <button
+            type="button"
             onClick={() => setOpen(false)}
-            aria-hidden
-          />
-          {/* Panel */}
-          <div
-            className="md:hidden fixed left-0 right-0 top-16 bg-offwhite border-b border-jungle/10 shadow-card-hover z-40 max-h-[calc(100vh-4rem)] overflow-y-auto"
-            onClick={() => setOpen(false)}
+            aria-label="Cerrar menú"
+            className="grid h-11 w-11 place-items-center rounded-xl text-ink hover:bg-paper"
           >
-            <div className="container-x py-6 flex flex-col gap-1">
-              <ScrollLink to="plataformas" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
-                Plataformas
-              </ScrollLink>
-              <ScrollLink to="programa" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
-                Programa
-              </ScrollLink>
-              <ScrollLink to="beneficios" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
-                Beneficios
-              </ScrollLink>
-              <ScrollLink to="cursos" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
-                Cursos
-              </ScrollLink>
-              <ScrollLink to="nosotros" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
-                Nosotros
-              </ScrollLink>
-              <ScrollLink to="faq" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
-                FAQ
-              </ScrollLink>
-              <ScrollLink to="contacto" className="py-3 px-2 rounded-lg text-jungle font-medium hover:bg-jungle/5 cursor-pointer">
-                Contacto
-              </ScrollLink>
-
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Link to="/login" className="btn-ghost w-full justify-center">Login</Link>
-                <ScrollLink to="plataformas" className="btn-primary w-full justify-center cursor-pointer">
-                  Empezar
-                </ScrollLink>
-              </div>
-            </div>
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        <div className="container-x flex flex-1 flex-col py-6" onClick={() => setOpen(false)}>
+          {LINKS.map((l, i) => (
+            <ScrollLink
+              key={l.to}
+              to={l.to}
+              className={`cursor-pointer border-b border-line py-4 font-display text-2xl font-bold text-ink transition-all duration-500 ease-expo ${
+                open ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+              }`}
+            >
+              <span style={{ transitionDelay: open ? `${80 + i * 50}ms` : '0ms' }}>{l.label}</span>
+            </ScrollLink>
+          ))}
+          <a href={simulacroHref()!} className="border-b border-line py-4 font-display text-2xl font-bold text-ink">
+            Simulacros
+          </a>
+          <div className="mt-auto grid grid-cols-2 gap-3 pt-6">
+            <Link to="/login" className="btn-secondary w-full">Ingresar</Link>
+            <ScrollLink to="plataformas" className="btn-primary w-full cursor-pointer">Ver plataformas</ScrollLink>
           </div>
-        </>
-      )}
+        </div>
+      </div>
     </header>
   );
 }
