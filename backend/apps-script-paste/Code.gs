@@ -3366,3 +3366,61 @@ function healthcheck() {
 //    (monto, PEN, metadata.id_compra, exito, id unico en hoja Pagos) bajo
 //    LockService; webhooks re-consultados a la API. activarCompra_ es la unica
 //    logica de activacion (la usa tambien aprobarPago_ del admin).
+
+/**
+ * PRUEBA DE PUNTA A PUNTA SIN NAVEGADOR (solo con credenciales de PRUEBA).
+ * Crea una compra, cobra con la tarjeta de prueba APRO por la API de Mercado Pago
+ * (sin dinero real) y pasa el pago por la MISMA verificación y activación que usa
+ * la web (confirmarPagoMP_). Ejecutar desde el editor y leer el registro.
+ */
+function pruebaPagoMPCompleta() {
+  requireEditor_();
+  if (!mpSandbox_()) throw new Error('Solo en modo prueba: define MP_SANDBOX=true.');
+  const log = function (t, o) { Logger.log(t + (o === undefined ? '' : ' ' + JSON.stringify(o))); };
+  const correo = 'alumno.prueba.api@example.com';
+
+  // 1) Compra pendiente (precio desde la hoja).
+  const ini = iniciarCompra_({ slug: 'enam', nombre: 'Alumno Prueba API', correo: correo,
+    dni: '12345678', whatsapp: '987654321', aceptaTerminos: true });
+  log('1. iniciarCompra:', ini.ok ? { id: ini.data.id_compra, monto: ini.data.monto } : ini);
+  if (!ini.ok) return;
+  const idCompra = ini.data.id_compra;
+
+  // 2) Token de la tarjeta de prueba (titular APRO = aprobado).
+  const pk = getProperty_('MP_PUBLIC_KEY');
+  const tok = mpRequest_('post', '/v1/card_tokens' + (pk ? '?public_key=' + encodeURIComponent(pk) : ''), {
+    card_number: '5031755734530604', expiration_month: 11, expiration_year: 2030,
+    security_code: '123', cardholder: { name: 'APRO', identification: { type: 'DNI', number: '12345678' } }
+  });
+  log('2. card_token HTTP ' + tok.status, tok.body.id ? 'ok' : tok.body);
+  if (!tok.body.id) return;
+
+  // 3) Pago (con external_reference = id de la compra, igual que Checkout Pro).
+  const notif = webAppUrl_();
+  const emails = ['test_user_' + Date.now() + '@testuser.com', 'comprador.prueba@example.com'];
+  let pay = null;
+  for (let i = 0; i < emails.length; i++) {
+    const body = {
+      transaction_amount: Number(ini.data.monto), token: tok.body.id, installments: 1,
+      payment_method_id: 'master', description: ini.data.descripcion,
+      external_reference: idCompra, payer: { email: emails[i] }
+    };
+    if (/^https:\/\//.test(notif)) body.notification_url = notif + '?source=mp';
+    pay = mpRequest_('post', '/v1/payments', body);
+    log('3. pago (payer ' + emails[i] + ') HTTP ' + pay.status,
+      { id: pay.body.id, status: pay.body.status, detail: pay.body.status_detail, msg: pay.body.message });
+    if (pay.body.id) break;
+  }
+  if (!pay || !pay.body.id) return;
+
+  // 4) Misma confirmación que usa la web al volver de Mercado Pago.
+  const conf = confirmarPagoMP_({ id_compra: idCompra, payment_id: String(pay.body.id), correo: correo });
+  log('4. confirmarPagoMP:', conf);
+
+  // 5) Repetir la confirmación: debe ser idempotente (no activar dos veces).
+  const conf2 = confirmarPagoMP_({ id_compra: idCompra, payment_id: String(pay.body.id), correo: correo });
+  log('5. confirmar otra vez (idempotencia):', conf2);
+
+  // 6) Estado final.
+  log('6. estadoCompra:', estadoCompra_({ id_compra: idCompra, correo: correo }));
+}
