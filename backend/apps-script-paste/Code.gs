@@ -2767,7 +2767,6 @@ function crearPreferenciaMP_(idCompra, plat, monto, correo, nombre, expiraIso) {
     external_reference: idCompra,
     metadata: { id_compra: idCompra },
     back_urls: { success: retorno, pending: retorno, failure: retorno },
-    auto_return: 'approved',
     expires: true,
     expiration_date_from: mpFecha_(new Date(Date.now() - 60 * 1000)),
     expiration_date_to: mpFecha_(new Date(expiraIso)),
@@ -2775,6 +2774,9 @@ function crearPreferenciaMP_(idCompra, plat, monto, correo, nombre, expiraIso) {
     // Sin cuotas. No se excluye ningun medio (tarjetas, Yape, saldo MP).
     payment_methods: { installments: 1 }
   };
+  // MP rechaza auto_return si la URL de vuelta no es https (p. ej. localhost en pruebas):
+  // en ese caso el alumno vuelve con el botón "Volver al sitio" de Mercado Pago.
+  if (/^https:\/\//.test(retorno)) body.auto_return = 'approved';
   if (/^https:\/\//.test(notif)) {
     body.notification_url = notif + (notif.indexOf('?') === -1 ? '?' : '&') + 'source=mp';
   }
