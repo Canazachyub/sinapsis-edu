@@ -38,6 +38,7 @@ function formatDuracion(dias: number): string {
 function chipColor(etiqueta: string): string {
   const e = etiqueta.toLowerCase();
   if (e === 'nuevo') return 'bg-green-50 text-correct ring-1 ring-correct/20';
+  if (e.startsWith('-') || e.includes('friday')) return 'bg-lime-400 text-ink font-extrabold ring-1 ring-ink/10 animate-pulse';
   if (e === 'oferta') return 'bg-red-50 text-wrong ring-1 ring-wrong/20';
   if (e === 'destacado') return 'bg-amber-50 text-warning ring-1 ring-warning/20';
   return 'bg-jungle-900/85 text-lime-400 ring-1 ring-lime-400/30 backdrop-blur'; // Premium y otras

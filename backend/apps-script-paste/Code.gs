@@ -893,8 +893,112 @@ function precioVigente_(plat) {
   const base = Number(plat.precio);
   const promo = (plat.precio_promocional === undefined || plat.precio_promocional === '')
     ? NaN : Number(plat.precio_promocional);
-  if (!isNaN(promo) && promo > 0 && (!isFinite(base) || promo < base)) return promo;
-  return isFinite(base) ? base : 0;
+  let vigente = (!isNaN(promo) && promo > 0 && (!isFinite(base) || promo < base)) ? promo
+    : (isFinite(base) ? base : 0);
+  // Campaña (Black Friday, etc.): descuento sobre el precio BASE; gana el más barato.
+  const conCampana = precioConCampana_(plat);
+  if (conCampana !== null && conCampana > 0 && conCampana < vigente) vigente = conCampana;
+  return vigente;
+}
+
+// ── Campañas de descuento (hoja "Campanas") ─────────────────────────────────
+// Una fila por campaña. Se aplica la primera activa cuya ventana incluya "ahora".
+//   nombre        Texto del banner y de la etiqueta ("NOVIEMBRE FRIDAY")
+//   descuento_pct 1..90
+//   inicio, fin   Fecha/hora (hora de Lima). Fuera de la ventana no aplica.
+//   plataformas   slugs separados por coma; vacío = todas
+//   activo        TRUE/FALSE (interruptor manual)
+//   mensaje       Texto corto opcional para el banner
+// El precio SIEMPRE se calcula aquí: el navegador solo lo muestra.
+const SHEET_CAMPANAS = 'Campanas';
+const HEADERS_CAMPANAS = ['nombre', 'descuento_pct', 'inicio', 'fin', 'plataformas', 'activo', 'mensaje'];
+
+function campanaVigente_() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('campana_v1');
+  if (hit) return hit === 'none' ? null : JSON.parse(hit);
+  let res = null;
+  try {
+    const sh = getSpreadsheet_().getSheetByName(SHEET_CAMPANAS);
+    if (sh && sh.getLastRow() >= 2) {
+      const ahora = Date.now();
+      const rows = readAll_(SHEET_CAMPANAS);
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const activo = r.activo === true || String(r.activo).toLowerCase() === 'true';
+        const pct = Number(r.descuento_pct);
+        const ini = toMillis_(r.inicio), fin = toMillis_(r.fin);
+        if (!activo || !(pct > 0 && pct <= 90) || !(fin > ahora)) continue;
+        if (isFinite(ini) && ini > ahora) continue;
+        res = {
+          nombre: String(r.nombre || 'Oferta').slice(0, 40),
+          descuento_pct: pct,
+          fin: new Date(fin).toISOString(),
+          plataformas: String(r.plataformas || '').split(',')
+            .map(function (x) { return x.trim().toLowerCase(); }).filter(String),
+          mensaje: String(r.mensaje || '').slice(0, 140)
+        };
+        break;
+      }
+    }
+  } catch (e) { res = null; }
+  // 60 s de caché, sin pasar del fin de la campaña.
+  let ttl = 60;
+  if (res) ttl = Math.max(1, Math.min(60, Math.floor((toMillis_(res.fin) - Date.now()) / 1000)));
+  cache.put('campana_v1', res ? JSON.stringify(res) : 'none', ttl);
+  return res;
+}
+
+function campanaAplica_(camp, slug) {
+  if (!camp) return false;
+  return camp.plataformas.length === 0 || camp.plataformas.indexOf(String(slug).toLowerCase()) >= 0;
+}
+
+/** Precio con la campaña vigente (redondeado a soles enteros) o null si no aplica. */
+function precioConCampana_(plat) {
+  const camp = campanaVigente_();
+  if (!campanaAplica_(camp, plat.slug)) return null;
+  const base = Number(plat.precio);
+  if (!isFinite(base) || base <= 0) return null;
+  return Math.max(1, Math.round(base * (1 - camp.descuento_pct / 100)));
+}
+
+/** Público: datos de la campaña para el banner (sin nada sensible). */
+function campanaActual_() {
+  const c = campanaVigente_();
+  if (!c) return ok_(null);
+  return ok_({ nombre: c.nombre, descuento_pct: c.descuento_pct, fin: c.fin,
+               plataformas: c.plataformas, mensaje: c.mensaje });
+}
+
+/**
+ * Ejecutar UNA vez desde el editor: crea la hoja "Campanas" con una fila de ejemplo
+ * (NOVIEMBRE FRIDAY). Queda con activo = FALSE: revisa % y fechas y ponlo en TRUE.
+ */
+function crearHojaCampanas() {
+  requireEditor_();
+  const ss = getSpreadsheet_();
+  let sh = ss.getSheetByName(SHEET_CAMPANAS);
+  if (sh) return 'La hoja Campanas ya existe.';
+  sh = ss.insertSheet(SHEET_CAMPANAS);
+  sh.getRange(1, 1, 1, HEADERS_CAMPANAS.length).setValues([HEADERS_CAMPANAS]).setFontWeight('bold');
+  sh.getRange(2, 1, 1, HEADERS_CAMPANAS.length).setValues([[
+    'NOVIEMBRE FRIDAY', 30, new Date('2026-11-20T00:00:00-05:00'), new Date('2026-11-30T23:59:00-05:00'),
+    '', false, 'Hasta 30 % en todas las plataformas. Solo por noviembre.'
+  ]]);
+  sh.getRange('C2:D2').setNumberFormat('dd/mm/yyyy hh:mm');
+  sh.setFrozenRows(1);
+  return 'Hoja Campanas creada. Revisa la fila 2 y pon activo = TRUE para lanzarla.';
+}
+
+/** Para probar desde el editor: muestra la campaña vigente y los precios resultantes. */
+function testCampana() {
+  CacheService.getScriptCache().remove('campana_v1');
+  const c = campanaVigente_();
+  Logger.log('Campaña vigente: ' + JSON.stringify(c));
+  readAll_(SHEET_NAMES.PLATAFORMAS).forEach(function (p) {
+    Logger.log(p.slug + ': base S/' + p.precio + ' → cobra S/' + precioVigente_(p));
+  });
 }
 
 /** Lookup por correo en la hoja Usuarios (case-insensitive). */
@@ -988,9 +1092,11 @@ function listarPlataformasPublicas_(req) {
         return p.activo === true || String(p.activo).toLowerCase() === 'true';
       })
       .map(function (p) {
-        const promo = p.precio_promocional === undefined || p.precio_promocional === ''
-          ? null
-          : Number(p.precio_promocional);
+        // precio_promocional = lo que realmente se cobra (incluye campaña), si es menor.
+        const vig = precioVigente_(p);
+        const promo = (isFinite(vig) && vig > 0 && vig < Number(p.precio)) ? vig : null;
+        const camp = campanaVigente_();
+        const enCampana = campanaAplica_(camp, p.slug) && precioConCampana_(p) === vig;
         const orden = p.orden === undefined || p.orden === ''
           ? 9999
           : Number(p.orden);
@@ -1003,7 +1109,8 @@ function listarPlataformasPublicas_(req) {
           duracion_dias: Number(p.duracion_dias),
           activo: true,
           precio_promocional: (promo !== null && !isNaN(promo)) ? promo : null,
-          etiqueta: p.etiqueta ? String(p.etiqueta) : '',
+          etiqueta: enCampana ? ('-' + camp.descuento_pct + '% ' + camp.nombre)
+            : (p.etiqueta ? String(p.etiqueta) : ''),
           orden: isNaN(orden) ? 9999 : orden
         };
       });
@@ -3081,6 +3188,7 @@ function dispatchPublic_(req) {
   switch (action) {
     case 'ping':                     return ping_();
     case 'listarPlataformasPublicas':return listarPlataformasPublicas_(req);
+    case 'campanaActual':            return campanaActual_();
     case 'registrarCompra':          return registrarCompra_(req);
     case 'subirVoucher':             return subirVoucher_(req);
     case 'loginAlumno':              return loginAlumno_(req);
