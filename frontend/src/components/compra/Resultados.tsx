@@ -3,9 +3,10 @@
  */
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Clock, Loader2, Mail, RotateCcw, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock, Loader2, Mail, RotateCcw, XCircle } from 'lucide-react';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { fechaPeru } from '@/api/pagos';
+import { simulacroHref } from '@/config';
 
 type Tono = 'ok' | 'error' | 'espera';
 
@@ -24,26 +25,68 @@ function Encabezado({ tono, titulo, children }: { tono: Tono; titulo: string; ch
 }
 
 export function ResultadoAprobado({
-  plataforma, fechaFin, correo, passwordEnviada, idCompra,
-}: { plataforma: string; fechaFin: string; correo?: string; passwordEnviada?: boolean; idCompra?: string }) {
+  plataforma, fechaFin, correo, passwordEnviada, idCompra, slug, sesionIniciada,
+}: {
+  plataforma: string; fechaFin: string; correo?: string; passwordEnviada?: boolean; idCompra?: string;
+  /** Para el botón directo al simulacro de esa plataforma. */
+  slug?: string;
+  /** El servidor abrió la sesión automáticamente: el alumno ya está dentro. */
+  sesionIniciada?: boolean;
+}) {
+  const simulacro = slug ? simulacroHref(slug, 'registro') : null;
   return (
     <div className="space-y-6" aria-live="polite">
-      <Encabezado tono="ok" titulo="¡Listo! Tu pago fue aprobado">
-        Ya tienes acceso a <strong className="text-ink">{plataforma}</strong> hasta el{' '}
-        <strong className="tabular text-ink">{fechaPeru(fechaFin)}</strong>.
-      </Encabezado>
+      <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
+        <img
+          src={`${import.meta.env.BASE_URL}images/flujo/pago-aprobado.webp`}
+          alt=""
+          width={112}
+          height={112}
+          className="h-28 w-28 shrink-0 rounded-2xl bg-jungle-900"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+        <div>
+          <h2 className="text-[28px] leading-tight sm:text-[32px]">
+            {sesionIniciada ? '¡Bienvenido! Ya estás dentro' : '¡Listo! Tu pago fue aprobado'}
+          </h2>
+          <p className="mt-2 text-[16px] leading-relaxed text-muted">
+            Tienes acceso a <strong className="text-ink">{plataforma}</strong> hasta el{' '}
+            <strong className="tabular text-ink">{fechaPeru(fechaFin)}</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        {sesionIniciada ? (
+          <>
+            <Link to="/portal" className="btn-primary text-base">
+              Empezar a estudiar <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+            {simulacro && <a href={simulacro} className="btn-secondary">Rendir un simulacro</a>}
+          </>
+        ) : (
+          <>
+            <Link to="/login" className="btn-primary text-base">
+              Iniciar sesión <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+            <Link to="/portal" className="btn-secondary">Ir al Portal</Link>
+          </>
+        )}
+      </div>
 
       <ol className="divide-y divide-line rounded-2xl border border-line bg-white">
         <li className="flex gap-3 p-4">
           <Mail className="mt-0.5 h-5 w-5 shrink-0 text-jungle-600" aria-hidden />
           <div className="text-[15px]">
-            <div className="font-semibold text-ink">Revisa tu correo</div>
+            <div className="font-semibold text-ink">
+              {sesionIniciada ? 'Guarda tu contraseña para la próxima vez' : 'Revisa tu correo'}
+            </div>
             <div className="text-muted">
               {passwordEnviada === true && (
                 <>Te enviamos tu usuario y contraseña{correo ? <> a <strong className="break-all text-ink">{correo}</strong></> : ''}. Revisa también Spam o Promociones.</>
               )}
               {passwordEnviada === false && (
-                <>Usa la contraseña que ya tenías. Te enviamos la confirmación{correo ? <> a <strong className="break-all text-ink">{correo}</strong></> : ''}.</>
+                <>Tus datos de acceso están en tu correo{correo ? <> <strong className="break-all text-ink">{correo}</strong></> : ''} (revisa también Spam). Si ya tenías cuenta, usa tu misma contraseña.</>
               )}
               {passwordEnviada === undefined && (
                 <>Te enviamos un correo con tus datos de acceso. Revisa también Spam o Promociones.</>
@@ -54,16 +97,11 @@ export function ResultadoAprobado({
         <li className="flex gap-3 p-4">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-jungle-600" aria-hidden />
           <div className="text-[15px]">
-            <div className="font-semibold text-ink">Entra y empieza</div>
-            <div className="text-muted">Inicia sesión y abre tu plataforma desde el Portal.</div>
+            <div className="font-semibold text-ink">Todo en tu Portal</div>
+            <div className="text-muted">Ahí ves tus accesos, los días que te quedan y entras al simulacro o al aula.</div>
           </div>
         </li>
       </ol>
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Link to="/login" className="btn-primary">Iniciar sesión</Link>
-        <Link to="/portal" className="btn-secondary">Ir al Portal</Link>
-      </div>
       {idCompra && <p className="text-xs text-subtle">Código de compra: <span className="font-mono">{idCompra}</span></p>}
     </div>
   );

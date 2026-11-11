@@ -44,6 +44,8 @@ export interface ConfirmarPagoRes {
   plataforma: string;
   passwordEnviada: boolean;
   correo: string;
+  /** Solo si se confirmó desde el mismo navegador poco después de pagar: login automático. */
+  sesion?: { token: string; usuario: { nombre: string; correo: string } };
 }
 
 export type EstadoPago =

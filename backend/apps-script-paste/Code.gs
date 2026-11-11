@@ -2881,6 +2881,23 @@ function procesarPagoMPPorId_(paymentId, origen, payPrevio) {
  * Body: { id_compra, payment_id, correo }
  * Codigos (campo `code`): RECHAZADO, EN_PROCESO, REVISION, OCUPADO, PASARELA_NO_CONFIGURADA.
  */
+/**
+ * Sesión automática tras un pago aprobado hace menos de 2 h (ventana corta:
+ * el enlace de vuelta con payment_id puede quedar en el historial).
+ * Devuelve { token, usuario } o null.
+ */
+function sesionTrasPago_(usuario, fechaAprobacion) {
+  const t = fechaAprobacion ? new Date(fechaAprobacion).getTime() : NaN;
+  if (!isFinite(t) || Date.now() - t > 2 * 3600 * 1000) return null;
+  const token = createSession_({
+    id_usuario: String(usuario.id_usuario),
+    correo: String(usuario.correo),
+    nombre: String(usuario.nombre)
+  });
+  log_({ accion: 'sesionTrasPago', idUsuario: String(usuario.id_usuario), nivel: 'info', detalle: 'login automatico tras pago' });
+  return { token: token, usuario: { nombre: String(usuario.nombre), correo: String(usuario.correo) } };
+}
+
 /** "yubert.c@gmail.com" → "yu•••@gmail.com" */
 function enmascararCorreo_(correo) {
   const s = String(correo || '');
@@ -2920,6 +2937,12 @@ function confirmarPagoMP_(req) {
     if (r.tipo === 'aprobado' || r.tipo === 'ya_activa') {
       const resp = respuestaActivacion_(r.activacion, found.compra);
       if (!correo) resp.correo = enmascararCorreo_(resp.correo);
+      else {
+        // Mismo navegador (correo guardado + payment_id) y pago reciente: el alumno
+        // entra directo al Portal sin esperar el correo con la contraseña.
+        const sesion = sesionTrasPago_(usuario, (pre.body || {}).date_approved);
+        if (sesion) resp.sesion = sesion;
+      }
       return ok_(resp, '¡Pago aprobado!');
     }
     if (r.tipo === 'pendiente') {

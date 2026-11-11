@@ -33,7 +33,7 @@ export function Footer() {
           </p>
           <div className="mt-6">
             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-white/40">Medios de pago</div>
-            <div className="mt-2 text-sm text-white/80">Tarjeta · Yape · Binance (USDT) · Transferencia BCP</div>
+            <div className="mt-2 text-sm text-white/80">Yape · Tarjeta (Mercado Pago) · Binance (USDT) · Transferencia BCP</div>
           </div>
         </div>
 

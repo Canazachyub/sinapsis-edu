@@ -64,7 +64,28 @@ function formatDuracion(dias: number): string {
   return `${dias} días de acceso`;
 }
 
+function formatMonto(n: number): string {
+  return n.toFixed(n % 1 === 0 ? 0 : 2);
+}
+
 // ─── Subcomponentes ──────────────────────────────────────────
+
+/** Medios de pago aceptados (texto, sin logos de terceros) + sello de seguridad. */
+function MediosPago() {
+  return (
+    <div className="text-center">
+      <ul className="flex flex-wrap justify-center gap-1.5" aria-label="Medios de pago aceptados">
+        {['Yape', 'Visa', 'Mastercard', 'Débito', 'Saldo Mercado Pago'].map((m) => (
+          <li key={m} className="rounded-full border border-line bg-white px-2.5 py-1 text-[12px] font-semibold text-muted">{m}</li>
+        ))}
+      </ul>
+      <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-subtle">
+        <ShieldCheck className="h-3.5 w-3.5 text-jungle-600" aria-hidden />
+        Pagas en la página segura de Mercado Pago. Tu tarjeta no pasa por nuestros servidores.
+      </p>
+    </div>
+  );
+}
 
 const PASOS = ['Tus datos', 'Pago', 'Listo'] as const;
 
@@ -179,7 +200,7 @@ export function Compra() {
   // Si el alumno vuelve con "Atrás" desde Mercado Pago (página restaurada de
   // la caché del navegador), reactivar el botón de pagar.
   useEffect(() => {
-    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setAbriendoCulqi(false); };
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) { setAbriendoCulqi(false); setIniciando(false); } };
     window.addEventListener('pageshow', onShow);
     return () => window.removeEventListener('pageshow', onShow);
   }, []);
@@ -256,6 +277,12 @@ export function Compra() {
         id_compra: res.data.id_compra, correo, slug,
         init_point: res.data.init_point, expira: res.data.expira,
       });
+      // Mercado Pago: directo a su página segura (un clic menos). Culqi abre su modal en el paso 2.
+      if (res.data.pasarela === 'mercadopago' && res.data.init_point) {
+        setAbriendoCulqi(true);
+        window.location.assign(res.data.init_point);
+        return;
+      }
       setPaso('pago');
       return;
     }
@@ -512,11 +539,16 @@ export function Compra() {
                 )}
 
                 <div className="flex flex-col gap-3">
-                  <button type="submit" disabled={iniciando} className="btn-primary w-full disabled:opacity-60 sm:w-auto sm:self-start">
-                    {iniciando ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Preparando tu compra…</> : 'Continuar al pago'}
+                  <button type="submit" disabled={iniciando || abriendoCulqi || (esAnatomia && segmentos.size === 0)} className="btn-primary w-full py-4 text-base disabled:opacity-60">
+                    {abriendoCulqi
+                      ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Te llevamos a Mercado Pago…</>
+                      : iniciando
+                        ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Preparando tu pago…</>
+                        : <><Lock className="h-4 w-4" aria-hidden /> Pagar S/ {formatMonto(precioCliente)}</>}
                   </button>
-                  <button type="button" onClick={irAVoucher} className="min-h-[44px] self-start text-sm font-semibold text-jungle-600 underline underline-offset-2 hover:text-jungle-800">
-                    Prefiero pagar por transferencia o Yape con voucher
+                  <MediosPago />
+                  <button type="button" onClick={irAVoucher} className="mt-1 min-h-[44px] self-center text-sm font-semibold text-jungle-600 underline underline-offset-2 hover:text-jungle-800">
+                    ¿Prefieres Binance o transferencia? Paga con voucher
                   </button>
                 </div>
               </form>

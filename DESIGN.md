@@ -278,7 +278,9 @@ parte superior y resumen del pedido fijo a la derecha en desktop.
 ## 9. Imágenes
 
 - **No** se usan objetos 3D realistas, ilustraciones de personajes ni imágenes de stock.
-- Excepción aprobada: los banners planos de plataformas (§7.2).
+- Excepción aprobada: los banners planos de plataformas (§7.2) y, con el mismo estilo (icono de
+  línea lima sobre verde oscuro, sin texto), las ilustraciones del flujo de compra en
+  `public/images/flujo/` (pasos de "Cómo funciona" y pago aprobado), aprobadas el 2026-11-11.
 - Lo visual son las **maquetas de UI en código** (§7.3) y la red 3D del hero.
 - Si se necesitan fotos (testimonios, docentes), deben ser reales.
 - Imágenes generadas con ChatGPT (Codex `image_gen`) solo para: el fallback estático del hero

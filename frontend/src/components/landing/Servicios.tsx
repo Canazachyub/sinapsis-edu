@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CreditCard, FileText, MailCheck, MessageCircle, MousePointerClick, Upload, type LucideIcon } from 'lucide-react';
+import { ArrowRight, CreditCard, FileText, MailCheck, MessageCircle, MousePointerClick, type LucideIcon } from 'lucide-react';
 import { SectionHeader } from './SectionHeader';
+import { ScrollLink } from '@/components/ScrollLink';
 import { PruebaPregunta } from './PruebaPregunta';
 import { COLECCIONES } from '@/data/contenido';
 import { WHATSAPP } from '@/config/pago';
@@ -213,11 +214,22 @@ export function SeccionVideoclases() {
 
 // ── Cómo funciona ────────────────────────────────────────────────
 
-const PASOS: Array<{ Icon: LucideIcon; titulo: string; texto: string }> = [
-  { Icon: MousePointerClick, titulo: 'Elige tu plataforma', texto: 'Revisa el detalle y el precio de cada banco o curso.' },
-  { Icon: CreditCard, titulo: 'Paga como prefieras', texto: 'Yape, Binance (USDT) o transferencia bancaria.' },
-  { Icon: Upload, titulo: 'Sube tu voucher', texto: 'Completa tus datos y adjunta el comprobante de pago.' },
-  { Icon: MailCheck, titulo: 'Recibe tu acceso', texto: 'Verificamos tu pago y te enviamos tus credenciales por correo en menos de 24 h hábiles.' },
+const PASOS: Array<{ Icon: LucideIcon; img: string; titulo: string; texto: string; dato: string }> = [
+  {
+    Icon: MousePointerClick, img: 'paso-elige', titulo: 'Elige tu plataforma',
+    texto: 'ENAM, ENCIB, Residentado, EsSalud o videoclases. Ves el precio y qué incluye antes de pagar.',
+    dato: 'Precio claro',
+  },
+  {
+    Icon: CreditCard, img: 'paso-paga', titulo: 'Paga con Yape o tarjeta',
+    texto: 'Escribe tu nombre y correo, y paga en la página segura de Mercado Pago. Sin suscripciones ni cobros automáticos.',
+    dato: 'Menos de 2 minutos',
+  },
+  {
+    Icon: MailCheck, img: 'paso-acceso', titulo: 'Entra al instante',
+    texto: 'Apenas se aprueba el pago entras a tu Portal y te enviamos tu contraseña por correo para la próxima vez.',
+    dato: 'Acceso inmediato',
+  },
 ];
 
 export function ComoFunciona() {
@@ -226,29 +238,43 @@ export function ComoFunciona() {
       <div className="container-x py-20 md:py-28">
         <SectionHeader
           eyebrow="Cómo funciona"
-          title="Tu acceso en cuatro pasos"
-          lead="Sin suscripciones automáticas ni tarjetas de crédito. Pagas una vez por el periodo que elijas."
+          title="Empieza a estudiar en tres pasos"
+          lead="Pagas una sola vez por el periodo que elijas y entras en el momento. Sin esperar a que alguien revise tu pago."
         />
-        <ol className="mt-14 grid gap-8 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-          {PASOS.map(({ Icon, titulo, texto }, i) => (
-            <li key={titulo} className="relative" data-reveal={i * 100}>
-              {i < PASOS.length - 1 && (
-                <span className="absolute left-14 right-0 top-6 hidden h-px bg-line lg:block" aria-hidden />
-              )}
-              <div className="relative flex items-center gap-3">
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-jungle-800 text-white">
-                  <Icon className="h-5 w-5" aria-hidden />
+        <ol className="mt-14 grid gap-6 md:grid-cols-3">
+          {PASOS.map(({ Icon, img, titulo, texto, dato }, i) => (
+            <li key={titulo} className="overflow-hidden rounded-2xl border border-line bg-white" data-reveal={i * 100}>
+              <div className="relative aspect-[4/3] bg-jungle-900">
+                <img
+                  src={`${import.meta.env.BASE_URL}images/flujo/${img}.webp`}
+                  alt=""
+                  width={800}
+                  height={600}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+                <span className="absolute left-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-lime-400 font-display text-sm font-extrabold text-jungle-900">
+                  {i + 1}
                 </span>
-                <span className="tabular rounded-full bg-white px-2 text-sm font-semibold text-subtle">0{i + 1}</span>
               </div>
-              <h3 className="mt-5 text-lg">{titulo}</h3>
-              <p className="mt-2 text-[15px] leading-relaxed text-muted">{texto}</p>
+              <div className="p-5 sm:p-6">
+                <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-jungle-600">
+                  <Icon className="h-4 w-4" aria-hidden /> {dato}
+                </div>
+                <h3 className="mt-2 text-lg">{titulo}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-muted">{texto}</p>
+              </div>
             </li>
           ))}
         </ol>
-        <div className="mt-12 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-paper px-5 py-4 text-sm text-muted" data-reveal>
-          <FileText className="h-5 w-5 text-jungle-600" aria-hidden />
-          ¿Prefieres que te guiemos? Escríbenos por WhatsApp y coordinamos el pago contigo.
+        <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-line bg-paper px-5 py-5 sm:flex-row sm:items-center sm:justify-between" data-reveal>
+          <p className="flex items-start gap-3 text-sm text-muted">
+            <FileText className="mt-0.5 h-5 w-5 shrink-0 text-jungle-600" aria-hidden />
+            <span>¿Prefieres Binance o transferencia BCP? También puedes pagar y subir tu voucher; lo activamos en menos de 24 h hábiles.</span>
+          </p>
+          <ScrollLink to="plataformas" className="btn-primary shrink-0 cursor-pointer">Ver plataformas</ScrollLink>
         </div>
       </div>
     </section>

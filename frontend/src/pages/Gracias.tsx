@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Check, Clock, Loader2, Mail, MessageCircle } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
@@ -8,8 +8,9 @@ import {
   ResultadoAprobado, ResultadoEnProceso, ResultadoRechazado,
 } from '@/components/compra/Resultados';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useAuth } from '@/hooks/useAuth';
 import {
-  CODIGO, confirmarPagoMP, estadoCompra, leerCompraEnCurso, type CompraEnCurso,
+  CODIGO, borrarCompraEnCurso, confirmarPagoMP, estadoCompra, leerCompraEnCurso, type CompraEnCurso,
 } from '@/api/pagos';
 
 /** Contenido para el pago por voucher (pendiente de revisión manual). */
@@ -55,7 +56,7 @@ function VoucherRecibido({ idCompra }: { idCompra: string | null }) {
 type Vista =
   | { tipo: 'cargando' }
   | { tipo: 'voucher' }
-  | { tipo: 'aprobado'; plataforma: string; fechaFin: string; correo?: string; passwordEnviada?: boolean }
+  | { tipo: 'aprobado'; plataforma: string; fechaFin: string; correo?: string; passwordEnviada?: boolean; sesionIniciada?: boolean }
   | { tipo: 'rechazado'; mensaje: string }
   | { tipo: 'en_proceso' }
   | { tipo: 'revision' }
@@ -81,6 +82,8 @@ export function Gracias() {
 
   const [vista, setVista] = useState<Vista>({ tipo: 'cargando' });
   const [consultando, setConsultando] = useState(false);
+  const { login, isAuthenticated } = useAuth();
+  const slug = propia?.slug;
 
   /** Mercado Pago: confirma con el pago que trae la URL. */
   const confirmarMP = useCallback(async (): Promise<boolean> => {
@@ -88,14 +91,21 @@ export function Gracias() {
     // Sin correo guardado (otro navegador/dispositivo) el servidor valida con el payment_id.
     const res = await confirmarPagoMP(idCompra, paymentId, correo ?? '');
     if (res.ok && res.data) {
-      setVista({ tipo: 'aprobado', plataforma: res.data.plataforma, fechaFin: res.data.fecha_fin, correo: res.data.correo, passwordEnviada: res.data.passwordEnviada });
+      const s = res.data.sesion;
+      if (s?.token) login(s.token, s.usuario);
+      borrarCompraEnCurso();
+      setVista({
+        tipo: 'aprobado', plataforma: res.data.plataforma, fechaFin: res.data.fecha_fin,
+        correo: res.data.correo, passwordEnviada: res.data.passwordEnviada,
+        sesionIniciada: !!s?.token || isAuthenticated,
+      });
       return true;
     }
     if (res.code === CODIGO.RECHAZADO) { setVista({ tipo: 'rechazado', mensaje: res.error || 'Tu pago fue rechazado.' }); return true; }
     if (res.code === CODIGO.EN_PROCESO) { setVista({ tipo: 'en_proceso' }); return true; }
     if (res.code === CODIGO.REVISION) { setVista({ tipo: 'revision' }); return true; }
     return false; // red u otro: consultar el estado de la compra
-  }, [idCompra, correo, paymentId]);
+  }, [idCompra, correo, paymentId, login, isAuthenticated]);
 
   /** Estado de la compra en el servidor (vale para todas las pasarelas y el voucher). */
   const consultarEstado = useCallback(async () => {
@@ -142,7 +152,22 @@ export function Gracias() {
     }
   }, [idCompra, correo, statusMP, paymentId, confirmarMP, consultarEstado]);
 
-  useEffect(() => { void actualizar(); }, [actualizar]);
+  // Primera consulta al llegar. (Solo una vez: `actualizar` cambia tras el login automático.)
+  const consultado = useRef(false);
+  useEffect(() => {
+    if (consultado.current) return;
+    consultado.current = true;
+    void actualizar();
+  }, [actualizar]);
+
+  // Pago en proceso (Yape/PagoEfectivo lentos): volver a consultar solo cada 6 s, hasta 3 min.
+  const intentos = useRef(0);
+  useEffect(() => {
+    if (vista.tipo !== 'en_proceso' || !correo) return;
+    if (intentos.current >= 30) return;
+    const id = window.setTimeout(() => { intentos.current += 1; void actualizar(); }, 6000);
+    return () => window.clearTimeout(id);
+  }, [vista, correo, actualizar]);
 
   /** Reintentar: reabre el mismo enlace de pago si sigue vigente; si no, vuelve a la compra. */
   function reintentar() {
@@ -170,7 +195,11 @@ export function Gracias() {
       break;
     case 'aprobado':
       contenido = (
-        <ResultadoAprobado plataforma={vista.plataforma} fechaFin={vista.fechaFin} correo={vista.correo} passwordEnviada={vista.passwordEnviada} idCompra={idCompra ?? undefined} />
+        <ResultadoAprobado
+          plataforma={vista.plataforma} fechaFin={vista.fechaFin} correo={vista.correo}
+          passwordEnviada={vista.passwordEnviada} idCompra={idCompra ?? undefined}
+          slug={slug} sesionIniciada={vista.sesionIniciada}
+        />
       );
       break;
     case 'aprobado_sin_datos':

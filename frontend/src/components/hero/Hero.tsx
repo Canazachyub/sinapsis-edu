@@ -78,7 +78,7 @@ export function Hero() {
           </div>
 
           <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/75">
-            {['Yape · Binance · Transferencia', 'Acceso en menos de 24 h', 'Celular, tablet o PC'].map((t) => (
+            {['Paga con Yape o tarjeta', 'Acceso al instante', 'Celular, tablet o PC'].map((t) => (
               <li key={t} className="inline-flex items-center gap-2">
                 <span className="grid h-5 w-5 place-items-center rounded-full border border-lime-400/50 text-lime-400">
                   <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
