@@ -119,8 +119,8 @@ function Campo({
 }
 
 function Resumen({
-  plataforma, duracion, monto, extra,
-}: { plataforma: string; duracion: number; monto: number; extra?: string }) {
+  plataforma, duracion, monto, extra, proveedor,
+}: { plataforma: string; duracion: number; monto: number; extra?: string; proveedor: string }) {
   return (
     <div className="card p-5 sm:p-6">
       <div className="eyebrow">Tu pedido</div>
@@ -138,7 +138,7 @@ function Resumen({
         <span className="tabular font-display text-[28px] font-extrabold text-ink">S/ {monto.toFixed(2)}</span>
       </div>
       <ul className="mt-4 space-y-2 text-[13px] text-muted">
-        <li className="flex gap-2"><ShieldCheck className="h-4 w-4 shrink-0 text-jungle-600" aria-hidden /> Pago seguro procesado por Culqi. Tu tarjeta no pasa por nuestros servidores.</li>
+        <li className="flex gap-2"><ShieldCheck className="h-4 w-4 shrink-0 text-jungle-600" aria-hidden /> Pago seguro procesado por {proveedor}. Tu tarjeta no pasa por nuestros servidores.</li>
         <li className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-jungle-600" aria-hidden /> Acceso inmediato al aprobarse el pago.</li>
       </ul>
     </div>
@@ -175,6 +175,14 @@ export function Compra() {
     const c = leerCompraEnCurso();
     if (c && c.slug === slug) setPendiente(c);
   }, [slug]);
+
+  // Si el alumno vuelve con "Atrás" desde Mercado Pago (página restaurada de
+  // la caché del navegador), reactivar el botón de pagar.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) setAbriendoCulqi(false); };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
 
   // Al cambiar de paso (no en la primera carga), subir al indicador (móvil).
   const primerRender = useRef(true);
@@ -244,13 +252,20 @@ export function Compra() {
     setIniciando(false);
     if (res.ok && res.data) {
       setCompra(res.data);
-      guardarCompraEnCurso({ id_compra: res.data.id_compra, correo, slug });
+      guardarCompraEnCurso({
+        id_compra: res.data.id_compra, correo, slug,
+        init_point: res.data.init_point, expira: res.data.expira,
+      });
       setPaso('pago');
       return;
     }
     if (res.code === CODIGO.NO_CONFIGURADA) {
       setAvisoVoucher('El pago con tarjeta o Yape todavía no está disponible. Puedes pagar con voucher y activamos tu acceso en cuanto lo revisemos.');
       setPaso('voucher');
+      return;
+    }
+    if (res.code === CODIGO.PASARELA_ERROR) {
+      setErrorGeneral('No pudimos conectar con la pasarela de pago. Intenta de nuevo en unos minutos o paga con voucher (enlace abajo).');
       return;
     }
     setErrorGeneral(res.message || res.error || 'No pudimos continuar. Revisa tu conexión e intenta de nuevo.');
@@ -265,6 +280,23 @@ export function Compra() {
   async function pagar() {
     if (!compra || abriendoCulqi || procesandoRef.current) return;
     setErrorGeneral(null);
+
+    // Mercado Pago Checkout Pro: redirección en la misma pestaña. La compra
+    // en curso ya quedó guardada para retomarla al volver (/gracias).
+    if (compra.pasarela === 'mercadopago') {
+      if (!compra.init_point) {
+        setErrorGeneral('No pudimos preparar el pago. Vuelve a intentarlo o paga con voucher.');
+        return;
+      }
+      setAbriendoCulqi(true);
+      window.location.assign(compra.init_point);
+      return;
+    }
+
+    if (!compra.publicKey) {
+      setErrorGeneral('No pudimos preparar el pago. Vuelve a intentarlo o paga con voucher.');
+      return;
+    }
     setAbriendoCulqi(true);
     try {
       await abrirCheckoutCulqi({
@@ -518,12 +550,14 @@ export function Compra() {
                     className="btn-primary w-full text-base disabled:opacity-60"
                   >
                     {abriendoCulqi
-                      ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Abriendo la pasarela…</>
+                      ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {compra.pasarela === 'mercadopago' ? 'Te llevamos a Mercado Pago…' : 'Abriendo la pasarela…'}</>
                       : <><Lock className="h-4 w-4" aria-hidden /> Pagar S/ {compra.monto.toFixed(compra.monto % 1 === 0 ? 0 : 2)} con tarjeta o Yape</>}
                   </button>
                   <p className="mt-2 text-center text-[13px] text-muted">
-                    Se abre la ventana segura de Culqi. Con Yape necesitas el código de aprobación de tu app.
-                    Tienes 30 minutos para completar el pago.
+                    {compra.pasarela === 'mercadopago'
+                      ? 'Te llevaremos a la página segura de Mercado Pago. Al terminar volverás aquí solo.'
+                      : 'Se abre la ventana segura de Culqi. Con Yape necesitas el código de aprobación de tu app.'}
+                    {' '}Tienes 30 minutos para completar el pago.
                   </p>
                 </div>
 
@@ -592,7 +626,13 @@ export function Compra() {
 
           <aside className="lg:col-span-5">
             <div className="lg:sticky lg:top-24">
-              <Resumen plataforma={data.nombre} duracion={duracion} monto={montoMostrado} extra={extraResumen} />
+              <Resumen
+                plataforma={data.nombre}
+                duracion={duracion}
+                monto={montoMostrado}
+                extra={extraResumen}
+                proveedor={compra?.pasarela === 'culqi' ? 'Culqi' : 'Mercado Pago'}
+              />
             </div>
           </aside>
         </div>

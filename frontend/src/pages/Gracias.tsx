@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Check, Clock, Loader2, Mail, MessageCircle } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -8,7 +8,9 @@ import {
   ResultadoAprobado, ResultadoEnProceso, ResultadoRechazado,
 } from '@/components/compra/Resultados';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { estadoCompra, leerCompraEnCurso, type EstadoCompraRes } from '@/api/pagos';
+import {
+  CODIGO, confirmarPagoMP, estadoCompra, leerCompraEnCurso, type CompraEnCurso,
+} from '@/api/pagos';
 
 /** Contenido para el pago por voucher (pendiente de revisión manual). */
 function VoucherRecibido({ idCompra }: { idCompra: string | null }) {
@@ -50,90 +52,172 @@ function VoucherRecibido({ idCompra }: { idCompra: string | null }) {
   );
 }
 
+type Vista =
+  | { tipo: 'cargando' }
+  | { tipo: 'voucher' }
+  | { tipo: 'aprobado'; plataforma: string; fechaFin: string; correo?: string; passwordEnviada?: boolean }
+  | { tipo: 'rechazado'; mensaje: string }
+  | { tipo: 'en_proceso' }
+  | { tipo: 'revision' }
+  | { tipo: 'anulada' }
+  | { tipo: 'aprobado_sin_datos' };
+
+const RE_PAYMENT = /^\d{1,20}$/;
+
 export function Gracias() {
   useDocumentTitle('Estado de tu compra');
   const location = useLocation();
-  // Con HashRouter el query string vive después del segundo `?`: /#/gracias?id=C-001
-  const idCompra = new URLSearchParams(location.search).get('id');
-  const guardada = leerCompraEnCurso();
-  const correo = guardada && idCompra && guardada.id_compra === idCompra ? guardada.correo : null;
+  const navigate = useNavigate();
+  // Con HashRouter el query string vive después del segundo `?`: /#/gracias?id_compra=C-001&payment_id=…
+  const q = new URLSearchParams(location.search);
+  const idCompra = q.get('id_compra') || q.get('id');
+  const paymentIdRaw = q.get('payment_id') || '';
+  const paymentId = RE_PAYMENT.test(paymentIdRaw) ? paymentIdRaw : null;
+  const statusMP = q.get('status'); // approved | pending | in_process | rejected | null…
 
-  const [estado, setEstado] = useState<EstadoCompraRes | null>(null);
-  const [cargando, setCargando] = useState<boolean>(!!(idCompra && correo));
-  const [fallo, setFallo] = useState(false);
+  const [guardada] = useState<CompraEnCurso | null>(() => leerCompraEnCurso());
+  const propia = guardada && idCompra && guardada.id_compra === idCompra ? guardada : null;
+  const correo = propia ? propia.correo : null;
 
-  const consultar = useCallback(async () => {
-    if (!idCompra || !correo) return;
-    setCargando(true);
-    const res = await estadoCompra(idCompra, correo);
-    setCargando(false);
+  const [vista, setVista] = useState<Vista>({ tipo: 'cargando' });
+  const [consultando, setConsultando] = useState(false);
+
+  /** Mercado Pago: confirma con el pago que trae la URL. */
+  const confirmarMP = useCallback(async (): Promise<boolean> => {
+    if (!idCompra || !correo || !paymentId) return false;
+    const res = await confirmarPagoMP(idCompra, paymentId, correo);
     if (res.ok && res.data) {
-      setEstado(res.data);
-      setFallo(false);
-    } else {
-      setFallo(true);
+      setVista({ tipo: 'aprobado', plataforma: res.data.plataforma, fechaFin: res.data.fecha_fin, correo: res.data.correo, passwordEnviada: res.data.passwordEnviada });
+      return true;
     }
-  }, [idCompra, correo]);
+    if (res.code === CODIGO.RECHAZADO) { setVista({ tipo: 'rechazado', mensaje: res.error || 'Tu pago fue rechazado.' }); return true; }
+    if (res.code === CODIGO.EN_PROCESO) { setVista({ tipo: 'en_proceso' }); return true; }
+    if (res.code === CODIGO.REVISION) { setVista({ tipo: 'revision' }); return true; }
+    return false; // red u otro: consultar el estado de la compra
+  }, [idCompra, correo, paymentId]);
 
-  useEffect(() => { void consultar(); }, [consultar]);
-
-  let contenido;
-  if (cargando && !estado) {
-    contenido = (
-      <p className="flex items-center gap-2 text-muted" aria-live="polite">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Consultando el estado de tu compra…
-      </p>
-    );
-  } else if (!estado || fallo) {
-    // Sin datos para consultar (o sin conexión): mensaje del flujo de voucher.
-    contenido = <VoucherRecibido idCompra={idCompra} />;
-  } else {
-    const ep = estado.estado_pago;
-    if (ep === 'aprobado' && estado.estado_acceso === 'activo') {
-      contenido = (
-        <ResultadoAprobado plataforma={estado.plataforma} fechaFin={estado.fecha_fin} correo={correo ?? undefined} idCompra={estado.id_compra} />
-      );
+  /** Estado de la compra en el servidor (vale para todas las pasarelas y el voucher). */
+  const consultarEstado = useCallback(async () => {
+    if (!idCompra || !correo) return;
+    const res = await estadoCompra(idCompra, correo);
+    const d = res.data;
+    if (!res.ok || !d) { setVista({ tipo: 'en_proceso' }); return; }
+    const ep = d.estado_pago;
+    if (ep === 'aprobado' && d.estado_acceso === 'activo') {
+      setVista({ tipo: 'aprobado', plataforma: d.plataforma, fechaFin: d.fecha_fin, correo });
     } else if (ep === 'pendiente') {
-      contenido = <VoucherRecibido idCompra={estado.id_compra} />;
+      setVista({ tipo: 'voucher' });
     } else if (ep === 'pendiente_pago') {
-      contenido = estado.expirada ? (
-        <ResultadoRechazado mensaje="Tu compra expiró sin completar el pago. No se realizó ningún cobro." plataforma={estado.plataforma} />
-      ) : (
-        <ResultadoEnProceso onConsultar={consultar} consultando={cargando} idCompra={estado.id_compra} />
-      );
+      if (d.expirada) setVista({ tipo: 'rechazado', mensaje: 'Tu compra expiró sin completar el pago. No se realizó ningún cobro.' });
+      else if (statusMP && statusMP !== 'approved' && statusMP !== 'pending' && statusMP !== 'in_process') {
+        setVista({ tipo: 'rechazado', mensaje: 'El pago no se completó. No se realizó ningún cobro.' });
+      } else setVista({ tipo: 'en_proceso' });
     } else if (ep === 'en_revision') {
+      setVista({ tipo: 'revision' });
+    } else if (ep === 'rechazado') {
+      setVista({ tipo: 'rechazado', mensaje: 'No pudimos verificar tu pago.' });
+    } else {
+      setVista({ tipo: 'anulada' });
+    }
+  }, [idCompra, correo, statusMP]);
+
+  const actualizar = useCallback(async () => {
+    setConsultando(true);
+    try {
+      if (!idCompra) { setVista({ tipo: 'voucher' }); return; }
+      if (!correo) {
+        // Otro navegador/dispositivo: no podemos consultar. Mostramos lo que dijo MP.
+        if (statusMP === 'approved') setVista({ tipo: 'aprobado_sin_datos' });
+        else if (statusMP === 'pending' || statusMP === 'in_process') setVista({ tipo: 'en_proceso' });
+        else if (statusMP) setVista({ tipo: 'rechazado', mensaje: 'El pago no se completó.' });
+        else setVista({ tipo: 'voucher' });
+        return;
+      }
+      if (paymentId && (await confirmarMP())) return;
+      await consultarEstado();
+    } finally {
+      setConsultando(false);
+    }
+  }, [idCompra, correo, statusMP, paymentId, confirmarMP, consultarEstado]);
+
+  useEffect(() => { void actualizar(); }, [actualizar]);
+
+  /** Reintentar: reabre el mismo enlace de pago si sigue vigente; si no, vuelve a la compra. */
+  function reintentar() {
+    if (propia?.init_point && propia.expira && new Date(propia.expira).getTime() > Date.now() + 60_000) {
+      window.location.assign(propia.init_point);
+      return;
+    }
+    navigate(propia ? `/compra/${propia.slug}` : '/');
+  }
+  function irAVoucher() {
+    navigate(propia ? `/compra/${propia.slug}` : '/');
+  }
+
+  let contenido: ReactNode;
+  switch (vista.tipo) {
+    case 'cargando':
+      contenido = (
+        <p className="flex items-center gap-2 text-muted" aria-live="polite">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Consultando el estado de tu pago…
+        </p>
+      );
+      break;
+    case 'voucher':
+      contenido = <VoucherRecibido idCompra={idCompra} />;
+      break;
+    case 'aprobado':
+      contenido = (
+        <ResultadoAprobado plataforma={vista.plataforma} fechaFin={vista.fechaFin} correo={vista.correo} passwordEnviada={vista.passwordEnviada} idCompra={idCompra ?? undefined} />
+      );
+      break;
+    case 'aprobado_sin_datos':
+      contenido = (
+        <ResultadoEnProceso
+          titulo="¡Pago recibido!"
+          texto="Mercado Pago aprobó tu pago. Estamos activando tu acceso y te enviaremos un correo con tus datos en unos minutos."
+          idCompra={idCompra ?? undefined}
+        />
+      );
+      break;
+    case 'rechazado':
+      contenido = <ResultadoRechazado mensaje={vista.mensaje} onReintentar={reintentar} onVoucher={propia ? irAVoucher : undefined} />;
+      break;
+    case 'en_proceso':
+      contenido = (
+        <ResultadoEnProceso
+          onConsultar={correo ? actualizar : undefined}
+          consultando={consultando}
+          idCompra={idCompra ?? undefined}
+          texto={<>Tu pago está en proceso. <strong className="text-ink">No vuelvas a pagar.</strong> Apenas se confirme, tu acceso se activa solo y te avisamos por correo.</>}
+        />
+      );
+      break;
+    case 'revision':
       contenido = (
         <ResultadoEnProceso
           titulo="Recibimos tu pago y lo estamos verificando"
           texto={<>Te escribiremos por correo o WhatsApp en breve. <strong className="text-ink">No vuelvas a pagar.</strong></>}
-          idCompra={estado.id_compra}
+          idCompra={idCompra ?? undefined}
         />
       );
-    } else if (ep === 'rechazado') {
-      contenido = <ResultadoRechazado mensaje="No pudimos verificar tu pago." plataforma={estado.plataforma} />;
-    } else {
+      break;
+    case 'anulada':
       contenido = (
         <ResultadoEnProceso
           titulo="Tu acceso no está activo"
           texto="Esta compra fue devuelta o anulada. Si crees que es un error, escríbenos."
-          idCompra={estado.id_compra}
+          idCompra={idCompra ?? undefined}
         />
       );
-    }
+      break;
   }
-
-  const volverACompra = estado && estado.estado_pago === 'pendiente_pago' && estado.slug;
 
   return (
     <div className="flex min-h-screen flex-col bg-paper">
       <Navbar />
       <main className="container-x flex-1 py-12 md:py-16">
-        <div className="card mx-auto max-w-2xl p-5 sm:p-8">
-          {contenido}
-          {volverACompra && (
-            <Link to={`/compra/${estado.slug}`} className="btn-secondary mt-6">Volver a intentar el pago</Link>
-          )}
-        </div>
+        <div className="card mx-auto max-w-2xl p-5 sm:p-8">{contenido}</div>
       </main>
       <Footer />
     </div>
