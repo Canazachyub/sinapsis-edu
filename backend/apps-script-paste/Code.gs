@@ -7,10 +7,27 @@
  * ║  Apps Script V8 (ES2019) — todo en scope global.               ║
  * ╚════════════════════════════════════════════════════════════════╝
  *
- * ── PASARELA CULQI (Fase 1) ─────────────────────────────────────
- * Script Properties que debes crear (Configuración del proyecto →
- * Propiedades del script). NUNCA las pegues en este archivo:
+ * ── PASARELA DE PAGO (Fase 1) ───────────────────────────────────
+ * Script Properties (Configuración del proyecto → Propiedades del
+ * script). NUNCA pegues llaves en este archivo.
  *
+ *   PASARELA           'mercadopago' | 'culqi'. Vacía = mercadopago si
+ *                      existe MP_ACCESS_TOKEN; si no, culqi si tiene llaves.
+ *
+ *   ▸ Mercado Pago (Checkout Pro por redirección) — pasarela por defecto
+ *   MP_ACCESS_TOKEN    Access Token (APP_USR-… de producción o de la cuenta
+ *                      de prueba vendedora; TEST-… en credenciales antiguas).
+ *   MP_PUBLIC_KEY      Public Key. No la usa Checkout Pro por redirección;
+ *                      se guarda para integraciones futuras.
+ *   MP_SANDBOX         'true' para usar sandbox_init_point (opcional; se
+ *                      activa solo si el token empieza con TEST-).
+ *   SITE_URL           Default https://sinapsisedu.com. Mercado Pago vuelve
+ *                      a SITE_URL/pago-retorno.html.
+ *   WEBAPP_URL         Opcional: URL /exec del Web App para notification_url
+ *                      (si no, se usa ScriptApp.getService().getUrl()).
+ *   Corre testMPConfig() para verificar (no imprime secretos).
+ *
+ *   ▸ Culqi (alternativa, se conserva detrás de PASARELA='culqi')
  *   CULQI_PUBLIC_KEY   pk_test_xxx (prueba) o pk_live_xxx (producción).
  *                      Se entrega al navegador vía iniciarCompra.
  *   CULQI_SECRET_KEY   sk_test_xxx o sk_live_xxx. Solo vive aquí.
@@ -2000,61 +2017,85 @@ function contarRechazo_(correo, idCompra) {
   } catch (e) { /* best-effort */ }
 }
 
-/**
- * Valida un cargo de Culqi (ya re-consultado o recien creado) contra la compra.
- * @return {{ok: boolean, motivo?: string}}
- */
+/** ¿El cargo de Culqi es una venta exitosa? */
 function cargoExitoso_(charge) {
   if (!charge || charge.object !== 'charge') return false;
   const outcome = charge.outcome || {};
   return outcome.type === 'venta_exitosa' || /^AUT/.test(String(outcome.code || ''));
 }
 
-function validarCargo_(charge, idCompra, compra) {
-  if (!charge || charge.object !== 'charge') return { ok: false, motivo: 'no es un cargo' };
-  if (!cargoExitoso_(charge)) {
-    return { ok: false, motivo: 'cargo no exitoso (' + ((charge.outcome || {}).type || '?') + ')' };
-  }
-  if (charge.action_code) return { ok: false, motivo: 'cargo requiere accion: ' + charge.action_code };
-  const meta = charge.metadata || {};
-  if (String(meta.id_compra || '') !== String(idCompra)) return { ok: false, motivo: 'metadata.id_compra distinto' };
-  if (String(charge.currency_code) !== 'PEN') return { ok: false, motivo: 'moneda ' + charge.currency_code };
+/**
+ * Pago normalizado (independiente de la pasarela):
+ * { id, id_compra, monto (soles), moneda, metodo, correo, exitoso, motivoNoExito,
+ *   resumen, proveedor }
+ */
+function normalizarCargoCulqi_(charge) {
+  const exitoso = cargoExitoso_(charge) && !charge.action_code;
+  return {
+    id: String(charge.id || ''),
+    id_compra: String((charge.metadata || {}).id_compra || ''),
+    monto: Number(charge.amount) / 100,
+    moneda: String(charge.currency_code || ''),
+    metodo: metodoDesdeFuente_(charge.source && charge.source.id),
+    correo: String(charge.email || ''),
+    exitoso: exitoso,
+    motivoNoExito: charge.action_code
+      ? 'cargo requiere accion: ' + charge.action_code
+      : 'cargo no exitoso (' + ((charge.outcome || {}).type || '?') + ')',
+    resumen: resumenCulqi_(charge),
+    proveedor: 'Culqi'
+  };
+}
+
+/**
+ * Valida un pago normalizado contra la compra (monto y moneda DE LA HOJA).
+ * @return {{ok: boolean, motivo?: string, montoDistinto?: boolean}}
+ */
+function validarPago_(p, idCompra, compra) {
+  if (!p.exitoso) return { ok: false, motivo: p.motivoNoExito || 'pago no aprobado' };
+  if (String(p.id_compra) !== String(idCompra)) return { ok: false, motivo: 'referencia (id_compra) distinta' };
+  if (String(p.moneda) !== 'PEN') return { ok: false, motivo: 'moneda ' + p.moneda };
   const esperado = Math.round(Number(compra.monto) * 100);
-  if (Number(charge.amount) !== esperado) {
-    return { ok: false, motivo: 'monto ' + charge.amount + ' != esperado ' + esperado, montoDistinto: true };
+  const recibido = Math.round(Number(p.monto) * 100);
+  if (recibido !== esperado) {
+    return { ok: false, motivo: 'monto ' + (recibido / 100) + ' != esperado ' + (esperado / 100), montoDistinto: true };
   }
   return { ok: true };
 }
 
+/** Compatibilidad: procesa un cargo de Culqi. */
+function procesarCargoExitoso_(charge, origen) {
+  return procesarPagoExitoso_(normalizarCargoCulqi_(charge), origen);
+}
+
 /**
- * Procesa un cargo exitoso (desde confirmarPago_ o desde el webhook).
- * Debe llamarse con el lock tomado. Nunca confia en datos del navegador:
- * el monto esperado sale de la hoja.
+ * Procesa un pago aprobado por la pasarela (desde la vuelta del alumno o
+ * desde el webhook). Debe llamarse con el lock tomado. Nunca confia en datos
+ * del navegador: el monto esperado sale de la hoja.
  * @return {{estado: 'activada'|'ya_activa'|'revision', activacion?: object}}
  */
-function procesarCargoExitoso_(charge, origen) {
-  const idCompra = String((charge.metadata || {}).id_compra || '');
-  const sourceId = charge.source && charge.source.id;
-  const metodo = metodoDesdeFuente_(sourceId);
-  const correoCargo = String(charge.email || '');
+function procesarPagoExitoso_(p, origen) {
+  const idCompra = p.id_compra;
+  const prov = p.proveedor;
 
   const found = RE_ID_COMPRA.test(idCompra) ? getCompra_(idCompra) : null;
   if (!found) {
-    registrarPago_({ id_pago: charge.id, id_compra: idCompra, monto: Number(charge.amount) / 100,
-      moneda: charge.currency_code, metodo: metodo, estado: 'observado', correo: correoCargo,
-      respuesta: 'cargo sin compra asociada' });
-    notificarAdmin_('[SINAPSIS EDU] ⚠️ Cargo sin compra: ' + charge.id,
-      '<p>Culqi reporta el cargo <strong>' + escapeHtml_(charge.id) + '</strong> por S/ ' +
-      (Number(charge.amount) / 100).toFixed(2) + ' (' + escapeHtml_(correoCargo) +
-      ') pero no encontramos la compra <code>' + escapeHtml_(idCompra) + '</code>. Revisa en el panel de Culqi.</p>');
+    const nuevo = registrarPago_({ id_pago: p.id, id_compra: idCompra, monto: p.monto,
+      moneda: p.moneda, metodo: p.metodo, estado: 'observado', correo: p.correo,
+      respuesta: 'pago sin compra asociada' });
+    if (nuevo) {
+      notificarAdmin_('[SINAPSIS EDU] ⚠️ Pago sin compra: ' + p.id,
+        '<p>' + escapeHtml_(prov) + ' reporta el pago <strong>' + escapeHtml_(p.id) + '</strong> por S/ ' +
+        Number(p.monto).toFixed(2) + ' (' + escapeHtml_(p.correo) +
+        ') pero no encontramos la compra <code>' + escapeHtml_(idCompra) + '</code>. Revisa en el panel de ' + escapeHtml_(prov) + '.</p>');
+    }
     return { estado: 'revision' };
   }
   const compra = found.compra;
 
-  // Mismo cargo visto antes → idempotente (p. ej. webhook tras confirmarPago).
-  // Si ya estaba registrado con otro estado (observado, devuelto...), no
-  // re-alertar: el admin ya fue avisado la primera vez.
-  const previo = findPago_(charge.id);
+  // Mismo pago visto antes → idempotente (p. ej. webhook tras la vuelta del
+  // alumno). Si estaba con otro estado (observado, devuelto...), no re-alertar.
+  const previo = findPago_(p.id);
   if (previo) {
     if (String(compra.estado_pago) === 'aprobado' && String(previo.estado) === 'aprobado') {
       return { estado: 'ya_activa', activacion: activarCompra_(idCompra, origen, null) };
@@ -2062,11 +2103,10 @@ function procesarCargoExitoso_(charge, origen) {
     return { estado: 'revision' };
   }
 
-  const v = validarCargo_(charge, idCompra, compra);
+  const v = validarPago_(p, idCompra, compra);
   if (!v.ok) {
-    registrarPago_({ id_pago: charge.id, id_compra: idCompra, monto: Number(charge.amount) / 100,
-      moneda: charge.currency_code, metodo: metodo, estado: 'observado', correo: correoCargo,
-      respuesta: v.motivo });
+    registrarPago_({ id_pago: p.id, id_compra: idCompra, monto: p.monto,
+      moneda: p.moneda, metodo: p.metodo, estado: 'observado', correo: p.correo, respuesta: v.motivo });
     // Sacar la compra de pendiente_pago: no se reutiliza ni se vuelve a cobrar
     // hasta que el admin la revise (puede aprobarla desde el panel).
     if (String(compra.estado_pago) === ESTADO_PENDIENTE_PAGO) {
@@ -2074,40 +2114,40 @@ function procesarCargoExitoso_(charge, origen) {
     }
     notificarAdmin_('[SINAPSIS EDU] ⚠️ Pago observado ' + idCompra,
       '<h2 style="color:#10312D">Pago que no pasó las validaciones</h2>' +
-      '<p><strong>Compra:</strong> ' + escapeHtml_(idCompra) + ' · <strong>Cargo:</strong> ' + escapeHtml_(charge.id) + '</p>' +
+      '<p><strong>Compra:</strong> ' + escapeHtml_(idCompra) + ' · <strong>Pago ' + escapeHtml_(prov) + ':</strong> ' + escapeHtml_(p.id) + '</p>' +
       '<p><strong>Motivo:</strong> ' + escapeHtml_(v.motivo) + '</p>' +
       (v.montoDistinto ? '<p style="color:#b45309"><strong>Monto distinto al de la hoja.</strong></p>' : '') +
-      '<p>No se activó el acceso. Revisa en Culqi y decide si apruebas manualmente o devuelves el dinero.</p>');
-    log_({ accion: 'procesarCargo', nivel: 'warning', detalle: idCompra + ' ' + charge.id + ' observado: ' + v.motivo });
+      '<p>No se activó el acceso. Revisa en ' + escapeHtml_(prov) + ' y decide si apruebas manualmente o devuelves el dinero.</p>');
+    log_({ accion: 'procesarPago', nivel: 'warning', detalle: idCompra + ' ' + p.id + ' observado: ' + v.motivo });
     return { estado: 'revision' };
   }
 
-  // Compra ya aprobada con OTRO cargo → cobro duplicado.
-  if (String(compra.estado_pago) === 'aprobado' && String(compra.id_pago || '') !== String(charge.id)) {
-    registrarPago_({ id_pago: charge.id, id_compra: idCompra, monto: Number(charge.amount) / 100,
-      moneda: 'PEN', metodo: metodo, estado: 'duplicado', correo: correoCargo, respuesta: 'compra ya aprobada con ' + compra.id_pago });
+  // Compra ya aprobada con OTRO pago → cobro duplicado.
+  if (String(compra.estado_pago) === 'aprobado' && String(compra.id_pago || '') !== String(p.id)) {
+    registrarPago_({ id_pago: p.id, id_compra: idCompra, monto: p.monto,
+      moneda: 'PEN', metodo: p.metodo, estado: 'duplicado', correo: p.correo, respuesta: 'compra ya aprobada con ' + compra.id_pago });
     notificarAdmin_('[SINAPSIS EDU] ⚠️ Cobro repetido ' + idCompra,
-      '<p>La compra <strong>' + escapeHtml_(idCompra) + '</strong> ya estaba aprobada (cargo ' +
-      escapeHtml_(String(compra.id_pago || 'manual')) + ') y llegó otro cargo exitoso <strong>' +
-      escapeHtml_(charge.id) + '</strong>. Devuelve el dinero desde el panel de Culqi.</p>');
+      '<p>La compra <strong>' + escapeHtml_(idCompra) + '</strong> ya estaba aprobada (pago ' +
+      escapeHtml_(String(compra.id_pago || 'manual')) + ') y llegó otro pago aprobado <strong>' +
+      escapeHtml_(p.id) + '</strong>. Devuelve el dinero desde el panel de ' + escapeHtml_(prov) + '.</p>');
     return { estado: 'ya_activa', activacion: activarCompra_(idCompra, origen, null) };
   }
 
   if (String(compra.estado_pago) !== ESTADO_PENDIENTE_PAGO && String(compra.estado_pago) !== 'aprobado') {
-    registrarPago_({ id_pago: charge.id, id_compra: idCompra, monto: Number(charge.amount) / 100,
-      moneda: 'PEN', metodo: metodo, estado: 'observado', correo: correoCargo,
+    registrarPago_({ id_pago: p.id, id_compra: idCompra, monto: p.monto,
+      moneda: 'PEN', metodo: p.metodo, estado: 'observado', correo: p.correo,
       respuesta: 'estado de compra ' + compra.estado_pago });
     notificarAdmin_('[SINAPSIS EDU] ⚠️ Pago sobre compra ' + compra.estado_pago + ' ' + idCompra,
-      '<p>Llegó el cargo exitoso ' + escapeHtml_(charge.id) + ' para la compra ' + escapeHtml_(idCompra) +
+      '<p>Llegó el pago aprobado ' + escapeHtml_(p.id) + ' para la compra ' + escapeHtml_(idCompra) +
       ' que está en estado <strong>' + escapeHtml_(String(compra.estado_pago)) + '</strong>. No se activó.</p>');
     return { estado: 'revision' };
   }
 
-  // Nota: no se exige "no expirada" aqui. La expiracion se valida ANTES de
-  // cobrar (confirmarPago_). Si el dinero ya se cobro y todo coincide, se activa.
-  registrarPago_({ id_pago: charge.id, id_compra: idCompra, monto: Number(charge.amount) / 100,
-    moneda: 'PEN', metodo: metodo, estado: 'aprobado', correo: correoCargo, respuesta: resumenCulqi_(charge) });
-  const act = activarCompra_(idCompra, origen, { id: charge.id, monto: Number(charge.amount) / 100 });
+  // Nota: no se exige "no expirada" aqui. Si el dinero ya se cobro y todo
+  // coincide, se activa (no dejar sin acceso a un alumno que pago).
+  registrarPago_({ id_pago: p.id, id_compra: idCompra, monto: p.monto,
+    moneda: 'PEN', metodo: p.metodo, estado: 'aprobado', correo: p.correo, respuesta: p.resumen });
+  const act = activarCompra_(idCompra, origen, { id: p.id, monto: p.monto });
   return { estado: act.yaAprobada ? 'ya_activa' : 'activada', activacion: act };
 }
 
@@ -2115,7 +2155,9 @@ function procesarCargoExitoso_(charge, origen) {
 
 /**
  * iniciarCompra: crea la compra PENDIENTE DE PAGO con el monto fijado por el
- * servidor y devuelve lo que el Checkout de Culqi necesita.
+ * servidor y devuelve lo que la pasarela activa necesita:
+ *   pasarela 'mercadopago' → init_point (URL de Checkout Pro)
+ *   pasarela 'culqi'       → publicKey (Checkout v4)
  * Body: { slug, nombre, correo, dni, whatsapp, aceptaTerminos: true, segmentos? }
  */
 function iniciarCompra_(req) {
@@ -2137,7 +2179,8 @@ function iniciarCompra_(req) {
     if (req.aceptaTerminos !== true) return fail_('Debes aceptar los Términos y la Política de Privacidad');
     if (!/^[a-z0-9-]{2,40}$/.test(slug)) return fail_('Plataforma no encontrada');
 
-    if (!culqiConfigurado_()) {
+    const pasarela = pasarelaActiva_();
+    if (!pasarela) {
       return failCode_('PASARELA_NO_CONFIGURADA', 'Pasarela no configurada',
         'El pago con tarjeta o Yape aún no está disponible. Puedes pagar por voucher.');
     }
@@ -2175,6 +2218,7 @@ function iniciarCompra_(req) {
       if (String(c.id_usuario) !== userId) continue;
       if (String(c.id_plataforma) !== String(plat.id_plataforma)) continue;
       if (String(c.estado_pago) !== ESTADO_PENDIENTE_PAGO) continue;
+      if (String(c.metodo_pago) !== pasarela) continue;
       if (Number(c.monto) !== monto || String(c.detalle_extra || '') !== detalleExtra) continue;
       if (!(toMillis_(c.expira) > Date.now())) continue;
       idCompra = String(c.id_compra);
@@ -2190,7 +2234,7 @@ function iniciarCompra_(req) {
         id_usuario: userId,
         id_plataforma: String(plat.id_plataforma),
         monto: monto,
-        metodo_pago: 'culqi',
+        metodo_pago: pasarela,
         fecha_solicitud: nowIso_(),
         voucher_url: '',
         estado_pago: ESTADO_PENDIENTE_PAGO,
@@ -2207,20 +2251,37 @@ function iniciarCompra_(req) {
     const descripcion = ('SINAPSIS EDU - ' + String(plat.nombre) + ' (' + duracion + ' dias)').slice(0, 80);
 
     log_({ accion: 'iniciarCompra', idUsuario: userId, nivel: 'info',
-      detalle: idCompra + ' ' + plat.nombre + ' S/' + monto });
+      detalle: idCompra + ' ' + plat.nombre + ' S/' + monto + ' ' + pasarela });
 
-    return ok_({
+    const base = {
       id_compra: idCompra,
+      pasarela: pasarela,
       monto: monto,
       montoCentimos: Math.round(monto * 100),
       moneda: 'PEN',
       descripcion: descripcion,
-      publicKey: String(getProperty_('CULQI_PUBLIC_KEY')),
       plataforma: String(plat.nombre),
       slug: String(plat.slug),
       duracion_dias: duracion,
       expira: expira
-    });
+    };
+
+    if (pasarela === 'mercadopago') {
+      let pref;
+      try {
+        pref = crearPreferenciaMP_(idCompra, plat, monto, correo, nombre, expira);
+      } catch (mpErr) {
+        log_({ accion: 'iniciarCompra', idUsuario: userId, nivel: 'error',
+          detalle: idCompra + ' ' + (mpErr instanceof Error ? mpErr.message : String(mpErr)) });
+        return failCode_('PASARELA_ERROR', 'No pudimos conectar con Mercado Pago',
+          'Intenta de nuevo en unos minutos o paga por voucher.');
+      }
+      base.init_point = pref.url;
+      return ok_(base);
+    }
+
+    base.publicKey = String(getProperty_('CULQI_PUBLIC_KEY'));
+    return ok_(base);
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
     log_({ accion: 'iniciarCompra', nivel: 'error', detalle: detalle });
@@ -2504,6 +2565,339 @@ function procesarDevolucion_(chargeId, idEvento, monto, tipo) {
     '<p>El acceso de esa compra quedó <strong>revocado</strong>.</p>');
 }
 
+// ─── Pasarela Mercado Pago (Checkout Pro por redireccion) ────
+//
+// Flujo: iniciarCompra crea una PREFERENCIA (monto de la hoja,
+// external_reference = id_compra) → el alumno paga en la web de Mercado Pago
+// (tarjeta, Yape, saldo) → MP lo devuelve a SITE_URL/pago-retorno.html, que
+// redirige a /#/gracias → la web llama confirmarPagoMP → el backend RE-CONSULTA
+// el pago a la API de MP y valida todo antes de activar.
+// En paralelo llega el webhook (notification_url ?source=mp). Apps Script NO
+// puede leer la cabecera x-signature de MP, por eso el aviso nunca se usa como
+// verdad: siempre se re-consulta el pago por su id con el Access Token.
+
+const MP_API_BASE = 'https://api.mercadopago.com';
+const RE_MP_ID = /^\d{1,20}$/;
+
+function mpConfigurado_() {
+  return !!getProperty_('MP_ACCESS_TOKEN');
+}
+
+/**
+ * Pasarela activa segun Script Property PASARELA ('mercadopago' | 'culqi').
+ * Sin PASARELA: Mercado Pago si tiene llave; si no, Culqi si tiene llaves.
+ * Devuelve null si la elegida no esta configurada.
+ */
+function pasarelaActiva_() {
+  const elegida = String(getProperty_('PASARELA') || '').trim().toLowerCase();
+  if (elegida === 'culqi') return culqiConfigurado_() ? 'culqi' : null;
+  if (elegida === 'mercadopago') return mpConfigurado_() ? 'mercadopago' : null;
+  if (mpConfigurado_()) return 'mercadopago';
+  if (culqiConfigurado_()) return 'culqi';
+  return null;
+}
+
+/** Llamada autenticada a la API de MP. Nunca loguea el token. */
+function mpRequest_(method, path, payload) {
+  const token = getProperty_('MP_ACCESS_TOKEN');
+  if (!token) throw new Error('MP_ACCESS_TOKEN no configurado');
+  const opts = {
+    method: method,
+    muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + token },
+    contentType: 'application/json'
+  };
+  if (payload) {
+    opts.payload = JSON.stringify(payload);
+    // Evita preferencias duplicadas si UrlFetch reintenta.
+    opts.headers['X-Idempotency-Key'] = Utilities.getUuid();
+  }
+  const res = UrlFetchApp.fetch(MP_API_BASE + path, opts);
+  let body = {};
+  try { body = JSON.parse(res.getContentText()) || {}; } catch (e) { body = {}; }
+  return { status: res.getResponseCode(), body: body };
+}
+
+function mpSandbox_() {
+  const token = String(getProperty_('MP_ACCESS_TOKEN') || '');
+  return token.indexOf('TEST-') === 0 || String(getProperty_('MP_SANDBOX') || '').toLowerCase() === 'true';
+}
+
+function siteUrl_() {
+  return String(getProperty_('SITE_URL') || 'https://sinapsisedu.com').replace(/\/+$/, '');
+}
+
+/** URL publica /exec del Web App (Property WEBAPP_URL o la del servicio). */
+function webAppUrl_() {
+  const prop = getProperty_('WEBAPP_URL');
+  if (prop) return String(prop);
+  try { return ScriptApp.getService().getUrl() || ''; } catch (e) { return ''; }
+}
+
+/** Fecha en el formato que pide MP: yyyy-MM-dd'T'HH:mm:ss.SSS-05:00 */
+function mpFecha_(date) {
+  return Utilities.formatDate(date, 'America/Lima', "yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+}
+
+/**
+ * Crea la preferencia de Checkout Pro para una compra.
+ * @return {{id: string, url: string}}
+ */
+function crearPreferenciaMP_(idCompra, plat, monto, correo, nombre, expiraIso) {
+  const duracion = Number(plat.duracion_dias) || 30;
+  const retorno = siteUrl_() + '/pago-retorno.html';
+  const notif = webAppUrl_();
+  const body = {
+    items: [{
+      id: String(plat.id_plataforma),
+      title: ('SINAPSIS EDU - ' + String(plat.nombre) + ' (' + duracion + ' días)').slice(0, 250),
+      description: 'Acceso a la plataforma ' + String(plat.nombre) + ' por ' + duracion + ' días',
+      quantity: 1,
+      unit_price: Number(monto),
+      currency_id: 'PEN'
+    }],
+    payer: { email: correo, name: nombre },
+    external_reference: idCompra,
+    metadata: { id_compra: idCompra },
+    back_urls: { success: retorno, pending: retorno, failure: retorno },
+    auto_return: 'approved',
+    expires: true,
+    expiration_date_from: mpFecha_(new Date(Date.now() - 60 * 1000)),
+    expiration_date_to: mpFecha_(new Date(expiraIso)),
+    statement_descriptor: 'SINAPSIS EDU',
+    // Sin cuotas. No se excluye ningun medio (tarjetas, Yape, saldo MP).
+    payment_methods: { installments: 1 }
+  };
+  if (/^https:\/\//.test(notif)) {
+    body.notification_url = notif + (notif.indexOf('?') === -1 ? '?' : '&') + 'source=mp';
+  }
+  const r = mpRequest_('post', '/checkout/preferences', body);
+  if ((r.status !== 200 && r.status !== 201) || !r.body.id) {
+    throw new Error('MP preferencia HTTP ' + r.status + ' ' + String(r.body.message || r.body.error || '').slice(0, 150));
+  }
+  const url = mpSandbox_() ? (r.body.sandbox_init_point || r.body.init_point) : (r.body.init_point || r.body.sandbox_init_point);
+  if (!url) throw new Error('MP no devolvio init_point');
+  return { id: String(r.body.id), url: String(url) };
+}
+
+/** Pago de MP → pago normalizado (ver normalizarCargoCulqi_). */
+function normalizarPagoMP_(pay) {
+  const refund = Number(pay.transaction_amount_refunded) || 0;
+  const tipo = String(pay.payment_type_id || '');
+  return {
+    id: String(pay.id || ''),
+    id_compra: String(pay.external_reference || ''),
+    monto: Number(pay.transaction_amount),
+    moneda: String(pay.currency_id || ''),
+    metodo: 'mp-' + (String(pay.payment_method_id || '') === 'yape' ? 'yape' : (tipo || 'otro')),
+    correo: String((pay.payer && pay.payer.email) || ''),
+    exitoso: String(pay.status) === 'approved' && refund === 0,
+    motivoNoExito: 'status ' + pay.status + (refund ? ' con devolucion ' + refund : ''),
+    resumen: [pay.status, pay.status_detail, pay.payment_method_id].filter(Boolean).join(' | '),
+    proveedor: 'Mercado Pago'
+  };
+}
+
+/** Mensaje claro para el alumno segun status_detail de un pago rechazado. */
+function mensajeRechazoMP_(detalle) {
+  const m = {
+    cc_rejected_insufficient_amount: 'Tu tarjeta no tiene fondos suficientes.',
+    cc_rejected_bad_filled_security_code: 'El código de seguridad (CVV) no es correcto.',
+    cc_rejected_bad_filled_date: 'La fecha de vencimiento no es correcta.',
+    cc_rejected_bad_filled_card_number: 'El número de tarjeta no es correcto.',
+    cc_rejected_bad_filled_other: 'Revisa los datos de tu tarjeta.',
+    cc_rejected_call_for_authorize: 'Tu banco necesita que autorices este pago. Llama a tu banco y vuelve a intentarlo.',
+    cc_rejected_card_disabled: 'Tu tarjeta no está activa para compras por internet. Actívala con tu banco o usa otro medio.',
+    cc_rejected_duplicated_payment: 'Ya hiciste un pago igual hace un momento. Revisa tu correo antes de volver a pagar.',
+    cc_rejected_high_risk: 'El pago fue rechazado por seguridad. Prueba con Yape u otro medio.',
+    cc_rejected_max_attempts: 'Superaste los intentos permitidos. Prueba con otra tarjeta o con Yape.',
+    cc_rejected_blacklist: 'No pudimos procesar el pago con este medio. Prueba con otro.',
+    cc_rejected_card_error: 'No se pudo procesar tu tarjeta. Prueba con otra o con Yape.',
+    cc_rejected_other_reason: 'Tu banco rechazó el pago. Prueba con otro medio.',
+    insufficient_amount: 'No tienes saldo suficiente.',
+    required_call_for_authorize: 'Necesitas autorizar el pago con tu banco o Yape.',
+    expired: 'El tiempo para pagar se venció. Vuelve a intentarlo.'
+  };
+  return m[String(detalle || '')] || 'Tu pago no se completó. Prueba de nuevo o con otro medio.';
+}
+
+/**
+ * Re-consulta un pago de MP por id y actua segun su estado (idempotente).
+ * Debe llamarse con el lock tomado.
+ * @return {{tipo: 'aprobado'|'ya_activa'|'revision'|'pendiente'|'rechazado'|'devuelto'|'no_encontrado',
+ *           pago?: object, activacion?: object, mensaje?: string}}
+ */
+function procesarPagoMPPorId_(paymentId, origen, payPrevio) {
+  let pay = payPrevio;
+  if (!pay) {
+    const r = mpRequest_('get', '/v1/payments/' + encodeURIComponent(paymentId));
+    if (r.status !== 200 || !r.body || !r.body.id) return { tipo: 'no_encontrado' };
+    pay = r.body;
+  }
+  const p = normalizarPagoMP_(pay);
+  const status = String(pay.status || '');
+
+  if (status === 'refunded' || status === 'charged_back' || (status === 'approved' && Number(pay.transaction_amount_refunded) > 0)) {
+    const tipo = status === 'charged_back' ? 'contracargo' : 'devolucion';
+    procesarDevolucion_(p.id, 'mp-' + tipo + '-' + p.id, Number(pay.transaction_amount_refunded) || p.monto, tipo);
+    return { tipo: 'devuelto', pago: p };
+  }
+  if (status === 'approved') {
+    const res = procesarPagoExitoso_(p, origen);
+    return { tipo: res.estado === 'revision' ? 'revision' : (res.estado === 'ya_activa' ? 'ya_activa' : 'aprobado'),
+      pago: p, activacion: res.activacion };
+  }
+  if (status === 'in_mediation') {
+    notificarAdmin_('[SINAPSIS EDU] ⚠️ Pago en disputa ' + p.id_compra,
+      '<p>El pago ' + escapeHtml_(p.id) + ' (compra ' + escapeHtml_(p.id_compra) + ') está en mediación en Mercado Pago. Revísalo en el panel.</p>');
+    return { tipo: 'pendiente', pago: p };
+  }
+  if (status === 'pending' || status === 'in_process' || status === 'authorized') {
+    return { tipo: 'pendiente', pago: p };
+  }
+  // rejected / cancelled
+  const nuevo = registrarPago_({ id_pago: p.id, id_compra: p.id_compra, monto: p.monto, moneda: p.moneda,
+    metodo: p.metodo, estado: 'rechazado', correo: p.correo, respuesta: p.resumen });
+  if (nuevo && p.correo) contarRechazo_(String(p.correo).toLowerCase(), p.id_compra);
+  return { tipo: 'rechazado', pago: p, mensaje: mensajeRechazoMP_(pay.status_detail) };
+}
+
+/**
+ * confirmarPagoMP: la web lo llama al volver de Mercado Pago.
+ * Body: { id_compra, payment_id, correo }
+ * Codigos (campo `code`): RECHAZADO, EN_PROCESO, REVISION, OCUPADO, PASARELA_NO_CONFIGURADA.
+ */
+function confirmarPagoMP_(req) {
+  const idCompra = String(req.id_compra || '').trim();
+  const paymentId = String(req.payment_id || '').trim();
+  const correo = String(req.correo || '').trim().toLowerCase();
+
+  if (!RE_ID_COMPRA.test(idCompra) || !isEmail_(correo)) return fail_('Compra no encontrada');
+  if (!RE_MP_ID.test(paymentId)) return fail_('Pago no encontrado');
+  if (checkRateLimit_('rl_pagomp_' + idCompra, 30)) return fail_('Demasiadas consultas. Espera un momento.');
+  if (!mpConfigurado_()) return failCode_('PASARELA_NO_CONFIGURADA', 'Pasarela no configurada');
+
+  const found = getCompra_(idCompra);
+  if (!found) return fail_('Compra no encontrada');
+  const usuario = getUsuarioById_(found.compra.id_usuario);
+  if (!usuario || String(usuario.correo).toLowerCase() !== correo) return fail_('Compra no encontrada');
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return failCode_('OCUPADO', 'Estamos procesando tu pago. Consulta de nuevo en unos segundos.');
+  try {
+    // El pago debe pertenecer a ESTA compra antes de procesar nada.
+    const pre = mpRequest_('get', '/v1/payments/' + encodeURIComponent(paymentId));
+    if (pre.status !== 200 || String((pre.body || {}).external_reference || '') !== idCompra) {
+      return fail_('Pago no encontrado');
+    }
+    const r = procesarPagoMPPorId_(paymentId, 'mercadopago', pre.body);
+    if (r.tipo === 'aprobado' || r.tipo === 'ya_activa') {
+      return ok_(respuestaActivacion_(r.activacion, found.compra), '¡Pago aprobado!');
+    }
+    if (r.tipo === 'pendiente') {
+      return failCode_('EN_PROCESO', 'Tu pago está en proceso',
+        'Mercado Pago lo está confirmando. Te avisaremos por correo apenas se apruebe.');
+    }
+    if (r.tipo === 'rechazado') return failCode_('RECHAZADO', r.mensaje);
+    if (r.tipo === 'revision') {
+      return failCode_('REVISION', 'Recibimos tu pago y lo estamos verificando',
+        'Te escribiremos por correo en breve. No vuelvas a pagar.');
+    }
+    if (r.tipo === 'devuelto') return fail_('Este pago fue devuelto.');
+    return fail_('Pago no encontrado');
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log_({ accion: 'confirmarPagoMP', nivel: 'error', detalle: idCompra + ' ' + detalle });
+    return failCode_('EN_PROCESO', 'No pudimos confirmar tu pago todavía',
+      'Si se realizó, tu acceso se activará solo y te avisaremos por correo.');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Webhook / IPN de Mercado Pago. Llega a /exec?source=mp con:
+ *   query:  type=payment&data.id=123   (Webhooks)  o  topic=payment&id=123 (IPN)
+ *   cuerpo: { action, type, data: { id } }
+ * NUNCA confia en el aviso: re-consulta el recurso con el Access Token.
+ * Siempre responde ok rapido (MP reintenta si no recibe 200/201 en 22 s).
+ */
+function webhookMP_(params, body) {
+  const recibido = ok_({ recibido: true });
+  try {
+    if (!mpConfigurado_()) return recibido;
+    if (checkRateLimit_('rl_webhook_mp', 300)) {
+      log_({ accion: 'webhookMP', nivel: 'warning', detalle: 'rate limit de webhook excedido' });
+      return recibido;
+    }
+    params = params || {};
+    body = body || {};
+    const tipo = String(body.type || params.type || params.topic || body.topic || '');
+    const id = String((body.data && body.data.id) || params['data.id'] || params.id || body.id || '');
+    if (!RE_MP_ID.test(id)) {
+      log_({ accion: 'webhookMP', nivel: 'info', detalle: 'aviso ignorado tipo=' + tipo });
+      return recibido;
+    }
+
+    if (tipo === 'payment') {
+      conLock_(function () { procesarPagoMPPorId_(id, 'webhook'); });
+    } else if (tipo === 'merchant_order' || tipo === 'topic_merchant_order_wh') {
+      const mo = mpRequest_('get', '/merchant_orders/' + encodeURIComponent(id));
+      const pagos = (mo.status === 200 && mo.body && Array.isArray(mo.body.payments)) ? mo.body.payments : [];
+      pagos.slice(0, 5).forEach(function (pg) {
+        if (pg && RE_MP_ID.test(String(pg.id))) {
+          conLock_(function () { procesarPagoMPPorId_(String(pg.id), 'webhook'); });
+        }
+      });
+    } else if (/chargeback/.test(tipo)) {
+      // El pago afectado tambien llega como payment (status charged_back),
+      // que es lo que revoca. Aqui solo avisamos.
+      notificarAdmin_('[SINAPSIS EDU] ⚠️ Aviso de contracargo en Mercado Pago',
+        '<p>Mercado Pago avisó un contracargo (id ' + escapeHtml_(id) + '). Revisa el panel de Mercado Pago.</p>');
+    } else {
+      log_({ accion: 'webhookMP', nivel: 'info', detalle: 'tipo no manejado: ' + tipo });
+    }
+    return recibido;
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log_({ accion: 'webhookMP', nivel: 'error', detalle: detalle });
+    return recibido;
+  }
+}
+
+/**
+ * EDITOR-ONLY: verifica la configuracion de Mercado Pago sin imprimir secretos.
+ */
+function testMPConfig() {
+  requireEditor_();
+  const token = String(getProperty_('MP_ACCESS_TOKEN') || '');
+  const pk = String(getProperty_('MP_PUBLIC_KEY') || '');
+  const result = {
+    MP_ACCESS_TOKEN: token ? (/^(TEST-|APP_USR-)/.test(token) ? 'ok (' + token.split('-')[0] + ')' : 'formato raro') : 'FALTA',
+    MP_PUBLIC_KEY: pk ? 'ok (no se usa en Checkout Pro)' : 'falta (opcional)',
+    PASARELA: getProperty_('PASARELA') || '(vacía → mercadopago si hay token)',
+    pasarelaActiva: pasarelaActiva_(),
+    modoSandbox: mpSandbox_(),
+    SITE_URL: siteUrl_(),
+    back_url: siteUrl_() + '/pago-retorno.html',
+    notification_url: webAppUrl_() ? webAppUrl_() + '?source=mp' : 'NO DISPONIBLE: define WEBAPP_URL con la URL /exec',
+    apiResponde: null,
+    cuenta: null
+  };
+  if (token) {
+    try {
+      const r = mpRequest_('get', '/users/me');
+      result.apiResponde = r.status === 200 ? 'ok (HTTP 200)' : 'HTTP ' + r.status + (r.status === 401 ? ' — token inválido' : '');
+      if (r.status === 200) result.cuenta = { site_id: r.body.site_id, nickname: r.body.nickname };
+    } catch (e) {
+      result.apiResponde = 'error de red: ' + (e instanceof Error ? e.message : String(e));
+    }
+  }
+  result.siguiente = 'Si todo dice ok: Implementar → Gestionar implementaciones → Nueva versión.';
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
 // ─── Editor: verificacion de llaves ──────────────────────────
 
 /**
@@ -2697,6 +3091,7 @@ function dispatchPublic_(req) {
     case 'iniciarCompra':            return iniciarCompra_(req);
     case 'confirmarPago':            return confirmarPago_(req);
     case 'estadoCompra':             return estadoCompra_(req);
+    case 'confirmarPagoMP':          return confirmarPagoMP_(req);
     default:                         return fail_('Accion desconocida: ' + action);
   }
 }
@@ -2725,6 +3120,11 @@ function doGet(e) {
     return jsonResponse_(ping_());
   }
 
+  // IPN de Mercado Pago por GET (formato antiguo ?topic=payment&id=…).
+  if (params.source === 'mp') {
+    return jsonResponse_(webhookMP_(params, {}));
+  }
+
   if (params.page === 'admin') {
     return HtmlService.createHtmlOutputFromFile('admin')
       .setTitle('SINAPSIS EDU — Admin')
@@ -2740,6 +3140,16 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  // Webhook/IPN de Mercado Pago: notification_url lleva ?source=mp. El aviso
+  // NO se usa como verdad (Apps Script no puede leer x-signature): se
+  // re-consulta el pago a la API.
+  const qp = (e && e.parameter) ? e.parameter : {};
+  if (qp.source === 'mp') {
+    let cuerpo = {};
+    try { cuerpo = JSON.parse((e.postData && e.postData.contents) || '{}') || {}; } catch (err) { cuerpo = {}; }
+    return jsonResponse_(webhookMP_(qp, cuerpo));
+  }
+
   let req;
   try {
     const raw = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
