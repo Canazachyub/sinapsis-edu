@@ -2786,7 +2786,10 @@ function crearPreferenciaMP_(idCompra, plat, monto, correo, nombre, expiraIso) {
   if ((r.status !== 200 && r.status !== 201) || !r.body.id) {
     throw new Error('MP preferencia HTTP ' + r.status + ' ' + String(r.body.message || r.body.error || '').slice(0, 150));
   }
-  const url = mpSandbox_() ? (r.body.sandbox_init_point || r.body.init_point) : (r.body.init_point || r.body.sandbox_init_point);
+  // Con credenciales de usuario de prueba (APP_USR-…) MP pide usar init_point y pagar con
+  // la sesión del comprador de prueba; sandbox_init_point solo para tokens TEST- antiguos.
+  const tokenTest = String(getProperty_('MP_ACCESS_TOKEN') || '').indexOf('TEST-') === 0;
+  const url = tokenTest ? (r.body.sandbox_init_point || r.body.init_point) : (r.body.init_point || r.body.sandbox_init_point);
   if (!url) throw new Error('MP no devolvio init_point');
   return { id: String(r.body.id), url: String(url) };
 }
