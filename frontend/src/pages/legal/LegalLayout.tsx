@@ -6,7 +6,7 @@ import { EMPRESA, esMarcador } from '@/config/empresa';
 import { fechaPeru } from '@/api/pagos';
 
 /**
- * Muestra un dato de la empresa. Si sigue siendo un marcador ([RUC], etc.)
+ * Muestra un dato de la empresa. Si sigue siendo un marcador ([DIRECCIÓN], etc.)
  * lo resalta para que sea fácil de ver y completar en config/empresa.ts.
  */
 export function DatoEmpresa({ v }: { v: string }) {
@@ -40,7 +40,7 @@ export function LegalLayout({
           <h1 className="mt-2 text-[32px] leading-tight sm:text-[44px]">{titulo}</h1>
           <p className="mt-3 text-sm text-muted">
             Última actualización: {fechaPeru(EMPRESA.actualizacionLegal)} ·{' '}
-            <DatoEmpresa v={EMPRESA.razonSocial} /> (RUC <DatoEmpresa v={EMPRESA.ruc} />)
+            {EMPRESA.nombreComercial} · <DatoEmpresa v={EMPRESA.titular} /> ({EMPRESA.tipoDocumento} <DatoEmpresa v={EMPRESA.documento} />)
           </p>
           {intro && <div className="mt-6 text-[16px] leading-relaxed text-muted">{intro}</div>}
           <div className="mt-8 space-y-8">{children}</div>

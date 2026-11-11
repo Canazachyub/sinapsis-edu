@@ -21,8 +21,8 @@ export function Privacidad() {
     >
       <Seccion titulo="1. Responsable">
         <p>
-          El responsable del tratamiento es <strong><DatoEmpresa v={EMPRESA.razonSocial} /></strong> (nombre comercial{' '}
-          {EMPRESA.nombreComercial}), RUC <DatoEmpresa v={EMPRESA.ruc} />, con domicilio en{' '}
+          El responsable del tratamiento es <strong><DatoEmpresa v={EMPRESA.titular} /></strong>, persona natural que
+          opera con el nombre comercial {EMPRESA.nombreComercial}, {EMPRESA.tipoDocumento} <DatoEmpresa v={EMPRESA.documento} />, con domicilio en{' '}
           <DatoEmpresa v={EMPRESA.direccion} />. Contacto para temas de datos personales:{' '}
           <DatoEmpresa v={EMPRESA.correoContacto} />.
         </p>
@@ -35,7 +35,7 @@ export function Privacidad() {
           <li><strong>Uso de la cuenta:</strong> inicios de sesión, fechas de acceso y actividad en las plataformas, para darte el servicio y proteger el contenido.</li>
         </ul>
         <p>
-          <strong>No guardamos datos de tu tarjeta.</strong> Los pagos con tarjeta o Yape los procesa Culqi, que nos
+          <strong>No guardamos datos de tu tarjeta.</strong> Los pagos con tarjeta o Yape los procesa Mercado Pago, en su propia página, y nos
           informa solo el resultado de la operación.
         </p>
       </Seccion>
@@ -63,7 +63,7 @@ export function Privacidad() {
       <Seccion titulo="5. Con quién los compartimos">
         <p>Solo con proveedores que necesitamos para dar el servicio, que los tratan por encargo nuestro:</p>
         <ul>
-          <li><strong>Culqi</strong> (procesamiento de pagos con tarjeta y Yape).</li>
+          <li><strong>Mercado Pago</strong> (procesamiento de pagos con tarjeta y Yape). Recibe tu correo y el monto para cobrar.</li>
           <li><strong>Google</strong> (almacenamiento de datos y envío de correos). Sus servidores pueden estar fuera del Perú, por lo que hay transferencia internacional de datos con las garantías del proveedor.</li>
           <li>Autoridades, cuando una ley o una orden lo exija.</li>
         </ul>

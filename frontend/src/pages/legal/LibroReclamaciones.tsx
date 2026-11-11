@@ -73,7 +73,7 @@ export function LibroReclamaciones() {
     const texto = [
       `LIBRO DE RECLAMACIONES — HOJA ${codigo}`,
       `Fecha: ${fecha}`,
-      `Proveedor: ${EMPRESA.razonSocial} (${EMPRESA.nombreComercial}) · RUC ${EMPRESA.ruc} · ${EMPRESA.direccion}`,
+      `Proveedor: ${EMPRESA.titular} (${EMPRESA.nombreComercial}) · ${EMPRESA.tipoDocumento} ${EMPRESA.documento} · ${EMPRESA.direccion}`,
       '',
       '1. CONSUMIDOR',
       `Nombre: ${h.nombre.trim()}`,
@@ -113,9 +113,9 @@ export function LibroReclamaciones() {
     >
       <Seccion titulo="Proveedor">
         <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-[max-content_1fr]">
-          <dt className="text-muted">Razón social</dt><dd><DatoEmpresa v={EMPRESA.razonSocial} /></dd>
+          <dt className="text-muted">Titular</dt><dd><DatoEmpresa v={EMPRESA.titular} /></dd>
           <dt className="text-muted">Nombre comercial</dt><dd>{EMPRESA.nombreComercial}</dd>
-          <dt className="text-muted">RUC</dt><dd><DatoEmpresa v={EMPRESA.ruc} /></dd>
+          <dt className="text-muted">{EMPRESA.tipoDocumento}</dt><dd><DatoEmpresa v={EMPRESA.documento} /></dd>
           <dt className="text-muted">Domicilio</dt><dd><DatoEmpresa v={EMPRESA.direccion} /></dd>
         </dl>
         <ul className="text-[14px] text-muted">

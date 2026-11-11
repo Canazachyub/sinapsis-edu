@@ -20,8 +20,8 @@ export function Terminos() {
     >
       <Seccion titulo="1. Quiénes somos">
         <p>
-          {EMPRESA.nombreComercial} es un nombre comercial de <strong><DatoEmpresa v={EMPRESA.razonSocial} /></strong>,
-          con RUC <DatoEmpresa v={EMPRESA.ruc} />, domicilio en <DatoEmpresa v={EMPRESA.direccion} /> y correo de
+          {EMPRESA.nombreComercial} es el nombre comercial con el que opera <strong><DatoEmpresa v={EMPRESA.titular} /></strong>,
+          persona natural con {EMPRESA.tipoDocumento} <DatoEmpresa v={EMPRESA.documento} />, domicilio en <DatoEmpresa v={EMPRESA.direccion} /> y correo de
           contacto <DatoEmpresa v={EMPRESA.correoContacto} />.
         </p>
       </Seccion>
@@ -49,8 +49,8 @@ export function Terminos() {
         <ul>
           <li>Los precios están en soles (S/) e incluyen los impuestos que correspondan. El precio que se cobra es el que ves al pagar.</li>
           <li>
-            Puedes pagar con tarjeta de débito o crédito y con Yape a través de la pasarela Culqi. Los datos de tu tarjeta
-            los recibe directamente Culqi; nosotros no los vemos ni los guardamos.
+            Puedes pagar con tarjeta de débito o crédito y con Yape a través de Mercado Pago, en su página segura. Los datos de tu
+            tarjeta los recibe directamente Mercado Pago; nosotros no los vemos ni los guardamos.
           </li>
           <li>También puedes pagar por transferencia, Yape o Binance enviando tu comprobante (voucher). En ese caso
             activamos el acceso después de verificar el pago, en un plazo máximo de 24 horas hábiles.</li>
@@ -93,7 +93,7 @@ export function Terminos() {
       <Seccion titulo="8. Propiedad intelectual">
         <p>
           El contenido de las plataformas está protegido por la ley de derechos de autor (Decreto Legislativo N.° 822)
-          y pertenece a <DatoEmpresa v={EMPRESA.razonSocial} /> o a sus autores y licenciantes. Comprar un acceso te da
+          y pertenece a {EMPRESA.nombreComercial} (<DatoEmpresa v={EMPRESA.titular} />) o a sus autores y licenciantes. Comprar un acceso te da
           permiso para usarlo durante la vigencia, solo para tu estudio personal; no te transfiere ningún derecho sobre él.
         </p>
       </Seccion>

@@ -100,7 +100,7 @@ export function Footer() {
             </Link>
           </nav>
           <span>
-            © {new Date().getFullYear()} {EMPRESA.nombreComercial} · {EMPRESA.razonSocial} · RUC {EMPRESA.ruc}
+            © {new Date().getFullYear()} {EMPRESA.nombreComercial}
           </span>
         </div>
       </div>

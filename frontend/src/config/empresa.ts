@@ -1,13 +1,18 @@
 /**
- * Datos legales de la empresa. ÚNICO lugar donde viven: Términos,
+ * Datos legales del titular del negocio. ÚNICO lugar donde viven: Términos,
  * Privacidad, Libro de Reclamaciones y el footer los leen de aquí.
  *
- * Los valores entre corchetes [ASÍ] son marcadores visibles a propósito:
- * complétalos antes de pasar la pasarela a producción.
+ * El titular es una PERSONA NATURAL que opera con el nombre comercial
+ * "SINAPSIS EDU". Los valores entre corchetes [ASÍ] son marcadores visibles
+ * a propósito: complétalos antes de pasar la pasarela a producción.
  */
 export const EMPRESA = {
-  razonSocial: 'INGENIERIA TELCOM E.I.R.L.',
-  ruc: '20602277900',
+  /** Nombre completo del titular (persona natural). */
+  titular: '[NOMBRE DEL TITULAR]',
+  /** Etiqueta del documento que se muestra junto al número: 'DNI' o 'RUC'. */
+  tipoDocumento: 'DNI / RUC',
+  /** Número de DNI o RUC (RUC 10… de persona natural, si lo tiene). */
+  documento: '[DNI o RUC]',
   nombreComercial: 'SINAPSIS EDU',
   direccion: '[DIRECCIÓN]',
   correoContacto: '[CORREO DE CONTACTO]',
