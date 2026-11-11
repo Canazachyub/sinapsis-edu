@@ -84,8 +84,9 @@ export function Gracias() {
 
   /** Mercado Pago: confirma con el pago que trae la URL. */
   const confirmarMP = useCallback(async (): Promise<boolean> => {
-    if (!idCompra || !correo || !paymentId) return false;
-    const res = await confirmarPagoMP(idCompra, paymentId, correo);
+    if (!idCompra || !paymentId) return false;
+    // Sin correo guardado (otro navegador/dispositivo) el servidor valida con el payment_id.
+    const res = await confirmarPagoMP(idCompra, paymentId, correo ?? '');
     if (res.ok && res.data) {
       setVista({ tipo: 'aprobado', plataforma: res.data.plataforma, fechaFin: res.data.fecha_fin, correo: res.data.correo, passwordEnviada: res.data.passwordEnviada });
       return true;
@@ -125,6 +126,7 @@ export function Gracias() {
     setConsultando(true);
     try {
       if (!idCompra) { setVista({ tipo: 'voucher' }); return; }
+      if (!correo && paymentId && (await confirmarMP())) return;
       if (!correo) {
         // Otro navegador/dispositivo: no podemos consultar. Mostramos lo que dijo MP.
         if (statusMP === 'approved') setVista({ tipo: 'aprobado_sin_datos' });

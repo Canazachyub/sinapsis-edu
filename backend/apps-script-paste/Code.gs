@@ -2881,12 +2881,24 @@ function procesarPagoMPPorId_(paymentId, origen, payPrevio) {
  * Body: { id_compra, payment_id, correo }
  * Codigos (campo `code`): RECHAZADO, EN_PROCESO, REVISION, OCUPADO, PASARELA_NO_CONFIGURADA.
  */
+/** "yubert.c@gmail.com" → "yu•••@gmail.com" */
+function enmascararCorreo_(correo) {
+  const s = String(correo || '');
+  const at = s.indexOf('@');
+  if (at < 1) return '';
+  return s.slice(0, Math.min(2, at)) + '•••' + s.slice(at);
+}
+
 function confirmarPagoMP_(req) {
   const idCompra = String(req.id_compra || '').trim();
   const paymentId = String(req.payment_id || '').trim();
   const correo = String(req.correo || '').trim().toLowerCase();
 
-  if (!RE_ID_COMPRA.test(idCompra) || !isEmail_(correo)) return fail_('Compra no encontrada');
+  // El correo es opcional: si el alumno vuelve en otro navegador/dispositivo
+  // (app de MP en el celular, pestaña cerrada) no lo tenemos guardado. En ese
+  // caso la prueba es el payment_id, que MP solo entrega a quien pagó, y debe
+  // pertenecer a ESTA compra (external_reference). La respuesta enmascara el correo.
+  if (!RE_ID_COMPRA.test(idCompra) || (correo && !isEmail_(correo))) return fail_('Compra no encontrada');
   if (!RE_MP_ID.test(paymentId)) return fail_('Pago no encontrado');
   if (checkRateLimit_('rl_pagomp_' + idCompra, 30)) return fail_('Demasiadas consultas. Espera un momento.');
   if (!mpConfigurado_()) return failCode_('PASARELA_NO_CONFIGURADA', 'Pasarela no configurada');
@@ -2894,7 +2906,7 @@ function confirmarPagoMP_(req) {
   const found = getCompra_(idCompra);
   if (!found) return fail_('Compra no encontrada');
   const usuario = getUsuarioById_(found.compra.id_usuario);
-  if (!usuario || String(usuario.correo).toLowerCase() !== correo) return fail_('Compra no encontrada');
+  if (!usuario || (correo && String(usuario.correo).toLowerCase() !== correo)) return fail_('Compra no encontrada');
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return failCode_('OCUPADO', 'Estamos procesando tu pago. Consulta de nuevo en unos segundos.');
@@ -2906,7 +2918,9 @@ function confirmarPagoMP_(req) {
     }
     const r = procesarPagoMPPorId_(paymentId, 'mercadopago', pre.body);
     if (r.tipo === 'aprobado' || r.tipo === 'ya_activa') {
-      return ok_(respuestaActivacion_(r.activacion, found.compra), '¡Pago aprobado!');
+      const resp = respuestaActivacion_(r.activacion, found.compra);
+      if (!correo) resp.correo = enmascararCorreo_(resp.correo);
+      return ok_(resp, '¡Pago aprobado!');
     }
     if (r.tipo === 'pendiente') {
       return failCode_('EN_PROCESO', 'Tu pago está en proceso',
