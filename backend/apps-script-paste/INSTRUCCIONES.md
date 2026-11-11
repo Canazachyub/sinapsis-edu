@@ -163,6 +163,73 @@ Debes ver un JSON tipo:
 | El frontend sigue mostrando "Backend no desplegado" | Verifica que la URL en `.env` termina en `/exec` y reinicia `npm run dev`. |
 | El `?ping=1` devuelve HTML en vez de JSON | El despliegue del Paso 6 no se hizo bien. Repite con "Nueva implementación". |
 
+## Pasarela Culqi (Fase 1: tarjeta y Yape)
+
+### 1. Crear las llaves en Script Properties
+
+En el editor de Apps Script → **Configuración del proyecto** (engranaje) → **Propiedades del script** → **Agregar propiedad**:
+
+| Propiedad | Valor | Dónde la sacas |
+|---|---|---|
+| `CULQI_PUBLIC_KEY` | `pk_test_…` (luego `pk_live_…`) | Panel CulqiOnline → Desarrollo → API Keys |
+| `CULQI_SECRET_KEY` | `sk_test_…` (luego `sk_live_…`) | Mismo lugar. **Nunca** la pegues en el código, en GitHub ni en `frontend/.env` |
+
+Las dos deben ser del **mismo entorno** (las dos `test` o las dos `live`).
+Mientras falte alguna, la web muestra "Pasarela no configurada" y ofrece el pago por voucher.
+
+`WHATSAPP_NUMBER` (ya existe) es el número que sale en los correos de bienvenida.
+
+### 2. Pegar el código y actualizar las hojas
+
+1. Pega el nuevo `Code.gs` completo y `admin.html` (como en los pasos 2 y 3).
+2. Corre **`setup()`** una vez: crea la hoja **`Pagos`** y agrega al **final** de `Compras`
+   las columnas `dni`, `expira`, `id_pago`, `terminos_aceptados` (y `dni` en `Usuarios`).
+   No mueve ni borra columnas existentes. (Si no lo corres, el código las crea solo la primera vez que se usa.)
+3. Corre **`testCulqiConfig()`**: dice si las llaves existen, si son del mismo entorno y si
+   Culqi acepta la secreta. **No imprime las llaves.**
+4. **Redespliega**: Implementar → Gestionar implementaciones → lápiz → Versión: **Nueva versión** → Implementar.
+   La URL `/exec` no cambia. Sin este paso el Web App sigue con el código viejo.
+
+### 3. Webhook (aviso de Culqi)
+
+En el panel de CulqiOnline → **Desarrollo → Eventos (Webhooks)** agrega la URL `/exec` del Web App
+para los eventos de **cargos** y **devoluciones** (y contracargos si aparecen).
+El backend **no confía** en el contenido del aviso: toma el id y lo vuelve a consultar a la API de Culqi.
+
+- Cargo exitoso que no llegó por la web (el alumno cerró la pestaña) → activa la compra.
+- Devolución / contracargo → **revoca** el acceso de esa compra, lo registra en `Pagos` y te avisa.
+
+### 4. Probar en modo prueba
+
+Tarjetas oficiales de prueba de Culqi (solo con llaves `test`):
+
+| Resultado | Número | Venc. | CVV |
+|---|---|---|---|
+| Venta exitosa (Visa débito) | 4111 1111 1111 1111 | 09/30 | 123 |
+| Venta exitosa (Mastercard) | 5111 1111 1111 1118 | 12/30 | 039 |
+| Venta exitosa (Amex) | 3712 1212 1212 122 | 12/30 | 2841 |
+| Fondos insuficientes | 4000 0400 0000 0008 | 03/30 | 295 |
+| Tarjeta robada | 4000 0200 0000 0000 | 10/30 | 354 |
+| CVV incorrecto | 5400 0200 0000 0003 | 07/30 | 203 |
+| Contactar al emisor | 5400 0000 0000 0005 | 01/30 | 492 |
+
+**Yape de prueba:** celular `900 000 001`, código de aprobación: cualquier número de 6 dígitos.
+
+Las tarjetas que piden 3DS (`4456 5300 0000 1096`, etc.) **aún no** se completan en esta fase:
+el alumno ve un mensaje para usar Yape, otra tarjeta o voucher.
+
+Qué revisar después de cada prueba: hoja `Compras` (estado `aprobado`, `fecha_fin`), hoja `Pagos`
+(una fila por intento), correo de bienvenida, y que el alumno pueda entrar al Portal.
+
+### Estados nuevos en `Compras.estado_pago`
+
+| Estado | Significa |
+|---|---|
+| `pendiente_pago` | Llenó sus datos, aún no paga (expira a los 30 min) |
+| `aprobado` | Pagado y activo |
+| `en_revision` | Culqi cobró pero algo no cuadró (monto, referencia). **Revisa y aprueba o devuelve** desde el panel |
+| `reembolsado` / `contracargo` | Devolución o contracargo: acceso revocado |
+
 ## Actualizar el código en el futuro
 
 Cuando hagamos cambios en el backend (Fase 2, 3, etc.):

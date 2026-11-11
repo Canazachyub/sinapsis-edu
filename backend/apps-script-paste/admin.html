@@ -105,6 +105,8 @@ textarea{resize:vertical;min-height:84px}
 .st.pendiente{background:var(--warnbg);color:var(--warn)}
 .st.aprobado{background:var(--okbg);color:var(--ok)}
 .st.rechazado{background:var(--errbg);color:var(--err)}
+.st.en_revision{background:var(--warnbg);color:var(--warn)}
+.st.reembolsado,.st.contracargo{background:var(--errbg);color:var(--err)}
 .actions{display:flex;gap:8px;margin-top:4px}
 .side .links{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:12.5px}
 .side .links a{color:var(--muted)}
@@ -377,7 +379,12 @@ function montoAlerta(s){
   return '<div class="alert warn">El monto reportado (' + soles(s.monto) + ') no coincide con el precio de la plataforma (' + soles(esp) + '). Verifica el voucher.</div>';
 }
 
-var ESTADO = { pendiente: 'Pendiente', aprobado: 'Aprobado', rechazado: 'Rechazado' };
+var ESTADO = {
+  pendiente: 'Pendiente', aprobado: 'Aprobado', rechazado: 'Rechazado',
+  // Pasarela Culqi (fase 1)
+  pendiente_pago: 'Pago en línea sin completar', en_revision: 'Pago en línea observado',
+  reembolsado: 'Reembolsado', contracargo: 'Contracargo'
+};
 
 function render(){
   var list = filtered();
@@ -395,7 +402,7 @@ function render(){
     var wa = waLink(s.whatsapp, 'Hola ' + (s.nombre || '').split(' ')[0] + ', te escribimos de SINAPSIS EDU sobre tu solicitud ' + s.id_compra + '.');
     var extra = s.detalle_extra ? '<div class="extra"><strong>Detalle:</strong> ' + esc(s.detalle_extra) + '</div>' : '';
     var pwInfo = (s.estado_pago === 'pendiente' && !s.tiene_password) ? '<div class="alert info">Alumno nuevo: se generará su contraseña al aprobar.</div>' : '';
-    var acciones = s.estado_pago === 'pendiente'
+    var acciones = (s.estado_pago === 'pendiente' || s.estado_pago === 'en_revision')
       ? '<div class="actions"><button class="btn btn-err btn-sm brec" data-id="' + esc(s.id_compra) + '">Rechazar</button>' +
         '<button class="btn btn-ok btn-sm bapr" data-id="' + esc(s.id_compra) + '"' + (s.voucher_url ? '' : ' title="Aún no sube voucher"') + '>Aprobar</button></div>'
       : '';
