@@ -396,7 +396,7 @@ function inicializarSheets_() {
  *           precio_promocional, etiqueta, orden
  */
 function seedPlataformas_(sheet) {
-  const URL_DEMO = 'https://canazachyub.github.io/simulaencib/';
+  const URL_DEMO = 'https://banqueo.sinapsisedu.com/';
   const data = [
     // Las 6 originales
     // Cols: id_plataforma, nombre, slug, descripcion, url_real,
