@@ -12,6 +12,8 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { LucideIcon } from 'lucide-react';
 import { SEGMENTOS_ANATOMIA, PRECIO_POR_SEGMENTO_PEN } from '@/data/segmentosAnatomia';
 import { COLECCIONES, PROGRAMA } from '@/data/contenido';
+import { BanqueoDetalle, SLUGS_BANQUEO } from '@/components/plataforma/BanqueoDetalle';
+import { simulacroHref } from '@/config';
 
 // ── Contenido estático por slug ────────────────────────────────
 
@@ -368,6 +370,7 @@ export function Plataforma() {
     data.precio_promocional < data.precio;
   const precioMostrado = hayPromo ? data.precio_promocional! : data.precio;
   const esAnatomia = slug === 'anatomia';
+  const simGratis = slug && SLUGS_BANQUEO.includes(slug) ? simulacroHref(slug, 'registro') : null;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -377,9 +380,9 @@ export function Plataforma() {
       <section className="bg-jungle text-cream">
         <div className="container-x py-16 md:py-20">
           <div className="flex flex-col md:flex-row gap-10 md:gap-16 items-start">
-            {/* Icono */}
-            <div className="shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-lime/10 border border-lime/20 flex items-center justify-center">
-              <Icon className="w-10 h-10 md:w-12 md:h-12 text-lime" />
+            {/* Icono (solo si no hay imagen de la plataforma) */}
+            <div className="shrink-0 w-20 h-20 md:hidden rounded-3xl bg-lime/10 border border-lime/20 flex items-center justify-center">
+              <Icon className="w-10 h-10 text-lime" />
             </div>
 
             <div className="flex-1">
@@ -413,12 +416,27 @@ export function Plataforma() {
                 <Link to={`/compra/${data.slug}`} className="btn-primary-lime">
                   Comprar acceso
                 </Link>
-                <WhatsAppButton
-                  message={`Hola, quiero más información sobre ${data.nombre}.`}
-                  label="Consultar por WhatsApp"
-                  className="!border-cream/20 !text-cream hover:!bg-cream/10"
-                />
+                {simGratis ? (
+                  <a href={simGratis} className="btn inline-flex items-center gap-2 rounded-xl border border-cream/25 px-5 text-cream hover:bg-cream/10">
+                    Simulacro gratis
+                  </a>
+                ) : (
+                  <WhatsAppButton
+                    message={`Hola, quiero más información sobre ${data.nombre}.`}
+                    label="Consultar por WhatsApp"
+                    className="!border-cream/20 !text-cream hover:!bg-cream/10"
+                  />
+                )}
               </div>
+            </div>
+
+            <div className="hidden md:block md:w-[38%] shrink-0 self-center">
+              <img
+                src={`${import.meta.env.BASE_URL}images/plataformas/${data.slug}.webp`}
+                alt=""
+                className="w-full rounded-3xl border border-cream/10 shadow-mock-dark"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
             </div>
           </div>
         </div>
@@ -438,7 +456,7 @@ export function Plataforma() {
             </section>
 
             {/* Características */}
-            {info?.features && (
+            {info?.features && !simGratis && (
               <section>
                 <h2 className="text-3xl mb-5">Lo que vas a encontrar</h2>
                 <ul className="grid sm:grid-cols-2 gap-3">
@@ -451,6 +469,8 @@ export function Plataforma() {
                 </ul>
               </section>
             )}
+
+            {slug && SLUGS_BANQUEO.includes(slug) && <BanqueoDetalle slug={slug} />}
 
             {slug === 'cb' && <ContenidoCienciasBasicas />}
 
