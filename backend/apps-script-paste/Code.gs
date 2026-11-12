@@ -152,16 +152,53 @@ function escapeHtml_(s) {
  * Fail-open: si CacheService falla, no bloquea.
  * `limitOverride` (opcional) fija un limite propio para ese bucket.
  */
-function checkRateLimit_(bucketKey, limitOverride) {
+function checkRateLimit_(bucketKey, limitOverride, ttlSeconds) {
   try {
     const cache = CacheService.getScriptCache();
     const limit = Number(limitOverride) || Number(getProperty_('RATE_LIMIT_PER_HOUR')) || 10;
     const current = Number(cache.get(bucketKey)) || 0;
     if (current >= limit) return true;
-    cache.put(bucketKey, String(current + 1), 3600);
+    cache.put(bucketKey, String(current + 1), Number(ttlSeconds) || 3600);
     return false;
   } catch (e) {
     return false;
+  }
+}
+
+/**
+ * Solo consulta (no suma): ¿el bucket ya llego al limite?
+ * Se usa para contar SOLO intentos fallidos (login): primero se mira, y
+ * solo si el intento falla se suma con sumarFallo_.
+ */
+function bucketExcedido_(bucketKey, limit) {
+  try {
+    return (Number(CacheService.getScriptCache().get(bucketKey)) || 0) >= limit;
+  } catch (e) {
+    return false;
+  }
+}
+
+/** Suma 1 al bucket de fallos (TTL desde el ultimo fallo). */
+function sumarFallo_(bucketKey, ttlSeconds) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const n = (Number(cache.get(bucketKey)) || 0) + 1;
+    cache.put(bucketKey, String(n), ttlSeconds || 3600);
+  } catch (e) { /* best-effort */ }
+}
+
+/**
+ * Marca "ya hecho" de un solo uso en CacheService. Devuelve true si la clave
+ * NO existia (primera vez) y la deja marcada por ttlSeconds; false si ya estaba.
+ */
+function marcarUnaVez_(key, ttlSeconds) {
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get(key)) return false;
+    cache.put(key, '1', ttlSeconds || 3600);
+    return true;
+  } catch (e) {
+    return true;
   }
 }
 
@@ -242,7 +279,10 @@ const HEADERS_COMPRAS = [
   'dni',                // DNI del comprador (8 digitos)
   'expira',             // ISO: hasta cuando se puede pagar una compra pendiente_pago
   'id_pago',            // id del cargo Culqi que activo la compra
-  'terminos_aceptados'  // ISO: cuando acepto Terminos y Privacidad
+  'terminos_aceptados', // ISO: cuando acepto Terminos y Privacidad
+  // Agregadas en el batch de seguridad 2026-11-12 (al final, retrocompatible):
+  'cuenta_nueva',       // 'si' si la cuenta NO tenia contraseña al iniciar la compra (habilita login automatico tras pagar)
+  'upload_token'        // token aleatorio que exige subirVoucher (solo compras por voucher)
 ];
 
 /** Pagos de la pasarela: un intento por fila. id_pago es UNICO. */
@@ -597,16 +637,45 @@ function subirVoucherDrive_(base64, mime, filename) {
 
 // ─── Gmail ───────────────────────────────────────────────────
 
+// Cuota diaria de MailApp (100/dia en cuentas gmail.com). Los correos al
+// ALUMNO (credenciales, recuperacion) tienen prioridad: los avisos al admin
+// se cortan antes de que la cuota llegue a la reserva y tienen tope por hora.
+const MAIL_RESERVA_ALUMNOS = 25;     // cuota que nunca gastan los avisos al admin
+const MAIL_ADMIN_MAX_HORA = 20;      // tope global de avisos al admin por hora
+const MAIL_CUOTA_ALERTA = 10;        // por debajo: log de error en cada envio
+
+/** Cuota restante de MailApp hoy (Infinity si no se puede leer). */
+function cuotaCorreo_() {
+  try { return MailApp.getRemainingDailyQuota(); } catch (e) { return Infinity; }
+}
+
 function notificarAdmin_(asunto, cuerpoHtml) {
   const to = getProperty_('NOTIFICACION_EMAIL') || getProperty_('ADMIN_EMAIL');
   if (!to) {
     Logger.log('notificarAdmin: sin destinatario configurado. Asunto: ' + asunto);
     return;
   }
+  const cuota = cuotaCorreo_();
+  if (cuota <= MAIL_RESERVA_ALUMNOS) {
+    log_({ accion: 'notificarAdmin', nivel: 'error',
+      detalle: 'OMITIDO: cuota de correo baja (' + cuota + ' restantes, reservada para alumnos). Asunto: ' + asunto });
+    return;
+  }
+  if (checkRateLimit_('rl_mail_admin', MAIL_ADMIN_MAX_HORA)) {
+    log_({ accion: 'notificarAdmin', nivel: 'warning',
+      detalle: 'OMITIDO: tope de ' + MAIL_ADMIN_MAX_HORA + ' avisos/hora. Asunto: ' + asunto });
+    return;
+  }
   MailApp.sendEmail({ to: to, subject: asunto, htmlBody: cuerpoHtml });
 }
 
+/** Correo transaccional al alumno: prioridad sobre los avisos al admin. */
 function enviarCorreo_(to, asunto, cuerpoHtml) {
+  const cuota = cuotaCorreo_();
+  if (cuota <= MAIL_CUOTA_ALERTA) {
+    log_({ accion: 'enviarCorreo', nivel: 'error',
+      detalle: '¡CUOTA DE CORREO CASI AGOTADA! Quedan ' + cuota + ' envios hoy. Asunto: ' + asunto });
+  }
   MailApp.sendEmail({ to: to, subject: asunto, htmlBody: cuerpoHtml });
 }
 
@@ -993,6 +1062,7 @@ function crearHojaCampanas() {
 
 /** Para probar desde el editor: muestra la campaña vigente y los precios resultantes. */
 function testCampana() {
+  requireEditor_();
   CacheService.getScriptCache().remove('campana_v1');
   const c = campanaVigente_();
   Logger.log('Campaña vigente: ' + JSON.stringify(c));
@@ -1132,6 +1202,8 @@ function listarPlataformasPublicas_(req) {
 // ─── Admin: sesión ───────────────────────────────────────────
 
 const ADMIN_SESSION_TTL = 21600; // 6h (tope de CacheService)
+const ADMIN_FALLOS_MAX = 10;     // fallos seguidos antes del bloqueo
+const ADMIN_BLOQUEO_SEG = 600;   // bloqueo de 10 min desde el ultimo fallo
 
 function validateAdminSession_(token) {
   if (!token) return false;
@@ -1148,9 +1220,11 @@ function requireAdmin_(req) {
 
 function adminLogin_(req) {
   try {
-    if (checkRateLimit_('rl_admin_login')) {
-      log_({ accion: 'adminLogin', nivel: 'warning', detalle: 'rate limit de login admin excedido' });
-      return fail_('Demasiados intentos. Espera unos minutos.');
+    // Solo cuentan los intentos FALLIDOS; bloqueo corto (10 min desde el
+    // ultimo fallo). Un login correcto nunca consume cupo.
+    if (bucketExcedido_('rl_admin_fail', ADMIN_FALLOS_MAX)) {
+      log_({ accion: 'adminLogin', nivel: 'warning', detalle: 'login admin bloqueado temporalmente por fallos' });
+      return fail_('Demasiados intentos fallidos. Espera 10 minutos.');
     }
     const password = String(req.password || '').trim();
     if (!isNonEmptyString_(password)) return fail_('Falta la contraseña');
@@ -1176,6 +1250,8 @@ function adminLogin_(req) {
       return fail_('ADMIN_PASSWORD no configurado. Agrégalo en Configuración del Proyecto → Propiedades del script.');
     }
     if (!valid) {
+      sumarFallo_('rl_admin_fail', ADMIN_BLOQUEO_SEG);
+      Utilities.sleep(1500); // frena la fuerza bruta sin bloquear el panel
       log_({ accion: 'adminLogin', nivel: 'warning', detalle: 'contraseña admin incorrecta' });
       return fail_('Credenciales incorrectas');
     }
@@ -1507,6 +1583,11 @@ function rechazarPago_(req) {
 // ─── Fase 2: registrar compra + subir voucher ────────────────
 
 const METODOS_PAGO_VALIDOS = ['yape', 'transferencia', 'binance', 'whatsapp'];
+// Topes GLOBALES por hora (ademas del limite por correo, que se esquiva
+// cambiando de correo). Protegen la hoja y la cuota de correo.
+const LIMITE_GLOBAL_COMPRAS_HORA = 60;   // registrarCompra (voucher)
+const LIMITE_GLOBAL_INICIOS_HORA = 60;   // iniciarCompra (pasarela)
+const RE_UPLOAD_TOKEN = /^[A-Za-z0-9]{32}$/;
 
 /**
  * Registra una solicitud de compra. Crea el usuario si no existe.
@@ -1521,70 +1602,88 @@ function registrarCompra_(req) {
     const whatsapp = String(req.whatsapp || '').trim();
     const idPlataforma = String(req.id_plataforma || '').trim();
     const metodoPago = String(req.metodo_pago || '').trim().toLowerCase();
-    const monto = Number(req.monto || 0);
+    // Monto que MUESTRA el navegador: solo se usa para la alerta al admin.
+    // El monto de la compra se calcula SIEMPRE en el servidor.
+    const montoCliente = Number(req.monto);
 
     if (checkRateLimit_('rl_compra_' + correo)) {
       log_({ accion: 'registrarCompra', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
       return fail_('Demasiados intentos. Espera unos minutos.');
     }
 
-    if (!isNonEmptyString_(nombre) || nombre.length < 3) return fail_('Nombre invalido');
+    if (!isNonEmptyString_(nombre) || nombre.length < 3 || nombre.length > 120) return fail_('Nombre invalido');
     if (!isEmail_(correo)) return fail_('Correo invalido');
     if (!isWhatsapp_(whatsapp)) return fail_('WhatsApp invalido');
     if (!isNonEmptyString_(idPlataforma)) return fail_('Falta plataforma');
     if (METODOS_PAGO_VALIDOS.indexOf(metodoPago) === -1) return fail_('Metodo de pago invalido');
-    if (!isFinite(monto) || monto <= 0) return fail_('Monto invalido');
 
     const plat = findPlataformaById_(idPlataforma);
     if (!plat) return fail_('Plataforma no encontrada');
     const activo = plat.activo === true || String(plat.activo).toLowerCase() === 'true';
     if (!activo) return fail_('Plataforma no disponible');
 
-    // Serializar detalle_extra (puede venir como objeto o string).
-    let detalleExtra = '';
-    if (req.detalle_extra !== undefined && req.detalle_extra !== null && req.detalle_extra !== '') {
-      detalleExtra = (typeof req.detalle_extra === 'string')
-        ? req.detalle_extra
-        : JSON.stringify(req.detalle_extra);
+    // detalle_extra del cliente: solo se aceptan los segmentos de Anatomia.
+    let extraCliente = req.detalle_extra;
+    if (typeof extraCliente === 'string' && extraCliente) {
+      try { extraCliente = JSON.parse(extraCliente); } catch (e) { extraCliente = null; }
+    }
+    const segmentos = (extraCliente && typeof extraCliente === 'object') ? extraCliente.segmentos : undefined;
+    const calc = calcularMontoCompra_(plat, segmentos);
+    if (calc.error) return fail_(calc.error);
+    const monto = calc.monto;
+    const detalleExtra = calc.detalleExtra;
+
+    // Tope GLOBAL (el limite por correo se esquiva cambiando de correo).
+    if (checkRateLimit_('rl_compra_global', LIMITE_GLOBAL_COMPRAS_HORA)) {
+      log_({ accion: 'registrarCompra', nivel: 'warning', detalle: 'rate limit GLOBAL excedido' });
+      return fail_('Estamos recibiendo muchas solicitudes. Intenta en unos minutos o escríbenos por WhatsApp.');
     }
 
-    // Find or create user (la cuenta se identifica por el correo; nombre y
-    // WhatsApp se conservan del registro inicial). Password se genera al aprobar.
-    const userId = upsertUsuario_(nombre, correo, whatsapp, '');
+    // Token para subir el voucher: sin el, nadie mas puede adjuntar archivos a
+    // esta compra (los id_compra son secuenciales y adivinables).
+    const uploadToken = randomToken_(32);
 
-    // Crear compra (estado pendiente)
-    const sheetCompras = getSheet_(SHEET_NAMES.COMPRAS);
-    const idCompra = nextId_('C', nextSequenceFromColumn_(SHEET_NAMES.COMPRAS, 1));
-    sheetCompras.appendRow([
-      idCompra, userId, idPlataforma, monto, metodoPago,
-      nowIso_(),       // fecha_solicitud
-      '',             // voucher_url
-      'pendiente',    // estado_pago
-      '',             // fecha_aprobacion
-      '',             // fecha_inicio
-      '',             // fecha_fin
-      'pendiente',    // estado_acceso
-      detalleExtra    // detalle_extra
-    ]);
+    // Find or create user + id de compra + fila: bajo lock para que dos compras
+    // simultaneas no compartan id. Password se genera al aprobar.
+    ensureColumnas_(SHEET_NAMES.COMPRAS, HEADERS_COMPRAS);
+    const creada = conLock_(function () {
+      const uid = upsertUsuario_(nombre, correo, whatsapp, '');
+      const id = nextId_('C', nextSequenceFromColumn_(SHEET_NAMES.COMPRAS, 1));
+      appendRowByHeaders_(SHEET_NAMES.COMPRAS, {
+        id_compra: id,
+        id_usuario: uid,
+        id_plataforma: idPlataforma,
+        monto: monto,
+        metodo_pago: metodoPago,
+        fecha_solicitud: nowIso_(),
+        voucher_url: '',
+        estado_pago: 'pendiente',
+        fecha_aprobacion: '',
+        fecha_inicio: '',
+        fecha_fin: '',
+        estado_acceso: 'pendiente',
+        detalle_extra: detalleExtra,
+        upload_token: uploadToken
+      });
+      return { userId: uid, idCompra: id };
+    });
+    const userId = creada.userId;
+    const idCompra = creada.idCompra;
 
-    // Notificar admin por email
+    // Notificar admin por email (con tope por hora y reserva de cuota en notificarAdmin_)
     try {
       const ssUrl = getSpreadsheet_().getUrl();
       const detalleHtml = detalleExtra
         ? `<p><strong>Detalles:</strong> <code>${escapeHtml_(detalleExtra)}</code></p>`
         : '';
-      // Alerta de monto: solo si NO hay detalle_extra (precio fijo) y el monto
-      // reportado no coincide con el precio esperado (promocional si existe).
+      // Alerta de monto: SIEMPRE se compara lo que mostro el navegador con el
+      // precio calculado por el servidor (que es el que queda en la hoja).
       let alertaMonto = '';
-      if (!detalleExtra) {
-        const precioBase = Number(plat.precio);
-        const precioEsperado = precioVigente_(plat);
-        const coincide = (monto === precioEsperado) || (isFinite(precioBase) && monto === precioBase);
-        if (isFinite(precioEsperado) && !coincide) {
-          alertaMonto = '<p style="color:#b45309"><strong>⚠️ Monto reportado S/' + monto.toFixed(2) +
-            ' no coincide con el precio base S/' + precioEsperado.toFixed(2) +
-            ' — verificar voucher.</strong></p>';
-        }
+      if (!isFinite(montoCliente) || Math.round(montoCliente * 100) !== Math.round(monto * 100)) {
+        alertaMonto = '<p style="color:#b45309"><strong>⚠️ El navegador mostró S/' +
+          (isFinite(montoCliente) ? montoCliente.toFixed(2) : '?') +
+          ' pero el precio vigente es S/' + monto.toFixed(2) +
+          ' — verificar que el voucher sea por S/' + monto.toFixed(2) + '.</strong></p>';
       }
       notificarAdmin_(
         '[SINAPSIS EDU] Nueva compra ' + idCompra + ' - ' + plat.nombre,
@@ -1614,6 +1713,8 @@ function registrarCompra_(req) {
     return ok_({
       id_compra: idCompra,
       id_usuario: userId,
+      monto: monto,
+      upload_token: uploadToken,
       message: 'Solicitud registrada. Ahora sube tu voucher.'
     });
   } catch (err) {
@@ -1635,7 +1736,10 @@ function subirVoucher_(req) {
     const mime = String(req.tipo || req.mime || '').trim();
     const filename = String(req.nombre || req.filename || 'voucher.png').trim();
 
-    if (!isNonEmptyString_(idCompra)) return fail_('Falta id_compra');
+    const uploadToken = String(req.upload_token || '').trim();
+
+    if (!RE_ID_COMPRA.test(idCompra)) return fail_('Compra no encontrada');
+    if (!RE_UPLOAD_TOKEN.test(uploadToken)) return fail_('Compra no encontrada');
 
     if (checkRateLimit_('rl_voucher_' + idCompra)) {
       log_({ accion: 'subirVoucher', nivel: 'warning', detalle: 'rate limit excedido: ' + idCompra });
@@ -1649,6 +1753,14 @@ function subirVoucher_(req) {
 
     const rowIndex = findRowIndex_(SHEET_NAMES.COMPRAS, 1, idCompra);
     if (rowIndex < 0) return fail_('Compra no encontrada');
+
+    // Propiedad: solo quien registro la compra (recibio upload_token) puede
+    // subir el voucher. Mismo mensaje que "no existe" para no revelar ids.
+    const compraObj = readRowObject_(SHEET_NAMES.COMPRAS, rowIndex);
+    if (!compraObj || String(compraObj.upload_token || '') !== uploadToken) {
+      log_({ accion: 'subirVoucher', nivel: 'warning', detalle: idCompra + ' rechazado: upload_token invalido' });
+      return fail_('Compra no encontrada');
+    }
 
     // Guard: solo compras pendientes y sin voucher previo admiten subida.
     // (El reintento legitimo pasa: si la primera subida fallo, voucher_url
@@ -1725,38 +1837,38 @@ function subirVoucher_(req) {
 
 // ─── Fase 5: login alumno + accesos + url plataforma ─────────
 
+const LOGIN_FALLOS_MAX = 10; // fallos por correo en 1 h antes de bloquear
+
 function loginAlumno_(req) {
   try {
     const correo = String(req.correo || '').trim();
     const password = String(req.password || '');
-
-    if (checkRateLimit_('rl_login_' + correo.toLowerCase())) {
-      log_({ accion: 'loginAlumno', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
-      return fail_('Demasiados intentos. Espera unos minutos.');
-    }
+    const bucket = 'rl_login_fail_' + correo.toLowerCase();
+    // Un solo mensaje para correo inexistente, cuenta bloqueada, sin
+    // contraseña o contraseña incorrecta (no revela si la cuenta existe).
+    const generico = 'Correo o contraseña incorrectos. Si no recuerdas tu contraseña, usa "¿La olvidaste?".';
+    const fallo = function (detalle, idUsuario) {
+      sumarFallo_(bucket, 3600);
+      log_({ accion: 'loginAlumno', idUsuario: idUsuario || '', nivel: 'warning', detalle: detalle });
+      return fail_(generico);
+    };
 
     if (!isEmail_(correo)) return fail_('Correo invalido');
     if (!isNonEmptyString_(password)) return fail_('Falta la contrasena');
 
+    // Solo cuentan los intentos FALLIDOS: un alumno que entra bien no se bloquea.
+    if (bucketExcedido_(bucket, LOGIN_FALLOS_MAX)) {
+      log_({ accion: 'loginAlumno', nivel: 'warning', detalle: 'bloqueado por fallos: ' + correo });
+      return fail_('Demasiados intentos fallidos. Espera unos minutos o recupera tu contraseña.');
+    }
+
     const user = findUsuarioByCorreo_(correo);
-    if (!user) {
-      log_({ accion: 'loginAlumno', nivel: 'warning', detalle: 'correo no existe: ' + correo });
-      return fail_('Credenciales invalidas');
-    }
-    if (String(user.estado) !== 'activo') {
-      log_({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'cuenta no activa' });
-      return fail_('Cuenta bloqueada. Contacta soporte.');
-    }
+    if (!user) return fallo('correo no existe: ' + correo);
+    if (String(user.estado) !== 'activo') return fallo('cuenta no activa', String(user.id_usuario));
     const salt = String(user.password_salt || '');
     const hash = String(user.password_hash || '');
-    if (!salt || !hash) {
-      log_({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'usuario sin credenciales' });
-      return fail_('Cuenta sin contrasena configurada. Contacta soporte.');
-    }
-    if (hashPassword_(password, salt) !== hash) {
-      log_({ accion: 'loginAlumno', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'password incorrecta' });
-      return fail_('Credenciales invalidas');
-    }
+    if (!salt || !hash) return fallo('usuario sin credenciales', String(user.id_usuario));
+    if (hashPassword_(password, salt) !== hash) return fallo('password incorrecta', String(user.id_usuario));
 
     const token = createSession_({
       id_usuario: String(user.id_usuario),
@@ -1858,18 +1970,27 @@ function obtenerUrlPlataforma_(req) {
 }
 
 // ─── recuperarPassword: reset self-service por correo ────────
+//
+// Dos pasos para que nadie pueda cambiar la contraseña de otro solo con su
+// correo:
+//   1. recuperarPassword({correo}) → envia un ENLACE de un solo uso
+//      (token aleatorio en CacheService, 30 min). No toca la contraseña.
+//   2. confirmarRecuperacion({token}) → (lo llama la web desde
+//      /#/recuperar?t=…) genera una contraseña nueva y la envia por correo.
+
+const RECU_TOKEN_TTL = 1800; // 30 min
+const RE_RECU_TOKEN = /^[A-Za-z0-9]{40}$/;
 
 /**
- * Genera una nueva contraseña para el usuario, la hashea, actualiza Usuarios
- * y la envía por correo. La respuesta es SIEMPRE genérica: no revela si el
- * correo existe (evita enumeración de cuentas).
+ * Envia un enlace de recuperacion de un solo uso. La respuesta es SIEMPRE
+ * generica: no revela si el correo existe (evita enumeracion de cuentas).
  */
 function recuperarPassword_(req) {
   const correo = String(req.correo || '').trim().toLowerCase();
-  const generico = ok_({}, 'Si el correo está registrado, te enviamos una nueva contraseña.');
+  const generico = ok_({}, 'Si el correo está registrado, te enviamos un enlace para crear una contraseña nueva.');
   try {
     // Rate limit: si se excede, devolvemos el MISMO objeto generico (no revelar).
-    if (checkRateLimit_('rl_recu_' + correo)) {
+    if (checkRateLimit_('rl_recu_' + correo, 3)) {
       log_({ accion: 'recuperarPassword', nivel: 'warning', detalle: 'rate limit excedido: ' + correo });
       return generico;
     }
@@ -1885,42 +2006,99 @@ function recuperarPassword_(req) {
       log_({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'warning', detalle: 'cuenta no activa' });
       return generico;
     }
-
-    const nuevaPass = randomToken_(10);
-    const salt = generateSalt_();
-    const hash = hashPassword_(nuevaPass, salt);
-    const userRow = findRowIndex_(SHEET_NAMES.USUARIOS, 1, String(user.id_usuario));
-    if (userRow > 0) {
-      const sheetUsuarios = getSheet_(SHEET_NAMES.USUARIOS);
-      sheetUsuarios.getRange(userRow, 5).setValue(hash);
-      sheetUsuarios.getRange(userRow, 6).setValue(salt);
+    // Tope global de correos de recuperacion (protege la cuota diaria).
+    if (checkRateLimit_('rl_recu_global', 30)) {
+      log_({ accion: 'recuperarPassword', nivel: 'warning', detalle: 'rate limit GLOBAL excedido' });
+      return generico;
     }
 
+    const token = randomToken_(40);
+    CacheService.getScriptCache().put('recu_tok_' + token, String(user.id_usuario), RECU_TOKEN_TTL);
+    const enlace = siteUrl_() + '/#/recuperar?t=' + token;
+
     try {
-      const portalUrl = 'https://sinapsisedu.com/#/login';
       const emailBody =
         '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
         '<h2 style="color:#10312D;margin:0 0 16px">Recuperación de contraseña 🔑</h2>' +
         '<p>Hola <strong>' + escapeHtml_(String(user.nombre)) + '</strong>,</p>' +
-        '<p>Generamos una nueva contraseña para tu cuenta:</p>' +
-        '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + escapeHtml_(String(user.correo)) + '</code></p>' +
-        '<p><strong>🔑 Nueva contraseña:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + nuevaPass + '</code></p>' +
+        '<p>Recibimos un pedido para crear una contraseña nueva para tu cuenta <strong>' + escapeHtml_(String(user.correo)) + '</strong>.</p>' +
+        '<p>Toca el botón y te enviaremos la contraseña nueva a este mismo correo. El enlace sirve <strong>una sola vez</strong> y vence en 30 minutos.</p>' +
         '<div style="margin:28px 0">' +
-        '<a href="' + portalUrl + '" style="background:#10312D;color:#C2E476;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Entrar al Portal →</a>' +
+        '<a href="' + enlace + '" style="background:#10312D;color:#C2E476;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Crear contraseña nueva →</a>' +
         '</div>' +
-        '<p style="font-size:12px;color:#3D5752">Si no pediste esto, escríbenos por WhatsApp: <a href="https://wa.me/' + whatsappNumero_() + '">' + escapeHtml_(whatsappDisplay_()) + '</a></p>' +
+        '<p style="font-size:12px;color:#3D5752">Si no lo pediste tú, ignora este correo: tu contraseña actual sigue funcionando. ¿Dudas? WhatsApp: <a href="https://wa.me/' + whatsappNumero_() + '">' + escapeHtml_(whatsappDisplay_()) + '</a></p>' +
         '</div>';
-      enviarCorreo_(String(user.correo), '🔑 Nueva contraseña — SINAPSIS EDU', emailBody);
+      enviarCorreo_(String(user.correo), '🔑 Recupera tu contraseña — SINAPSIS EDU', emailBody);
     } catch (emailErr) {
       log_({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'falla email: ' + emailErr });
     }
 
-    log_({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'password regenerada' });
+    log_({ accion: 'recuperarPassword', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'enlace de recuperacion enviado' });
     return generico;
   } catch (err) {
     const detalle = err instanceof Error ? err.message : String(err);
     log_({ accion: 'recuperarPassword', nivel: 'error', detalle: detalle });
     return generico;
+  }
+}
+
+/**
+ * confirmarRecuperacion: consume el token del enlace (un solo uso), genera
+ * una contraseña nueva y la envia por correo. Body: { token }
+ */
+function confirmarRecuperacion_(req) {
+  const token = String(req.token || req.t || '').trim();
+  const invalido = fail_('El enlace no es válido o ya venció. Pide uno nuevo desde "¿La olvidaste?".');
+  try {
+    if (!RE_RECU_TOKEN.test(token)) return invalido;
+    if (checkRateLimit_('rl_recu_conf', 120)) return fail_('Demasiados intentos. Espera unos minutos.');
+
+    // Leer y borrar bajo lock: el token sirve UNA sola vez.
+    const idUsuario = conLock_(function () {
+      const cache = CacheService.getScriptCache();
+      const key = 'recu_tok_' + token;
+      const v = cache.get(key);
+      if (v) cache.remove(key);
+      return v;
+    });
+    if (!idUsuario) return invalido;
+
+    const userRow = findRowIndex_(SHEET_NAMES.USUARIOS, 1, String(idUsuario));
+    const user = readRowObject_(SHEET_NAMES.USUARIOS, userRow);
+    if (!user || String(user.estado) !== 'activo') return invalido;
+
+    const nuevaPass = randomToken_(10);
+    const salt = generateSalt_();
+    const sheetUsuarios = getSheet_(SHEET_NAMES.USUARIOS);
+    sheetUsuarios.getRange(userRow, 5).setValue(hashPassword_(nuevaPass, salt));
+    sheetUsuarios.getRange(userRow, 6).setValue(salt);
+
+    const portalUrl = siteUrl_() + '/#/login';
+    const emailBody =
+      '<div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:auto;background:#F3F1E8;padding:32px;border-radius:16px">' +
+      '<h2 style="color:#10312D;margin:0 0 16px">Tu contraseña nueva 🔑</h2>' +
+      '<p>Hola <strong>' + escapeHtml_(String(user.nombre)) + '</strong>,</p>' +
+      '<p>Generamos una nueva contraseña para tu cuenta:</p>' +
+      '<p><strong>📧 Correo:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + escapeHtml_(String(user.correo)) + '</code></p>' +
+      '<p><strong>🔑 Nueva contraseña:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px">' + nuevaPass + '</code></p>' +
+      '<div style="margin:28px 0">' +
+      '<a href="' + portalUrl + '" style="background:#10312D;color:#C2E476;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Entrar al Portal →</a>' +
+      '</div>' +
+      '<p style="font-size:12px;color:#3D5752">Si no pediste esto, escríbenos por WhatsApp: <a href="https://wa.me/' + whatsappNumero_() + '">' + escapeHtml_(whatsappDisplay_()) + '</a></p>' +
+      '</div>';
+    try {
+      enviarCorreo_(String(user.correo), '🔑 Nueva contraseña — SINAPSIS EDU', emailBody);
+    } catch (emailErr) {
+      log_({ accion: 'confirmarRecuperacion', idUsuario: String(user.id_usuario), nivel: 'error', detalle: 'falla email: ' + emailErr });
+      return fail_('No pudimos enviarte el correo. Escríbenos por WhatsApp.');
+    }
+
+    log_({ accion: 'confirmarRecuperacion', idUsuario: String(user.id_usuario), nivel: 'info', detalle: 'password regenerada por enlace' });
+    return ok_({ correo: enmascararCorreo_(String(user.correo)) }, 'Te enviamos tu contraseña nueva por correo.');
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log_({ accion: 'confirmarRecuperacion', nivel: 'error', detalle: detalle });
+    return fail_('Error interno', 'No se pudo completar la recuperación. Intenta de nuevo.');
   }
 }
 
@@ -2261,6 +2439,29 @@ function procesarPagoExitoso_(p, origen) {
 // ─── Acciones publicas ───────────────────────────────────────
 
 /**
+ * Precio de una compra calculado SOLO en el servidor (lo usan iniciarCompra_
+ * y registrarCompra_): precioVigente_ (promo + campaña) y, en Anatomia,
+ * precio x segmento. Nunca usa montos enviados por el navegador.
+ * @return {{monto: number, detalleExtra: string}|{error: string}}
+ */
+function calcularMontoCompra_(plat, segmentosRaw) {
+  let monto = precioVigente_(plat);
+  let detalleExtra = '';
+  if (String(plat.slug).toLowerCase() === 'anatomia') {
+    const segs = Array.isArray(segmentosRaw) ? segmentosRaw.map(String) : [];
+    const unicos = segs.filter(function (s, i) { return segs.indexOf(s) === i && /^[a-z0-9-]{2,40}$/.test(s); });
+    if (unicos.length === 0 || unicos.length !== segs.length || unicos.length > MAX_SEGMENTOS_ANATOMIA) {
+      return { error: 'Elige al menos un segmento válido' };
+    }
+    monto = monto * unicos.length;
+    detalleExtra = JSON.stringify({ segmentos: unicos });
+  }
+  monto = Math.round(monto * 100) / 100;
+  if (!isFinite(monto) || monto <= 0) return { error: 'Plataforma sin precio configurado' };
+  return { monto: monto, detalleExtra: detalleExtra };
+}
+
+/**
  * iniciarCompra: crea la compra PENDIENTE DE PAGO con el monto fijado por el
  * servidor y devuelve lo que la pasarela activa necesita:
  *   pasarela 'mercadopago' → init_point (URL de Checkout Pro)
@@ -2298,60 +2499,74 @@ function iniciarCompra_(req) {
     if (!activo) return fail_('Plataforma no disponible');
 
     // Monto: SIEMPRE de la hoja. Anatomia se vende por segmento.
-    let monto = precioVigente_(plat);
-    let detalleExtra = '';
-    if (slug === 'anatomia') {
-      const segs = Array.isArray(req.segmentos) ? req.segmentos.map(String) : [];
-      const unicos = segs.filter(function (s, i) { return segs.indexOf(s) === i && /^[a-z0-9-]{2,40}$/.test(s); });
-      if (unicos.length === 0 || unicos.length !== segs.length || unicos.length > MAX_SEGMENTOS_ANATOMIA) {
-        return fail_('Elige al menos un segmento válido');
-      }
-      monto = monto * unicos.length;
-      detalleExtra = JSON.stringify({ segmentos: unicos });
+    const calc = calcularMontoCompra_(plat, req.segmentos);
+    if (calc.error) return fail_(calc.error);
+    const monto = calc.monto;
+    const detalleExtra = calc.detalleExtra;
+
+    // Tope GLOBAL (el limite por correo se esquiva cambiando de correo).
+    if (checkRateLimit_('rl_inicio_global', LIMITE_GLOBAL_INICIOS_HORA)) {
+      log_({ accion: 'iniciarCompra', nivel: 'warning', detalle: 'rate limit GLOBAL excedido' });
+      return fail_('Estamos recibiendo muchas solicitudes. Intenta en unos minutos.');
     }
-    monto = Math.round(monto * 100) / 100;
-    if (!isFinite(monto) || monto <= 0) return fail_('Plataforma sin precio configurado');
 
     ensureColumnas_(SHEET_NAMES.COMPRAS, HEADERS_COMPRAS);
-    const userId = upsertUsuario_(nombre, correo, whatsapp, dni);
     const expira = new Date(Date.now() + COMPRA_EXPIRA_MINUTOS * 60 * 1000).toISOString();
 
-    // Reutiliza una compra pendiente_pago vigente identica (evita filas basura
-    // si el alumno vuelve atras y reintenta).
-    let idCompra = null;
-    const compras = readAll_(SHEET_NAMES.COMPRAS);
-    for (let i = compras.length - 1; i >= 0; i--) {
-      const c = compras[i];
-      if (String(c.id_usuario) !== userId) continue;
-      if (String(c.id_plataforma) !== String(plat.id_plataforma)) continue;
-      if (String(c.estado_pago) !== ESTADO_PENDIENTE_PAGO) continue;
-      if (String(c.metodo_pago) !== pasarela) continue;
-      if (Number(c.monto) !== monto || String(c.detalle_extra || '') !== detalleExtra) continue;
-      if (!(toMillis_(c.expira) > Date.now())) continue;
-      idCompra = String(c.id_compra);
-      const row = findRowIndex_(SHEET_NAMES.COMPRAS, 1, idCompra);
-      setCellsByHeaders_(SHEET_NAMES.COMPRAS, row, { expira: expira, dni: dni, terminos_aceptados: nowIso_() });
-      break;
-    }
+    // Usuario + reutilizar/crear la compra bajo lock: dos compras simultaneas
+    // no pueden compartir id_compra ni id_usuario.
+    const creada = conLock_(function () {
+      // cuenta_nueva: la cuenta NO tenia contraseña antes de esta compra. Solo
+      // en ese caso se permite el login automatico tras pagar (sesionTrasPago_):
+      // si la cuenta ya existia con contraseña, comprar con ese correo no debe
+      // dar acceso a la cuenta de otra persona.
+      const previo = findUsuarioByCorreo_(correo);
+      const cuentaNueva = !previo || !String(previo.password_hash || '').trim();
+      const uid = upsertUsuario_(nombre, correo, whatsapp, dni);
 
-    if (!idCompra) {
-      idCompra = nextId_('C', nextSequenceFromColumn_(SHEET_NAMES.COMPRAS, 1));
-      appendRowByHeaders_(SHEET_NAMES.COMPRAS, {
-        id_compra: idCompra,
-        id_usuario: userId,
-        id_plataforma: String(plat.id_plataforma),
-        monto: monto,
-        metodo_pago: pasarela,
-        fecha_solicitud: nowIso_(),
-        voucher_url: '',
-        estado_pago: ESTADO_PENDIENTE_PAGO,
-        estado_acceso: 'pendiente',
-        detalle_extra: detalleExtra,
-        dni: dni,
-        expira: expira,
-        terminos_aceptados: nowIso_()
-      });
-    }
+      // Reutiliza una compra pendiente_pago vigente identica (evita filas basura
+      // si el alumno vuelve atras y reintenta).
+      let id = null;
+      const compras = readAll_(SHEET_NAMES.COMPRAS);
+      for (let i = compras.length - 1; i >= 0; i--) {
+        const c = compras[i];
+        if (String(c.id_usuario) !== uid) continue;
+        if (String(c.id_plataforma) !== String(plat.id_plataforma)) continue;
+        if (String(c.estado_pago) !== ESTADO_PENDIENTE_PAGO) continue;
+        if (String(c.metodo_pago) !== pasarela) continue;
+        if (Number(c.monto) !== monto || String(c.detalle_extra || '') !== detalleExtra) continue;
+        if (!(toMillis_(c.expira) > Date.now())) continue;
+        id = String(c.id_compra);
+        const row = findRowIndex_(SHEET_NAMES.COMPRAS, 1, id);
+        setCellsByHeaders_(SHEET_NAMES.COMPRAS, row, {
+          expira: expira, dni: dni, terminos_aceptados: nowIso_(), cuenta_nueva: cuentaNueva ? 'si' : 'no'
+        });
+        break;
+      }
+
+      if (!id) {
+        id = nextId_('C', nextSequenceFromColumn_(SHEET_NAMES.COMPRAS, 1));
+        appendRowByHeaders_(SHEET_NAMES.COMPRAS, {
+          id_compra: id,
+          id_usuario: uid,
+          id_plataforma: String(plat.id_plataforma),
+          monto: monto,
+          metodo_pago: pasarela,
+          fecha_solicitud: nowIso_(),
+          voucher_url: '',
+          estado_pago: ESTADO_PENDIENTE_PAGO,
+          estado_acceso: 'pendiente',
+          detalle_extra: detalleExtra,
+          dni: dni,
+          expira: expira,
+          terminos_aceptados: nowIso_(),
+          cuenta_nueva: cuentaNueva ? 'si' : 'no'
+        });
+      }
+      return { userId: uid, idCompra: id };
+    });
+    const userId = creada.userId;
+    const idCompra = creada.idCompra;
 
     const duracion = Number(plat.duracion_dias) || 30;
     // Culqi: description de 5 a 80 caracteres.
@@ -2577,24 +2792,34 @@ function esEventoCulqi_(body) {
 function webhookCulqi_(evt) {
   const recibido = ok_({ recibido: true });
   try {
-    if (checkRateLimit_('rl_webhook_culqi', 300)) {
-      log_({ accion: 'webhookCulqi', nivel: 'warning', detalle: 'rate limit de webhook excedido' });
-      return recibido;
-    }
     if (!culqiConfigurado_()) return recibido;
 
     let data = evt.data;
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch (e) { data = {}; } }
     data = data || {};
-    const type = String(evt.type);
+    const type = String(evt.type).slice(0, 60);
     const objeto = String(data.object || '');
 
     const esDevolucion = /^refund/.test(type) || objeto === 'refund';
     const esContracargo = /dispute|chargeback|contracargo/i.test(type);
 
+    // 1) Validar el id ANTES de contar nada; 2) dedupe por recurso; 3) tope
+    //    global generoso solo como ultimo recurso.
+    const recursoId = esDevolucion ? String(data.id || '') : String(
+      (objeto === 'charge' && data.id) || data.charge_id || (data.charge && data.charge.id) || ''
+    );
+    if (!(esDevolucion ? RE_CULQI_REFUND : RE_CULQI_CHARGE).test(recursoId)) {
+      Logger.log('webhookCulqi: evento ignorado (id invalido) tipo=' + type);
+      return recibido;
+    }
+    if (!marcarUnaVez_('wh_culqi_' + type + '_' + recursoId, WEBHOOK_DEDUPE_SEG)) return recibido;
+    if (checkRateLimit_('rl_webhook_culqi', WEBHOOK_MAX_HORA)) {
+      log_({ accion: 'webhookCulqi', nivel: 'warning', detalle: 'tope global de webhook excedido; ignorado ' + type + ' ' + recursoId });
+      return recibido;
+    }
+
     if (esDevolucion) {
-      const refundId = String(data.id || '');
-      if (!RE_CULQI_REFUND.test(refundId)) return recibido;
+      const refundId = recursoId;
       const r = culqiRequest_('get', '/refunds/' + encodeURIComponent(refundId));
       if (r.status !== 200 || !r.body || !r.body.charge_id) {
         log_({ accion: 'webhookCulqi', nivel: 'warning', detalle: 'devolución no verificable ' + refundId + ' HTTP ' + r.status });
@@ -2604,13 +2829,7 @@ function webhookCulqi_(evt) {
       return recibido;
     }
 
-    const chargeId = String(
-      (objeto === 'charge' && data.id) || data.charge_id || (data.charge && data.charge.id) || ''
-    );
-    if (!RE_CULQI_CHARGE.test(chargeId)) {
-      log_({ accion: 'webhookCulqi', nivel: 'info', detalle: 'evento ignorado: ' + type });
-      return recibido;
-    }
+    const chargeId = recursoId;
     const r = culqiRequest_('get', '/charges/' + encodeURIComponent(chargeId));
     if (r.status !== 200 || !r.body || r.body.object !== 'charge') {
       log_({ accion: 'webhookCulqi', nivel: 'warning', detalle: 'cargo no verificable ' + chargeId + ' HTTP ' + r.status });
@@ -2685,6 +2904,9 @@ function procesarDevolucion_(chargeId, idEvento, monto, tipo) {
 
 const MP_API_BASE = 'https://api.mercadopago.com';
 const RE_MP_ID = /^\d{1,20}$/;
+// Webhooks (MP y Culqi): dedupe por recurso + tope global de ultimo recurso.
+const WEBHOOK_DEDUPE_SEG = 15;   // ventana corta: los cambios de estado reales llegan despues
+const WEBHOOK_MAX_HORA = 1000;   // tope global generoso por pasarela
 
 function mpConfigurado_() {
   return !!getProperty_('MP_ACCESS_TOKEN');
@@ -2862,7 +3084,8 @@ function procesarPagoMPPorId_(paymentId, origen, payPrevio) {
       pago: p, activacion: res.activacion };
   }
   if (status === 'in_mediation') {
-    notificarAdmin_('[SINAPSIS EDU] ⚠️ Pago en disputa ' + p.id_compra,
+    // Verificado contra la API (pay viene de MP). Un aviso por pago cada 6 h.
+    if (marcarUnaVez_('aviso_med_' + p.id, 21600)) notificarAdmin_('[SINAPSIS EDU] ⚠️ Pago en disputa ' + p.id_compra,
       '<p>El pago ' + escapeHtml_(p.id) + ' (compra ' + escapeHtml_(p.id_compra) + ') está en mediación en Mercado Pago. Revísalo en el panel.</p>');
     return { tipo: 'pendiente', pago: p };
   }
@@ -2886,9 +3109,26 @@ function procesarPagoMPPorId_(paymentId, origen, payPrevio) {
  * el enlace de vuelta con payment_id puede quedar en el historial).
  * Devuelve { token, usuario } o null.
  */
-function sesionTrasPago_(usuario, fechaAprobacion) {
+function sesionTrasPago_(usuario, fechaAprobacion, idCompra) {
   const t = fechaAprobacion ? new Date(fechaAprobacion).getTime() : NaN;
   if (!isFinite(t) || Date.now() - t > 2 * 3600 * 1000) return null;
+
+  // Anti-secuestro de cuenta: solo si la cuenta la CREO esta compra (no tenia
+  // contraseña al iniciarla). Si el correo ya tenia cuenta, el alumno entra
+  // con su contraseña de siempre; comprar con el correo de otro no da su sesion.
+  const found = getCompra_(idCompra);
+  if (!found || String(found.compra.cuenta_nueva || '') !== 'si') return null;
+  // Y esta compra debe ser la UNICA aprobada de la cuenta (cubre la carrera de
+  // dos compras "nuevas" iniciadas a la vez con el mismo correo).
+  const otras = readAll_(SHEET_NAMES.COMPRAS).filter(function (c) {
+    return String(c.id_usuario) === String(usuario.id_usuario) &&
+      String(c.id_compra) !== String(idCompra) &&
+      String(c.estado_pago) === 'aprobado';
+  });
+  if (otras.length > 0) return null;
+  // Una sola sesion automatica por compra (TTL > ventana de 2 h).
+  if (!marcarUnaVez_('autologin_' + idCompra, 21600)) return null;
+
   const token = createSession_({
     id_usuario: String(usuario.id_usuario),
     correo: String(usuario.correo),
@@ -2898,7 +3138,7 @@ function sesionTrasPago_(usuario, fechaAprobacion) {
   return { token: token, usuario: { nombre: String(usuario.nombre), correo: String(usuario.correo) } };
 }
 
-/** "yubert.c@gmail.com" → "yu•••@gmail.com" */
+/** "alumno@example.com" → "al•••@example.com" */
 function enmascararCorreo_(correo) {
   const s = String(correo || '');
   const at = s.indexOf('@');
@@ -2940,7 +3180,8 @@ function confirmarPagoMP_(req) {
       else {
         // Mismo navegador (correo guardado + payment_id) y pago reciente: el alumno
         // entra directo al Portal sin esperar el correo con la contraseña.
-        const sesion = sesionTrasPago_(usuario, (pre.body || {}).date_approved);
+        // Solo cuentas creadas por esta compra y una vez por compra (ver sesionTrasPago_).
+        const sesion = sesionTrasPago_(usuario, (pre.body || {}).date_approved, idCompra);
         if (sesion) resp.sesion = sesion;
       }
       return ok_(resp, '¡Pago aprobado!');
@@ -2977,16 +3218,24 @@ function webhookMP_(params, body) {
   const recibido = ok_({ recibido: true });
   try {
     if (!mpConfigurado_()) return recibido;
-    if (checkRateLimit_('rl_webhook_mp', 300)) {
-      log_({ accion: 'webhookMP', nivel: 'warning', detalle: 'rate limit de webhook excedido' });
-      return recibido;
-    }
     params = params || {};
     body = body || {};
-    const tipo = String(body.type || params.type || params.topic || body.topic || '');
+    const tipo = String(body.type || params.type || params.topic || body.topic || '').slice(0, 60);
     const id = String((body.data && body.data.id) || params['data.id'] || params.id || body.id || '');
+    // 1) Validar el formato del id ANTES de contar nada: la basura no gasta cupo.
     if (!RE_MP_ID.test(id)) {
-      log_({ accion: 'webhookMP', nivel: 'info', detalle: 'aviso ignorado tipo=' + tipo });
+      Logger.log('webhookMP: aviso ignorado (id invalido) tipo=' + tipo);
+      return recibido;
+    }
+    // 2) Dedupe por recurso (ventana corta): los reintentos/duplicados del mismo
+    //    aviso no re-consultan la API. Un aviso falso de un id no silencia otros.
+    //    La clave incluye `action` (payment.created ≠ payment.updated).
+    const accionMP = String(body.action || '').slice(0, 40);
+    if (!marcarUnaVez_('wh_mp_' + tipo + '_' + accionMP + '_' + id, WEBHOOK_DEDUPE_SEG)) return recibido;
+    // 3) Tope global generoso, solo como ultimo recurso (la web igual confirma
+    //    con confirmarPagoMP al volver de Mercado Pago).
+    if (checkRateLimit_('rl_webhook_mp', WEBHOOK_MAX_HORA)) {
+      log_({ accion: 'webhookMP', nivel: 'warning', detalle: 'tope global de webhook excedido; ignorado ' + tipo + ' ' + id });
       return recibido;
     }
 
@@ -3002,9 +3251,19 @@ function webhookMP_(params, body) {
       });
     } else if (/chargeback/.test(tipo)) {
       // El pago afectado tambien llega como payment (status charged_back),
-      // que es lo que revoca. Aqui solo avisamos.
-      notificarAdmin_('[SINAPSIS EDU] ⚠️ Aviso de contracargo en Mercado Pago',
-        '<p>Mercado Pago avisó un contracargo (id ' + escapeHtml_(id) + '). Revisa el panel de Mercado Pago.</p>');
+      // que es lo que revoca. Aqui solo avisamos, y SOLO si el contracargo
+      // existe de verdad en nuestra cuenta (el aviso puede ser falso).
+      const cb = mpRequest_('get', '/v1/chargebacks/' + encodeURIComponent(id));
+      if (cb.status !== 200 || !cb.body || String(cb.body.id || '') !== id) {
+        log_({ accion: 'webhookMP', nivel: 'warning', detalle: 'contracargo no verificable ' + id + ' HTTP ' + cb.status });
+        return recibido;
+      }
+      if (marcarUnaVez_('aviso_cb_' + id, 21600)) {
+        const pagosCb = Array.isArray(cb.body.payments) ? cb.body.payments.slice(0, 5).map(String).join(', ') : '';
+        notificarAdmin_('[SINAPSIS EDU] ⚠️ Contracargo en Mercado Pago',
+          '<p>Mercado Pago confirmó un contracargo (id ' + escapeHtml_(id) + ')' +
+          (pagosCb ? ' sobre el/los pago(s) ' + escapeHtml_(pagosCb) : '') + '. Revisa el panel de Mercado Pago.</p>');
+      }
     } else {
       log_({ accion: 'webhookMP', nivel: 'info', detalle: 'tipo no manejado: ' + tipo });
     }
@@ -3165,13 +3424,15 @@ function gs_listarCredenciales(adminToken) {
  * Idempotente: si ya existe el usuario, no lo duplica; si ya tiene las
  * compras, tampoco las agrega.
  *
- * Credenciales por defecto: canazach12@gmail.com / Test1234
+ * Correo: admin-test@example.com (cámbialo aquí si quieres recibir correos).
+ * La contraseña se genera al azar en cada creación y SOLO se muestra en el
+ * registro de ejecución del editor (nunca en el repo, que es público).
  */
 function createTestUser() {
   requireEditor_();
-  const correo = 'canazach12@gmail.com';
-  const password = 'Test1234';
-  const nombre = 'Yubert Canaza (Test)';
+  const correo = 'admin-test@example.com';
+  const password = randomToken_(14);
+  const nombre = 'Usuario de prueba';
 
   const sheetUsuarios = getSheet_(SHEET_NAMES.USUARIOS);
   const sheetCompras = getSheet_(SHEET_NAMES.COMPRAS);
@@ -3244,12 +3505,16 @@ function createTestUser() {
     detalle: 'correo=' + correo + ' user_nuevo=' + userCreated + ' compras_nuevas=[' + created.join(';') + ']'
   });
 
+  // La contraseña solo se ve en el registro del editor (no va a la hoja Logs).
+  if (userCreated) Logger.log('Usuario de prueba ' + correo + ' / contraseña: ' + password);
+  else Logger.log('El usuario de prueba ya existía: su contraseña no cambió.');
+
   return {
     ok: true,
     usuario: {
       id_usuario: userId,
       correo: correo,
-      password: password,
+      password: userCreated ? password : '(sin cambios; ya existía)',
       nombre: nombre,
       creado_ahora: userCreated
     },
@@ -3271,6 +3536,7 @@ function dispatchPublic_(req) {
     case 'misSolicitudes':           return misSolicitudes_(req);
     case 'obtenerUrlPlataforma':     return obtenerUrlPlataforma_(req);
     case 'recuperarPassword':        return recuperarPassword_(req);
+    case 'confirmarRecuperacion':    return confirmarRecuperacion_(req);
     case 'iniciarCompra':            return iniciarCompra_(req);
     case 'confirmarPago':            return confirmarPago_(req);
     case 'estadoCompra':             return estadoCompra_(req);
@@ -3434,6 +3700,23 @@ function healthcheck() {
 //    (monto, PEN, metadata.id_compra, exito, id unico en hoja Pagos) bajo
 //    LockService; webhooks re-consultados a la API. activarCompra_ es la unica
 //    logica de activacion (la usa tambien aprobarPago_ del admin).
+// #10 (2026-11-12) Auditoria:
+//    - Login automatico tras pagar (sesionTrasPago_) solo si la cuenta la creo
+//      esa compra (columna Compras.cuenta_nueva, fijada en iniciarCompra), si es
+//      la unica compra aprobada de la cuenta y una sola vez por compra.
+//    - Correo: avisos al admin con tope 20/h y reserva de cuota para alumnos;
+//      topes globales en registrarCompra/iniciarCompra; contracargo de MP solo
+//      se avisa tras verificarlo en la API.
+//    - Webhooks MP/Culqi: id validado antes de contar, dedupe por recurso y
+//      tope global de 1000/h solo como ultimo recurso.
+//    - registrarCompra: monto calculado en el servidor (calcularMontoCompra_);
+//      devuelve upload_token, que subirVoucher exige (Compras.upload_token).
+//    - recuperarPassword envia un enlace de un solo uso (30 min);
+//      confirmarRecuperacion genera la contraseña nueva y la envia.
+//    - Login alumno/admin: solo cuentan intentos fallidos; admin bloquea 10 min.
+//      Mensaje unico para credenciales malas / cuenta bloqueada / sin contraseña.
+//    - Ids de Compras/Usuarios asignados bajo conLock_.
+//    - testCampana con requireEditor_; createTestUser sin credenciales fijas.
 
 /**
  * PRUEBA DE PUNTA A PUNTA SIN NAVEGADOR (solo con credenciales de PRUEBA).

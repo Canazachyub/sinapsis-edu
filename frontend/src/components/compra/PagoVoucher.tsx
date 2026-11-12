@@ -121,6 +121,8 @@ export function PagoVoucher({ slug, idPlataforma, monto, datos, detalleExtra, on
   const [enviando, setEnviando] = useState<false | 'registrando' | 'subiendo'>(false);
   const [error, setError] = useState<string | null>(null);
   const [idCompraCreada, setIdCompraCreada] = useState<string | null>(null);
+  // Token que devuelve registrarCompra: el backend lo exige para subir el voucher.
+  const [uploadToken, setUploadToken] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function onFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -152,9 +154,10 @@ export function PagoVoucher({ slug, idPlataforma, monto, datos, detalleExtra, on
     setError(null);
 
     let idCompra = idCompraCreada;
-    if (!idCompra) {
+    let token = uploadToken;
+    if (!idCompra || !token) {
       setEnviando('registrando');
-      const reg = await callApi<{ id_compra: string }>('registrarCompra', {
+      const reg = await callApi<{ id_compra: string; upload_token: string }>('registrarCompra', {
         nombre: datos.nombre.trim(),
         correo: datos.correo.trim(),
         whatsapp: datos.whatsapp.trim(),
@@ -163,13 +166,15 @@ export function PagoVoucher({ slug, idPlataforma, monto, datos, detalleExtra, on
         monto,
         detalle_extra: detalleExtra,
       });
-      if (!reg.ok || !reg.data?.id_compra) {
+      if (!reg.ok || !reg.data?.id_compra || !reg.data.upload_token) {
         setEnviando(false);
         setError(reg.message || reg.error || 'No se pudo registrar tu compra.');
         return;
       }
       idCompra = reg.data.id_compra;
+      token = reg.data.upload_token;
       setIdCompraCreada(idCompra);
+      setUploadToken(token);
       guardarCompraEnCurso({ id_compra: idCompra, correo: datos.correo.trim().toLowerCase(), slug });
     }
 
@@ -178,6 +183,7 @@ export function PagoVoucher({ slug, idPlataforma, monto, datos, detalleExtra, on
       const file = await fileToBase64(voucherFile);
       const up = await callApi('subirVoucher', {
         id_compra: idCompra,
+        upload_token: token,
         archivo_base64: file.base64,
         tipo: file.mime,
         nombre: file.name,

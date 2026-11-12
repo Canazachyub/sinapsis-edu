@@ -36,7 +36,7 @@ Ahora hay 2 cosas nuevas en `Code.gs`:
    - Headers extendidos con las 4 columnas nuevas.
    - Plataformas agrega P-007 (Anatomía) y P-008 (CTO) si no existían.
 6. En el dropdown → `createTestUser` → click **▶ Ejecutar**. Resultado:
-   - Crea el usuario `canazach12@gmail.com / Test1234`.
+   - Crea el usuario `admin-test@example.com` con una contraseña aleatoria que solo aparece en el registro de ejecución del editor.
    - Crea 2 compras de prueba (ENCIB 30 días, ENAM 5 días) si no existen.
 
 Verifica abriendo tu Sheet: deberías ver 8 plataformas y 1 usuario activo.
@@ -160,7 +160,7 @@ nslookup sinapsisedu.com
 Abre `https://sinapsisedu.com/` → deberías ver SINAPSIS EDU.
 
 Pruebas rápidas:
-- Login con `canazach12@gmail.com` / `Test1234` → debe loguear y mostrar Portal.
+- Login con `admin-test@example.com` y la contraseña que mostró `createTestUser()` → debe loguear y mostrar Portal.
 - Hard refresh con Ctrl+Shift+R → 8 cards de plataformas.
 - `/#/compra/anatomia` → selector de segmentos funciona, recalcula USDT/BTC.
 

@@ -24,7 +24,7 @@
 
 - **Web App (API):** `.../macros/s/AKfycby6vGh6...AgdiF43PIA/exec` (en `frontend/.env` como `VITE_API_URL`)
 - **Panel admin:** abrir la URL del Web App + `?page=admin`. Login con `ADMIN_PASSWORD` (Script Properties).
-- **Usuario de prueba:** `canazach12@gmail.com` / `Test1234` (recrea con `createTestUser()` desde el editor).
+- **Usuario de prueba:** `admin-test@example.com` con contraseña aleatoria (créalo con `createTestUser()` desde el editor; la contraseña sale solo en el registro de ejecución).
 - **Slugs reales:** `enam, encib, encaps, rm, essalud, biblioteca, anatomia, cto`.
   - Aliases que redirigen: `residentado→rm`, `ciencias-basicas/cb→encib`, `testut→anatomia`.
 - **WhatsApp soporte:** `+51 974 707 622` (footer) · backend usa `+51 984 300 510` en algunos correos.

@@ -206,8 +206,8 @@ export function Login() {
                   <div className="mt-6 rounded-2xl border border-line bg-paper p-6">
                     <p className="font-semibold text-ink">Revisa tu correo</p>
                     <p className="mt-2 text-[15px] leading-relaxed text-muted">
-                      Si <span className="font-medium text-ink">{recoverCorreo}</span> está registrado, te enviamos una
-                      nueva contraseña. Revisa también la carpeta de spam.
+                      Si <span className="font-medium text-ink">{recoverCorreo}</span> está registrado, te enviamos un
+                      enlace para crear una contraseña nueva (vence en 30 minutos). Revisa también la carpeta de spam.
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
                       <button type="button" onClick={() => setModo('login')} className="btn-primary">
@@ -226,7 +226,7 @@ export function Login() {
                 ) : (
                   <>
                     <p className="mt-2 text-[15px] text-muted">
-                      Escribe el correo de tu cuenta y te enviaremos una contraseña nueva.
+                      Escribe el correo de tu cuenta y te enviaremos un enlace para crear una contraseña nueva.
                     </p>
                     <form onSubmit={handleRecover} className="mt-8 space-y-5">
                       <div>
@@ -243,7 +243,7 @@ export function Login() {
                         />
                       </div>
                       <button type="submit" className="btn-primary w-full disabled:opacity-60" disabled={recoverLoading}>
-                        {recoverLoading ? 'Enviando…' : 'Enviar nueva contraseña'}
+                        {recoverLoading ? 'Enviando…' : 'Enviar enlace'}
                       </button>
                     </form>
                   </>
