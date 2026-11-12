@@ -4,6 +4,7 @@ import { SectionHeader } from './SectionHeader';
 import { ScrollLink } from '@/components/ScrollLink';
 import { PROGRAMA, TOTAL_CURSOS_PROGRAMA } from '@/data/contenido';
 import { WHATSAPP } from '@/config/pago';
+import { simulacroHref } from '@/config';
 
 // ── Programa de estudios ─────────────────────────────────────────
 
@@ -111,12 +112,15 @@ export function CtaFinal() {
         <div data-reveal>
           <h2 className="text-[32px] leading-tight !text-white md:text-[44px]">Empieza hoy tu preparación</h2>
           <p className="mt-3 max-w-xl text-lg text-white/70">
-            Elige tu plataforma o escríbenos y te ayudamos a escoger la que necesitas.
+            Mide tu nivel gratis hoy, elige tu plataforma o escríbenos y te ayudamos a escoger.
           </p>
         </div>
         <div className="flex flex-wrap gap-3" data-reveal>
-          <ScrollLink to="plataformas" className="btn-spark cursor-pointer px-6 hover:shadow-cta">
-            Ver plataformas <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
+          <a href={simulacroHref()!} className="btn-spark px-6 hover:shadow-cta">
+            Simulacro gratis <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
+          </a>
+          <ScrollLink to="plataformas" className="btn-ghost-dark cursor-pointer px-6">
+            Ver plataformas
           </ScrollLink>
           <a href={href} target="_blank" rel="noreferrer" className="btn-ghost-dark px-6">
             <MessageCircle className="h-[18px] w-[18px] text-whatsapp" aria-hidden /> Escríbenos por WhatsApp

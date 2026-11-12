@@ -229,7 +229,7 @@ export function SeccionBanqueo() {
                 </li>
               ))}
             </ul>
-            <p className="mt-5 text-sm text-subtle">Pruébalo: elige una respuesta o usa el 50/50 →</p>
+            <p className="mt-5 text-sm text-subtle">Pruébalo aquí mismo: elige una respuesta o usa el 50/50.</p>
           </div>
           <div className="lg:col-span-7" data-reveal={120}>
             <BanqueoJuego />

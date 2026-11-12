@@ -31,6 +31,12 @@ const DATOS_VACIOS: Datos = { nombre: '', correo: '', dni: '', whatsapp: '', ace
 
 const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RE_WHATSAPP = /^\+?\d{8,15}$/;
+
+/** Celular peruano de 9 dígitos → con código 51. Otros formatos quedan igual. */
+function normalizarWhatsapp(v: string): string {
+  const n = v.replace(/[\s\-()]/g, '');
+  return /^9\d{8}$/.test(n) ? `51${n}` : n.replace(/^\+/, '');
+}
 const RE_DNI = /^\d{8}$/;
 
 type Errores = Partial<Record<keyof Datos, string>>;
@@ -40,7 +46,7 @@ function validar(d: Datos): Errores {
   if (d.nombre.trim().length < 3) e.nombre = 'Escribe tu nombre completo.';
   if (!RE_EMAIL.test(d.correo.trim())) e.correo = 'Revisa tu correo: ahí te llega el acceso.';
   if (!RE_DNI.test(d.dni.trim())) e.dni = 'El DNI tiene 8 dígitos.';
-  if (!RE_WHATSAPP.test(d.whatsapp.replace(/\s|-/g, ''))) e.whatsapp = 'Escribe tu número con código de país, p. ej. 51987654321.';
+  if (!RE_WHATSAPP.test(normalizarWhatsapp(d.whatsapp))) e.whatsapp = 'Escribe tu celular, p. ej. 987 654 321.';
   if (!d.acepta) e.acepta = 'Debes aceptar los Términos y la Política de Privacidad.';
   return e;
 }
@@ -266,7 +272,7 @@ export function Compra() {
       nombre: datos.nombre.trim(),
       correo,
       dni: datos.dni.trim(),
-      whatsapp: datos.whatsapp.replace(/\s|-/g, ''),
+      whatsapp: normalizarWhatsapp(datos.whatsapp),
       aceptaTerminos: true,
       ...(esAnatomia ? { segmentos: segmentosIds } : {}),
     });
@@ -508,7 +514,7 @@ export function Compra() {
                   <Campo id="f-correo" label="Correo" type="email" inputMode="email" value={datos.correo} onChange={onCampo('correo')} autoComplete="email" error={errores.correo} />
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Campo id="f-dni" label="DNI" inputMode="numeric" maxLength={8} value={datos.dni} onChange={onCampo('dni')} error={errores.dni} />
-                    <Campo id="f-whatsapp" label="WhatsApp" type="tel" inputMode="tel" placeholder="51987654321" value={datos.whatsapp} onChange={onCampo('whatsapp')} autoComplete="tel" error={errores.whatsapp} />
+                    <Campo id="f-whatsapp" label="WhatsApp" type="tel" inputMode="tel" placeholder="987 654 321" value={datos.whatsapp} onChange={onCampo('whatsapp')} autoComplete="tel" error={errores.whatsapp} />
                   </div>
 
                   <div>

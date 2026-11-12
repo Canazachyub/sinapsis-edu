@@ -9,6 +9,14 @@ interface QA {
 // FAQ general de la landing (dudas comunes previas a la compra).
 const FAQS: QA[] = [
   {
+    q: '¿De dónde salen las preguntas?',
+    a: 'De exámenes ya tomados: tenemos un archivo de más de 15 000 preguntas reales de ENAM, ENCIB, Residentado, EsSalud y SERUMS, actualizado hasta 2026. Cada una viene con su justificación.',
+  },
+  {
+    q: '¿El simulacro gratis tiene alguna condición?',
+    a: 'No. El primer simulacro de cada examen es gratis: solo te registras con tus datos y lo rindes completo, con tiempo real y tu nota al final. No pedimos tarjeta.',
+  },
+  {
     q: '¿Cómo compro un acceso?',
     a: 'Elige tu plataforma, escribe tu nombre, correo, DNI y WhatsApp, y paga con Yape o tarjeta en la página segura de Mercado Pago. Al aprobarse el pago entras directo a tu Portal y te enviamos tu contraseña por correo.',
   },
@@ -26,7 +34,7 @@ const FAQS: QA[] = [
   },
   {
     q: '¿Cuánto dura el acceso?',
-    a: 'Depende de la plataforma: la mayoría son 30 días; CTO es de 1 año. La duración exacta aparece en cada plataforma antes de comprar.',
+    a: 'Depende de la plataforma: la mayoría son 30 días y algunos cursos tienen acceso por 1 año. La duración exacta aparece en cada plataforma antes de pagar. No hay renovaciones automáticas.',
   },
   {
     q: '¿Funciona en celular?',
