@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Clock, LogOut, AlertCircle, CheckCircle2, XCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -7,7 +7,8 @@ import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { callApi } from '@/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { simulacroHref } from '@/config';
+import { examenBanqueo, simulacroHref } from '@/config';
+import { urlEntradaBanqueo, type DestinoBanqueo } from '@/api/banqueo';
 
 interface AccesoData {
   id_acceso: string;
@@ -63,6 +64,27 @@ export function Portal() {
   const [solicitudes, setSolicitudes] = useState<SolicitudData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const location = useLocation();
+  // Aviso al volver del login con ?next=banqueo sin acceso activo (o al fallar el botón del banqueo)
+  const [avisoBanqueo, setAvisoBanqueo] = useState<string | null>(
+    () => (location.state as { aviso?: string } | null)?.aviso ?? null,
+  );
+  const [abriendo, setAbriendo] = useState<string | null>(null);
+
+  /** Pide el ticket de un solo uso y sale al banqueo (banqueo.sinapsisedu.com/acceso). */
+  async function entrarAlBanqueo(examen: string, destino: DestinoBanqueo) {
+    if (!token || abriendo) return;
+    setAbriendo(`${examen}:${destino}`);
+    setAvisoBanqueo(null);
+    const r = await urlEntradaBanqueo(token, examen, destino);
+    if (r.ok) {
+      window.location.href = r.url;
+      return;
+    }
+    setAbriendo(null);
+    if (r.sesionVencida) { handleSessionExpired(); return; }
+    setAvisoBanqueo(r.error);
+  }
 
   function handleSessionExpired() {
     logout();
@@ -132,6 +154,15 @@ export function Portal() {
           </button>
         </div>
 
+        {avisoBanqueo && (
+          <div role="alert" className="mt-6 text-sm text-ink bg-warning/10 border border-warning/30 rounded-lg px-4 py-3">
+            {avisoBanqueo}
+            {avisoBanqueo.startsWith('No tienes un acceso activo') && (
+              <> · <Link to="/plataformas" className="font-semibold text-jungle-600 hover:text-jungle-800">Ver planes</Link></>
+            )}
+          </div>
+        )}
+
         {error && (
           <div className="mt-6 text-sm text-danger bg-danger/10 border border-danger/20 rounded-lg px-4 py-3">
             {error}
@@ -175,7 +206,33 @@ export function Portal() {
                   {a.fecha_fin && (
                     <div className="mt-1 text-xs text-jungle-light">Vence el {formatFecha(a.fecha_fin)}</div>
                   )}
-                  {simulacroHref(a.slug) ? (
+                  {examenBanqueo(a.slug) ? (
+                    <div className="mt-5 grid gap-2">
+                      <button
+                        type="button"
+                        onClick={() => entrarAlBanqueo(examenBanqueo(a.slug)!, 'banqueo')}
+                        disabled={!!abriendo}
+                        className="btn-primary w-full disabled:opacity-60"
+                      >
+                        {abriendo === `${examenBanqueo(a.slug)}:banqueo` ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Abriendo…</>
+                        ) : 'Entrar al banqueo'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => entrarAlBanqueo(examenBanqueo(a.slug)!, 'simulacro')}
+                        disabled={!!abriendo}
+                        className="btn-secondary w-full disabled:opacity-60"
+                      >
+                        {abriendo === `${examenBanqueo(a.slug)}:simulacro` ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Abriendo…</>
+                        ) : 'Rendir simulacro'}
+                      </button>
+                      <Link to={`/aula/${a.slug}`} className="btn-secondary w-full">
+                        Entrar al aula
+                      </Link>
+                    </div>
+                  ) : simulacroHref(a.slug) ? (
                     <div className="mt-5 grid gap-2">
                       <a href={simulacroHref(a.slug, 'registro')!} className="btn-primary w-full">
                         Rendir simulacro

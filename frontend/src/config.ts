@@ -29,4 +29,26 @@ export function simulacroHref(slug?: string, ruta = ''): string | null {
   return `${base}${ruta}?examen=${examen}`;
 }
 
+/**
+ * slug de plataforma → examen del banqueo al que da acceso la cuenta (mismo mapa que
+ * BANQUEO_EXAMEN_POR_SLUG en el backend; otros slugs no dan banqueo).
+ */
+const BANQUEO_POR_SLUG: Record<string, string> = {
+  enam: 'enam',
+  encib: 'encib',
+  rm: 'rm',
+  encaps: 'serums',
+  essalud: 'essalud',
+};
+
+/** Examen del banqueo de una plataforma, o null si no tiene banqueo. */
+export function examenBanqueo(slug?: string): string | null {
+  return (slug && BANQUEO_POR_SLUG[slug]) || null;
+}
+
+/** URL base del banqueo, siempre con "/" final. */
+export function banqueoBaseUrl(): string {
+  return config.simulacrosUrl.replace(/\/?$/, '/');
+}
+
 export type AppConfig = typeof config;

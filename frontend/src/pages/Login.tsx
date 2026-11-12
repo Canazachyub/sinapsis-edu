@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, Eye, EyeOff, MessageCircle } from 'lucide-react';
 import { callApi } from '@/api/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { config } from '@/config';
+import { urlEntradaBanqueo } from '@/api/banqueo';
 
 interface LoginResponse {
   token: string;
@@ -33,8 +34,33 @@ export function Login() {
   const [recoverLoading, setRecoverLoading] = useState(false);
   const [recoverDone, setRecoverDone] = useState(false);
 
-  const { login } = useAuth();
+  const { login, token, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // ?next=banqueo: tras entrar, se salta al banqueo (banqueo.sinapsisedu.com) con un ticket.
+  const vaAlBanqueo = searchParams.get('next') === 'banqueo';
+  const [redirigiendo, setRedirigiendo] = useState(false);
+  const autoIntento = useRef(false);
+
+  /** Pide el ticket y sale al banqueo; sin acceso activo, va al portal con el aviso. */
+  async function irAlBanqueo(sessionToken: string) {
+    setRedirigiendo(true);
+    const r = await urlEntradaBanqueo(sessionToken);
+    if (r.ok) {
+      window.location.href = r.url;
+      return;
+    }
+    setRedirigiendo(false);
+    navigate('/portal', { replace: true, state: { aviso: r.error } });
+  }
+
+  // Si ya hay sesión abierta y piden ir al banqueo, no se vuelve a pedir la contraseña.
+  useEffect(() => {
+    if (vaAlBanqueo && isAuthenticated && token && !autoIntento.current) {
+      autoIntento.current = true;
+      irAlBanqueo(token);
+    }
+  }, [vaAlBanqueo, isAuthenticated, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,7 +72,12 @@ export function Login() {
       setError(res.error || res.message || 'No se pudo iniciar sesión');
       return;
     }
+    autoIntento.current = true;
     login(res.data.token, res.data.usuario);
+    if (vaAlBanqueo) {
+      await irAlBanqueo(res.data.token);
+      return;
+    }
     navigate('/portal');
   }
 
@@ -118,6 +149,13 @@ export function Login() {
                 <p className="mt-2 text-[15px] text-muted">
                   Usa el correo con el que compraste y la contraseña que te enviamos.
                 </p>
+                {vaAlBanqueo && (
+                  <p className="mt-4 rounded-xl border border-jungle-100 bg-jungle-50 px-4 py-3 text-sm text-ink">
+                    {redirigiendo
+                      ? 'Abriendo tu banqueo…'
+                      : 'Al entrar te llevamos directo a tu banqueo y simulacros.'}
+                  </p>
+                )}
 
                 <form onSubmit={handleSubmit} className="mt-8 space-y-5">
                   <div>
@@ -168,8 +206,8 @@ export function Login() {
                     </p>
                   )}
 
-                  <button type="submit" className="btn-primary w-full disabled:opacity-60" disabled={loading}>
-                    {loading ? 'Entrando…' : 'Entrar'}
+                  <button type="submit" className="btn-primary w-full disabled:opacity-60" disabled={loading || redirigiendo}>
+                    {loading ? 'Entrando…' : redirigiendo ? 'Abriendo el banqueo…' : 'Entrar'}
                   </button>
                 </form>
 

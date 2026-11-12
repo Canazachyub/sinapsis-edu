@@ -26,6 +26,8 @@ export function Router() {
         <Route path="/recuperar" element={<Recuperar />} />
         <Route path="/portal" element={<Portal />} />
         <Route path="/aula/:slug" element={<Aula />} />
+        {/* Enlace externo a la sección de planes (p. ej. desde el banqueo): #/plataformas o #plataformas */}
+        <Route path="/plataformas" element={<Navigate to="/" replace state={{ scrollTo: 'plataformas' }} />} />
         <Route path="/terminos" element={<Terminos />} />
         <Route path="/privacidad" element={<Privacidad />} />
         <Route path="/libro-de-reclamaciones" element={<LibroReclamaciones />} />

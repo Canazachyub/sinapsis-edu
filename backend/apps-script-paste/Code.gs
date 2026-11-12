@@ -1924,6 +1924,121 @@ function misAccesos_(req) {
   }
 }
 
+// ─── Banqueo (banqueo.sinapsisedu.com): ticket de un solo uso ─────
+//
+// El alumno entra al banqueo con su cuenta SINAPSIS: el portal pide un ticket
+// (ticketBanqueo, con sesion) y redirige a banqueo.sinapsisedu.com/acceso?ticket=…
+// El backend del banqueo lo canjea servidor a servidor (verificarTicketBanqueo):
+// el ticket dura 5 min y se borra al primer uso.
+
+/** slug de plataforma SINAPSIS → id de examen en el banqueo. Otros slugs no dan banqueo. */
+const BANQUEO_EXAMEN_POR_SLUG = { enam: 'enam', encib: 'encib', rm: 'rm', encaps: 'serums', essalud: 'essalud' };
+const BANQUEO_TICKET_TTL = 300;          // s
+const BANQUEO_TICKET_POR_USUARIO_HORA = 30;
+const BANQUEO_VERIFICAR_GLOBAL_HORA = 600;
+const RE_TICKET_BANQUEO = /^[A-Za-z0-9]{48}$/;
+
+/** Fecha de hoy en Lima (YYYY-MM-DD). */
+function hoyLima_() {
+  return Utilities.formatDate(new Date(), 'America/Lima', 'yyyy-MM-dd');
+}
+
+/**
+ * Accesos ACTIVOS del usuario al banqueo: { exams:[...], fin:{exam: 'YYYY-MM-DD'|''}, dni }.
+ * Activo = pago aprobado, estado_acceso 'activo' y fecha_fin >= hoy (Lima); sin fecha_fin = sin
+ * vencimiento (mismo criterio que misAccesos_). Si hay varias compras del mismo examen, gana la
+ * fecha_fin mas lejana. dni = el de la compra mas reciente que lo tenga ('' si ninguna).
+ */
+function accesosBanqueo_(idUsuario) {
+  const hoy = hoyLima_();
+  const compras = readAll_(SHEET_NAMES.COMPRAS).filter(function (c) {
+    return String(c.id_usuario) === String(idUsuario);
+  });
+  const slugPorId = {};
+  readAll_(SHEET_NAMES.PLATAFORMAS).forEach(function (p) { slugPorId[String(p.id_plataforma)] = String(p.slug); });
+
+  const fin = {};
+  const exams = [];
+  let dni = '';
+  let dniFecha = -Infinity;
+  compras.forEach(function (c) {
+    const d = String(c.dni || '').trim();
+    const t = toMillis_(c.fecha_solicitud);
+    if (d && (isNaN(t) ? -1 : t) >= dniFecha) { dni = d; dniFecha = isNaN(t) ? -1 : t; }
+
+    if (String(c.estado_pago) !== 'aprobado') return;
+    if (String(c.estado_acceso) !== 'activo') return;
+    const finIso = toIsoDate_(c.fecha_fin);
+    if (finIso && finIso < hoy) return;
+    const exam = BANQUEO_EXAMEN_POR_SLUG[slugPorId[String(c.id_plataforma)] || ''];
+    if (!exam) return;
+    if (exams.indexOf(exam) === -1) { exams.push(exam); fin[exam] = finIso; return; }
+    // '' (sin vencimiento) gana; si no, la fecha mas lejana
+    if (fin[exam] === '' || finIso === '') fin[exam] = '';
+    else if (finIso > fin[exam]) fin[exam] = finIso;
+  });
+  return { exams: exams, fin: fin, dni: dni };
+}
+
+/** { token } → { ticket }. Requiere sesion de alumno y al menos un acceso activo al banqueo. */
+function ticketBanqueo_(req) {
+  const session = validateSession_(req.token);
+  if (!session) return fail_('Sesion invalida o expirada');
+  try {
+    if (checkRateLimit_('rl_tb_' + session.id_usuario, BANQUEO_TICKET_POR_USUARIO_HORA, 3600)) {
+      return fail_('Demasiados intentos. Espera unos minutos y vuelve a intentarlo.');
+    }
+    const acc = accesosBanqueo_(session.id_usuario);
+    if (!acc.exams.length) return fail_('No tienes un acceso activo al banqueo');
+
+    let dni = acc.dni;
+    if (!dni) {
+      const u = getUsuarioById_(session.id_usuario);
+      dni = u ? String(u.dni || '').trim() : '';
+    }
+    const ticket = Utilities.getUuid().replace(/-/g, '') + randomToken_(16);
+    CacheService.getScriptCache().put('tb_' + ticket, JSON.stringify({
+      id_usuario: String(session.id_usuario),
+      correo: String(session.correo || ''),
+      nombre: String(session.nombre || ''),
+      dni: dni,
+      exams: acc.exams,
+      fin: acc.fin
+    }), BANQUEO_TICKET_TTL);
+    return ok_({ ticket: ticket });
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    log_({ accion: 'ticketBanqueo', idUsuario: String(session.id_usuario), nivel: 'error', detalle: detalle });
+    return fail_('No se pudo generar el acceso al banqueo');
+  }
+}
+
+/** { ticket } → payload del ticket (y lo borra: un solo uso). Lo llama el backend del banqueo. */
+function verificarTicketBanqueo_(req) {
+  const ticket = String(req.ticket || '');
+  if (!RE_TICKET_BANQUEO.test(ticket)) return fail_('Ticket inválido o vencido');
+  if (checkRateLimit_('rl_vtb_global', BANQUEO_VERIFICAR_GLOBAL_HORA, 3600)) {
+    return fail_('Demasiadas verificaciones. Intenta de nuevo en unos minutos.');
+  }
+  let raw = null;
+  try {
+    raw = conLock_(function () {
+      const cache = CacheService.getScriptCache();
+      const v = cache.get('tb_' + ticket);
+      if (v) cache.remove('tb_' + ticket);
+      return v;
+    });
+  } catch (err) {
+    return fail_('Servidor ocupado. Intenta de nuevo.');
+  }
+  if (!raw) return fail_('Ticket inválido o vencido');
+  try {
+    return ok_(JSON.parse(raw));
+  } catch (err) {
+    return fail_('Ticket inválido o vencido');
+  }
+}
+
 function obtenerUrlPlataforma_(req) {
   const session = validateSession_(req.token);
   if (!session) return fail_('Sesion invalida o expirada');
@@ -3541,6 +3656,8 @@ function dispatchPublic_(req) {
     case 'confirmarPago':            return confirmarPago_(req);
     case 'estadoCompra':             return estadoCompra_(req);
     case 'confirmarPagoMP':          return confirmarPagoMP_(req);
+    case 'ticketBanqueo':            return ticketBanqueo_(req);
+    case 'verificarTicketBanqueo':   return verificarTicketBanqueo_(req);
     default:                         return fail_('Accion desconocida: ' + action);
   }
 }
