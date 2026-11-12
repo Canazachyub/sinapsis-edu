@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function WhatsAppButton({ message, className = '', label = 'Coordinar por WhatsApp' }: Props) {
-  const text = encodeURIComponent(message ?? 'Hola Yubert, quisiera más información sobre Portal Central.');
+  const text = encodeURIComponent(message ?? 'Hola, quisiera más información sobre SINAPSIS EDU.');
   const href = `https://wa.me/${config.whatsappNumber}?text=${text}`;
 
   return (
@@ -20,7 +20,7 @@ export function WhatsAppButton({ message, className = '', label = 'Coordinar por
 
 /** Botón flotante fijo, abajo a la derecha. */
 export function WhatsAppFloating({ message }: { message?: string }) {
-  const text = encodeURIComponent(message ?? 'Hola Yubert, necesito ayuda con Portal Central.');
+  const text = encodeURIComponent(message ?? 'Hola, necesito ayuda con SINAPSIS EDU.');
   const href = `https://wa.me/${config.whatsappNumber}?text=${text}`;
   return (
     <a

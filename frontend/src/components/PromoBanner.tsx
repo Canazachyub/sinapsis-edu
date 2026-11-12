@@ -67,7 +67,7 @@ export function PromoBanner() {
           href={href}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 font-semibold text-white underline decoration-white/30 underline-offset-4 hover:decoration-lime-400"
+          className="-my-2 inline-flex min-h-[44px] items-center gap-1 font-semibold text-white underline decoration-white/30 underline-offset-4 hover:decoration-lime-400"
         >
           Escríbenos por WhatsApp <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </a>

@@ -102,7 +102,7 @@ export function Login() {
       {/* Formulario */}
       <main className="flex flex-col bg-white">
         <div className="flex items-center justify-between px-6 py-5 md:px-10">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink">
+          <Link to="/" className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-muted hover:text-ink">
             <ArrowLeft className="h-4 w-4" aria-hidden /> Volver al inicio
           </Link>
           <Link to="/" className="lg:hidden">
@@ -136,7 +136,7 @@ export function Login() {
                   <div>
                     <div className="mb-1.5 flex items-center justify-between">
                       <label htmlFor="password" className="block text-sm font-semibold text-ink">Contraseña</label>
-                      <button type="button" onClick={irARecuperar} className="text-sm font-medium text-jungle-600 hover:text-jungle-800">
+                      <button type="button" onClick={irARecuperar} className="-my-3 min-h-[44px] px-1 text-sm font-medium text-jungle-600 hover:text-jungle-800">
                         ¿La olvidaste?
                       </button>
                     </div>
@@ -157,7 +157,7 @@ export function Login() {
                         aria-label={verPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                         className="absolute inset-y-0 right-0 grid w-12 place-items-center text-subtle hover:text-ink"
                       >
-                        {verPass ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+                        {verPass ? <EyeOff className="h-[18px] w-[18px]" aria-hidden /> : <Eye className="h-[18px] w-[18px]" aria-hidden />}
                       </button>
                     </div>
                   </div>
@@ -175,7 +175,7 @@ export function Login() {
 
                 <div className="mt-10 border-t border-line pt-6 text-[15px] text-muted">
                   ¿Aún no tienes acceso?{' '}
-                  <Link to="/" state={{ scrollTo: 'plataformas' }} className="font-semibold text-jungle-600 hover:text-jungle-800">
+                  <Link to="/" state={{ scrollTo: 'plataformas' }} className="inline-flex min-h-[44px] items-center font-semibold text-jungle-600 hover:text-jungle-800">
                     Elige tu plataforma
                   </Link>
                 </div>
@@ -185,7 +185,7 @@ export function Login() {
                     href={waHref('Hola, no puedo entrar a mi cuenta de SINAPSIS EDU.')}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-semibold text-jungle-600 hover:text-jungle-800"
+                    className="inline-flex min-h-[44px] items-center gap-1 font-semibold text-jungle-600 hover:text-jungle-800"
                   >
                     <MessageCircle className="h-4 w-4 text-whatsapp" aria-hidden /> Escríbenos por WhatsApp
                   </a>
@@ -196,7 +196,7 @@ export function Login() {
                 <button
                   type="button"
                   onClick={() => setModo('login')}
-                  className="inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-ink"
+                  className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-muted hover:text-ink"
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden /> Volver a iniciar sesión
                 </button>

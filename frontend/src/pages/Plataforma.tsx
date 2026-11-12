@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowRight, BookOpen, Building2, Bone, CheckCircle2, Clock,
-  FileText, GraduationCap, Library, Microscope, PlayCircle, Stethoscope, Zap,
+  FileText, GraduationCap, Library, Loader2, Microscope, PlayCircle, Stethoscope, Zap,
 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -67,7 +67,7 @@ const INFO: Record<string, PlataformaInfo> = {
       '30 días de acceso',
     ],
     faq: [
-      { q: '¿Qué cursos cubre?', a: 'Anatomía, Histología, Fisiología, Bioquímica, Microbiología, Patología, Farmacología e Inmunología.' },
+      { q: '¿Qué cursos cubre?', a: 'Anatomía, Fisiología, Patología, Farmacología, Microbiología, Histología, Bioquímica y Embriología: los 8 cursos del ENCIB.' },
       { q: '¿Puedo pausar y continuar?', a: 'Sí, tu progreso se guarda automáticamente.' },
       { q: '¿Hay modo offline?', a: 'Por ahora la plataforma requiere conexión a internet.' },
     ],
@@ -344,7 +344,7 @@ export function Plataforma() {
   const { slug: rawSlug } = useParams<{ slug: string }>();
   // Normaliza alias (ej. "residentado" → "rm") antes de buscar.
   const slug = rawSlug ? (SLUG_ALIASES[rawSlug] ?? rawSlug) : undefined;
-  const { plataformas } = usePlataformas();
+  const { plataformas, loading } = usePlataformas();
   const data = plataformas.find((p) => p.slug === slug);
   const info = slug ? INFO[slug] : undefined;
 
@@ -355,8 +355,17 @@ export function Plataforma() {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-1 container-x py-20">
-          <h1 className="text-3xl">Plataforma no encontrada</h1>
-          <Link to="/" className="btn-ghost mt-6 inline-flex">Volver al inicio</Link>
+          {loading ? (
+            <p className="flex items-center gap-2 text-jungle-light" aria-live="polite">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Cargando…
+            </p>
+          ) : (
+            <>
+              <h1 className="text-3xl">Plataforma no encontrada</h1>
+              <p className="mt-3 text-jungle-light">El enlace no existe o la plataforma ya no está disponible.</p>
+              <Link to="/" state={{ scrollTo: 'plataformas' }} className="btn-primary mt-6 inline-flex">Ver plataformas</Link>
+            </>
+          )}
         </main>
         <Footer />
       </div>

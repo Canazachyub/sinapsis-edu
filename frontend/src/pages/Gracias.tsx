@@ -61,7 +61,8 @@ type Vista =
   | { tipo: 'en_proceso' }
   | { tipo: 'revision' }
   | { tipo: 'anulada' }
-  | { tipo: 'aprobado_sin_datos' };
+  | { tipo: 'aprobado_sin_datos' }
+  | { tipo: 'sin_compra' };
 
 const RE_PAYMENT = /^\d{1,20}$/;
 
@@ -135,7 +136,8 @@ export function Gracias() {
   const actualizar = useCallback(async () => {
     setConsultando(true);
     try {
-      if (!idCompra) { setVista({ tipo: 'voucher' }); return; }
+      // Sin código de compra (entrada directa o enlace incompleto): no afirmamos nada sobre un pago.
+      if (!idCompra) { setVista({ tipo: 'sin_compra' }); return; }
       if (!correo && paymentId && (await confirmarMP())) return;
       if (!correo) {
         // Otro navegador/dispositivo: no podemos consultar. Mostramos lo que dijo MP.
@@ -192,6 +194,21 @@ export function Gracias() {
       break;
     case 'voucher':
       contenido = <VoucherRecibido idCompra={idCompra} />;
+      break;
+    case 'sin_compra':
+      contenido = (
+        <div className="space-y-5">
+          <h1 className="text-[30px] leading-tight sm:text-[36px]">No encontramos una compra en curso</h1>
+          <p className="text-[16px] text-muted">
+            Si ya pagaste, revisa tu correo o entra a tu portal. Si tienes un código de compra, escríbenos y lo revisamos.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link to="/portal" className="btn-primary">Ir a mi portal</Link>
+            <WhatsAppButton message="Hola, quiero consultar el estado de mi compra en SINAPSIS EDU." />
+            <Link to="/" className="btn-secondary">Volver al inicio</Link>
+          </div>
+        </div>
+      );
       break;
     case 'aprobado':
       contenido = (
