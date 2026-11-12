@@ -229,7 +229,7 @@ Properties que hay que configurar en Apps Script (Project Settings → Script Pr
 | `ADMIN_EMAIL` | correo del administrador |
 | `NOTIFICACION_EMAIL` | correo donde llegan las solicitudes |
 | `SESSION_SECRET` | string aleatorio largo |
-| `WHATSAPP_NUMBER` | `51984300510` |
+| `WHATSAPP_NUMBER` | `51989855026` |
 | `RATE_LIMIT_PER_HOUR` | `10` |
 
 ---

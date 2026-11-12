@@ -13,9 +13,10 @@ export const TITULAR = 'Yubert *** Canaza ****';
 
 export const YAPE = {
   titular: TITULAR,
-  numero: '900 266 810',
-  numeroPlano: '900266810',
-  qrImage: '/images/pago/qr-yape.png',
+  numero: '989 855 026',
+  numeroPlano: '989855026',
+  /** QR del Yape 989 855 026. Si el archivo falta, la UI muestra solo el número. */
+  qrImage: '/images/pago/qr-yape-989855026.png',
 } as const;
 
 export const BCP_SOLES = {
@@ -34,11 +35,10 @@ export const BINANCE = {
   qrImage: '/images/pago/qr-binance.png',
 } as const;
 
+/** Único número de contacto (WhatsApp, llamadas y Yape). */
 export const WHATSAPP = {
-  numero: '51974707622',
-  display: '+51 974 707 622',
-  numeroAlternativo: '51921647291',
-  displayAlternativo: '+51 921 647 291',
+  numero: '51989855026',
+  display: '+51 989 855 026',
 } as const;
 
 export const CONTACTO = {

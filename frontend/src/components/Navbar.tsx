@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/useAuth';
 
 const LINKS: Array<{ to: string; label: string }> = [
   { to: 'banqueo', label: 'Banqueo' },
-  { to: 'videoclases', label: 'Videoclases' },
   { to: 'plataformas', label: 'Plataformas' },
   { to: 'como-funciona', label: 'Cómo funciona' },
   { to: 'faq', label: 'FAQ' },

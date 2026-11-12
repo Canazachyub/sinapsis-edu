@@ -92,7 +92,7 @@ El frontend necesita saber a qué backend pegar. El GitHub Action lo lee de un s
    ```
 5. **Add secret**.
 
-(Opcional) También puedes agregar como variable `VITE_WHATSAPP` con valor `51974707622`. Si no lo agregas, el workflow usa ese mismo valor por default.
+(Opcional) También puedes agregar como variable `VITE_WHATSAPP` con valor `51989855026`. Si no lo agregas, el workflow usa ese mismo valor por default.
 
 ---
 

@@ -1,6 +1,9 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { ArrowRight, Check, PlayCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { ScrollLink } from '@/components/ScrollLink';
+import { simulacroHref } from '@/config';
+import { useAuth } from '@/hooks/useAuth';
 import { MockPregunta } from '@/components/mocks/MockPregunta';
 import { MockVideo } from '@/components/mocks/MockVideo';
 
@@ -8,6 +11,7 @@ const HeroNeural = lazy(() => import('./HeroNeural'));
 
 /** Hero de la landing (DESIGN.md §5): red neuronal 3D + UI real del producto. */
 export function Hero() {
+  const { isAuthenticated } = useAuth();
   const mocksRef = useRef<HTMLDivElement>(null);
 
   // Parallax suave de las tarjetas con el mouse (solo desktop, sin reduced-motion).
@@ -57,23 +61,27 @@ export function Hero() {
       <div className="container-x grid min-h-[100svh] items-center gap-12 pb-20 pt-[128px] lg:grid-cols-12 lg:gap-8 lg:pb-32">
         <div className="relative z-10 lg:col-span-7">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lime-400">
-            Banqueo + videoclases para medicina
+            Banqueo y simulacros para medicina
           </p>
           <h1 className="mt-5 text-[36px] leading-[1.07] !text-white sm:text-5xl lg:text-[46px] xl:text-[50px]">
-            Prepárate para el ENAM, ENCIB, ENCAPS, SERUMS y Residentado con{' '}
-            <span className="text-lime-400">banqueo</span> y videoclases explicadas.
+            Banquea <span className="text-lime-400">como en el examen real</span> y llega listo al día de la prueba.
           </h1>
-          <p className="mt-6 max-w-[560px] text-[17px] leading-relaxed text-white/75 md:text-lg">
-            Más de 15 000 preguntas comentadas, simulacros cronometrados y cursos completos en video.
-            Todo en un solo lugar, disponible 24/7.
+          <ul className="mt-6 flex flex-wrap gap-2" aria-label="Exámenes">
+            {['ENAM', 'ENCIB', 'ENCAPS', 'Residentado', 'EsSalud', 'SERUMS'].map((e) => (
+              <li key={e} className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-[13px] font-semibold text-white/90">{e}</li>
+            ))}
+          </ul>
+          <p className="mt-5 max-w-[560px] text-[17px] leading-relaxed text-white/75 md:text-lg">
+            Más de 15 000 preguntas explicadas, simulacros cronometrados y tus aciertos por curso.
+            Empieza con un simulacro gratis.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <ScrollLink to="plataformas" className="btn-spark cursor-pointer px-6 hover:shadow-cta">
+            <a href={simulacroHref()!} className="btn-spark px-6 hover:shadow-cta">
+              <PlayCircle className="h-[18px] w-[18px]" aria-hidden /> Simulacro gratis
+            </a>
+            <ScrollLink to="plataformas" className="btn-ghost-dark cursor-pointer px-6">
               Ver plataformas <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
-            </ScrollLink>
-            <ScrollLink to="como-funciona" className="btn-ghost-dark cursor-pointer px-6">
-              <PlayCircle className="h-[18px] w-[18px]" aria-hidden /> Cómo funciona
             </ScrollLink>
           </div>
 
@@ -87,6 +95,15 @@ export function Hero() {
               </li>
             ))}
           </ul>
+
+          <p className="mt-6 text-sm text-white/60">
+            {isAuthenticated ? (
+              <Link to="/portal" className="font-semibold text-white underline decoration-lime-400/60 underline-offset-4 hover:text-lime-400">Ir a mi portal →</Link>
+            ) : (
+              <>¿Ya tienes cuenta?{' '}
+                <Link to="/login" className="font-semibold text-white underline decoration-lime-400/60 underline-offset-4 hover:text-lime-400">Ingresa aquí</Link></>
+            )}
+          </p>
         </div>
 
         {/* Maquetas de producto */}

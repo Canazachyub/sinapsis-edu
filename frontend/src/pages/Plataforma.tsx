@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  BookOpen, Building2, Bone, CheckCircle2, Clock,
-  GraduationCap, Library, Microscope, Stethoscope, Zap,
+  ArrowRight, BookOpen, Building2, Bone, CheckCircle2, Clock,
+  FileText, GraduationCap, Library, Microscope, PlayCircle, Stethoscope, Zap,
 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -10,6 +11,7 @@ import { usePlataformas } from '@/hooks/usePlataformas';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import type { LucideIcon } from 'lucide-react';
 import { SEGMENTOS_ANATOMIA, PRECIO_POR_SEGMENTO_PEN } from '@/data/segmentosAnatomia';
+import { COLECCIONES, PROGRAMA } from '@/data/contenido';
 
 // ── Contenido estático por slug ────────────────────────────────
 
@@ -180,6 +182,29 @@ const INFO: Record<string, PlataformaInfo> = {
       { q: '¿En qué universidad está enfocado?', a: 'El banco está adaptado al programa de anatomía de la UNAP, aunque es útil para cualquier estudiante de medicina.' },
     ],
   },
+  cb: {
+    Icon: Microscope,
+    tagline: 'Videoclases, PDF y bancos de ciencias básicas y preclínicas, en un solo acceso.',
+    features: [
+      'Videoclases completas por curso',
+      'Resúmenes en PDF para repasar rápido',
+      'Bancos de preguntas por curso',
+      'Desde Anatomía hasta Farmacología y Patología',
+      'Estudias a tu ritmo, en celular o PC',
+      'Acceso inmediato al pagar con tarjeta o Yape',
+    ],
+    incluye: [
+      'Colección NOTRERO de ciencias básicas',
+      'Videoclases + PDF + bancos',
+      'Soporte por WhatsApp',
+      '30 días de acceso',
+    ],
+    faq: [
+      { q: '¿Qué cursos incluye?', a: 'Anatomía, Bioquímica, Farmacología, Fisiología, Fisiopatología, Microbiología y Parasitología, Morfofisiología, Patología y Semiología.' },
+      { q: '¿Sirve para el ENCIB?', a: 'Sí. Cubre los cursos de ciencias básicas que evalúa el ENCIB. Para practicar con preguntas tipo examen, complementa con el banqueo ENCIB.' },
+      { q: '¿Incluye Anatomía de Testut por segmentos?', a: 'Anatomía de Testut se vende aparte, por segmento, para que pagues solo lo que estudias.' },
+    ],
+  },
   cto: {
     Icon: GraduationCap,
     tagline: 'El programa CTO — referente en España y Latinoamérica — en tu portal.',
@@ -211,6 +236,87 @@ const SLUG_ALIASES: Record<string, string> = {
   'residentado-medico': 'rm',
   testut: 'anatomia',
 };
+
+// ── Ciencias Básicas: videoclases y programa (antes en la landing) ─
+
+function ContenidoCienciasBasicas() {
+  const notrero = COLECCIONES.find((c) => c.id === 'notrero');
+  const etapas = PROGRAMA.filter((e) => e.id === 'basicas' || e.id === 'preclinicas');
+  const [etapa, setEtapa] = useState(etapas[0]?.id);
+  const actual = etapas.find((e) => e.id === etapa) ?? etapas[0];
+
+  return (
+    <>
+      {notrero && (
+        <section>
+          <h2 className="text-3xl mb-2">Videoclases incluidas</h2>
+          <p className="text-jungle-light mb-6 text-sm">{notrero.formato}</p>
+          <div className="overflow-hidden rounded-2xl border border-jungle/10 bg-white shadow-card">
+            <div className="flex items-center justify-between gap-4 border-b border-jungle/10 px-5 py-4">
+              <div>
+                <div className="font-display text-lg font-bold">{notrero.nombre}</div>
+                <div className="text-xs text-jungle-light">{notrero.cursos.length} cursos de ciencias básicas</div>
+              </div>
+              <div className="flex gap-2 text-jungle-600" aria-hidden>
+                <PlayCircle className="h-5 w-5" /><FileText className="h-5 w-5" />
+              </div>
+            </div>
+            <ul className="grid gap-px bg-jungle/10 sm:grid-cols-3">
+              {notrero.cursos.map((c) => (
+                <li key={c} className="flex items-center gap-2 bg-white px-4 py-3 text-sm">
+                  <PlayCircle className="h-4 w-4 shrink-0 text-success" aria-hidden /> {c}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <Link
+            to="/plataforma/anatomia"
+            className="group mt-3 flex items-center justify-between gap-4 rounded-2xl border border-jungle/10 bg-white px-5 py-4 shadow-card hover:border-jungle/30"
+          >
+            <div className="flex items-center gap-3">
+              <Bone className="h-6 w-6 text-jungle-600" aria-hidden />
+              <div>
+                <div className="font-semibold">Anatomía de Testut, por segmentos</div>
+                <div className="text-xs text-jungle-light">Resúmenes, banco UNAP y 5 simulacros por segmento · desde S/ {PRECIO_POR_SEGMENTO_PEN}</div>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-jungle-light transition-transform group-hover:translate-x-0.5" aria-hidden />
+          </Link>
+        </section>
+      )}
+
+      {actual && (
+        <section>
+          <h2 className="text-3xl mb-5">Programa de estudios</h2>
+          <div role="tablist" aria-label="Etapas" className="mb-4 flex gap-2">
+            {etapas.map((e) => (
+              <button
+                key={e.id}
+                role="tab"
+                type="button"
+                aria-selected={etapa === e.id}
+                onClick={() => setEtapa(e.id)}
+                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                  etapa === e.id ? 'border-jungle bg-jungle text-cream' : 'border-jungle/15 bg-white hover:border-jungle/40'
+                }`}
+              >
+                {e.nombre} <span className="opacity-60">· {e.cursos.length}</span>
+              </button>
+            ))}
+          </div>
+          <ul role="tabpanel" className="grid gap-2 sm:grid-cols-2">
+            {actual.cursos.map((c) => (
+              <li key={c} className="flex items-center gap-2 rounded-xl border border-jungle/10 bg-white px-4 py-2.5 text-sm">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" aria-hidden /> {c}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  );
+}
 
 // ── Componente principal ───────────────────────────────────────
 
@@ -308,7 +414,7 @@ export function Plataforma() {
                   Comprar acceso
                 </Link>
                 <WhatsAppButton
-                  message={`Hola Yubert, quiero más información sobre ${data.nombre}.`}
+                  message={`Hola, quiero más información sobre ${data.nombre}.`}
                   label="Consultar por WhatsApp"
                   className="!border-cream/20 !text-cream hover:!bg-cream/10"
                 />
@@ -345,6 +451,8 @@ export function Plataforma() {
                 </ul>
               </section>
             )}
+
+            {slug === 'cb' && <ContenidoCienciasBasicas />}
 
             {/* Segmentos Anatomía */}
             {esAnatomia && (
@@ -447,7 +555,7 @@ export function Plataforma() {
               <div className="text-sm font-semibold mb-1">¿Tienes dudas?</div>
               <div className="text-xs text-jungle-light mb-3">Escríbenos y te respondemos en minutos.</div>
               <WhatsAppButton
-                message={`Hola Yubert, tengo preguntas sobre ${data.nombre}.`}
+                message={`Hola, tengo preguntas sobre ${data.nombre}.`}
                 label="Consultar ahora"
                 className="w-full justify-center"
               />
@@ -455,6 +563,19 @@ export function Plataforma() {
           </aside>
         </div>
       </main>
+
+      {/* Móvil: compra siempre a mano */}
+      <div className="sticky bottom-0 z-30 border-t border-jungle/10 bg-white/95 px-4 py-3 backdrop-blur md:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <div className="leading-tight">
+            <div className="text-xs text-jungle-light">{esAnatomia ? 'Desde' : formatDuracion(data.duracion_dias)}</div>
+            <div className="text-xl font-bold">S/ {esAnatomia ? PRECIO_POR_SEGMENTO_PEN : precioMostrado}</div>
+          </div>
+          <Link to={`/compra/${data.slug}`} className="btn-primary !min-h-[44px] px-5">
+            {esAnatomia ? 'Elegir segmentos' : 'Comprar'} <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+      </div>
 
       <Footer />
     </div>

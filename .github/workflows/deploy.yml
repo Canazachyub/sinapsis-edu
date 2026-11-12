@@ -43,7 +43,7 @@ jobs:
         env:
           # Configurar este secret en Settings > Secrets and variables > Actions.
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          VITE_WHATSAPP: ${{ vars.VITE_WHATSAPP || '51974707622' }}
+          VITE_WHATSAPP: ${{ vars.VITE_WHATSAPP || '51989855026' }}
         run: npm run build
 
       - name: Deploy to gh-pages

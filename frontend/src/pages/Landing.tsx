@@ -6,9 +6,9 @@ import { PromoBanner } from '@/components/PromoBanner';
 import { WhatsAppFloating } from '@/components/WhatsAppButton';
 import { FaqLanding } from '@/components/FaqLanding';
 import { Hero } from '@/components/hero/Hero';
-import { ComoFunciona, FranjaExamenes, SeccionBanqueo, SeccionVideoclases } from '@/components/landing/Servicios';
+import { ComoFunciona, FranjaExamenes, SeccionBanqueo } from '@/components/landing/Servicios';
 import { SeccionPlataformas } from '@/components/landing/SeccionPlataformas';
-import { CtaFinal, Nosotros, ProgramaEstudios } from '@/components/landing/Institucional';
+import { CtaFinal, Nosotros } from '@/components/landing/Institucional';
 import { usePlataformas } from '@/hooks/usePlataformas';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useRevealAll } from '@/hooks/useInView';
@@ -38,10 +38,8 @@ export function Landing() {
         <Hero />
         <FranjaExamenes />
         <SeccionBanqueo />
-        <SeccionVideoclases />
-        <ComoFunciona />
         <SeccionPlataformas plataformas={plataformas} />
-        <ProgramaEstudios />
+        <ComoFunciona />
         <Nosotros />
         <FaqLanding />
         <CtaFinal />

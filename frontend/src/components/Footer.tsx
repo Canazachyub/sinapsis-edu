@@ -15,9 +15,8 @@ const FOOTER_PLATAFORMAS: Array<{ label: string; slug: string }> = [
 
 const FOOTER_SECCIONES: Array<{ label: string; to: string }> = [
   { label: 'Banqueo', to: 'banqueo' },
-  { label: 'Videoclases', to: 'videoclases' },
+  { label: 'Plataformas', to: 'plataformas' },
   { label: 'Cómo funciona', to: 'como-funciona' },
-  { label: 'Programa de estudios', to: 'programa' },
   { label: 'Quiénes somos', to: 'nosotros' },
   { label: 'Preguntas frecuentes', to: 'faq' },
 ];
@@ -73,7 +72,7 @@ export function Footer() {
             </li>
             <li className="flex items-start gap-2.5">
               <Phone className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <a href={`tel:+${WHATSAPP.numeroAlternativo}`} className="hover:text-lime-400">{WHATSAPP.displayAlternativo}</a>
+              <a href={`tel:+${WHATSAPP.numero}`} className="hover:text-lime-400">Llamar: {WHATSAPP.display}</a>
             </li>
             <li className="flex items-start gap-2.5">
               <Mail className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />

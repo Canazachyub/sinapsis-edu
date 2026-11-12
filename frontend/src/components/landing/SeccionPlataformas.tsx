@@ -16,20 +16,23 @@ const GRUPO: Record<string, Exclude<Filtro, 'todas'>> = {
   biblioteca: 'biblioteca',
 };
 
+/** Siguen a la venta por enlace directo (/plataforma/<slug>), pero no se muestran en la landing. */
+const OCULTAS = new Set(['cto']);
+
 const TABS: Array<{ id: Filtro; label: string }> = [
   { id: 'todas', label: 'Todas' },
   { id: 'banqueo', label: 'Banqueo' },
-  { id: 'cursos', label: 'Cursos y videoclases' },
+  { id: 'cursos', label: 'Cursos' },
   { id: 'biblioteca', label: 'Biblioteca' },
 ];
 
 export function SeccionPlataformas({ plataformas }: { plataformas: PlataformaCardData[] }) {
   const [filtro, setFiltro] = useState<Filtro>('todas');
 
-  const visibles = useMemo(
-    () => (filtro === 'todas' ? plataformas : plataformas.filter((p) => (GRUPO[p.slug] ?? 'cursos') === filtro)),
-    [plataformas, filtro],
-  );
+  const visibles = useMemo(() => {
+    const enVitrina = plataformas.filter((p) => !OCULTAS.has(p.slug));
+    return filtro === 'todas' ? enVitrina : enVitrina.filter((p) => (GRUPO[p.slug] ?? 'cursos') === filtro);
+  }, [plataformas, filtro]);
 
   return (
     <section id="plataformas" className="bg-paper">
@@ -38,7 +41,7 @@ export function SeccionPlataformas({ plataformas }: { plataformas: PlataformaCar
           <SectionHeader
             eyebrow="Plataformas"
             title="Elige tu plataforma"
-            lead="Precios por periodo de acceso, sin renovaciones automáticas. El acceso empieza cuando verificamos tu pago."
+            lead="Pagas una vez por el periodo de acceso, sin renovaciones automáticas. Con Yape o tarjeta entras al instante."
           />
           <div
             role="tablist"

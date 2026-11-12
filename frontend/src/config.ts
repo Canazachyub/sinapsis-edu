@@ -5,7 +5,7 @@
 
 export const config = {
   apiUrl: import.meta.env.VITE_API_URL ?? '',
-  whatsappNumber: import.meta.env.VITE_WHATSAPP ?? '51974707622',
+  whatsappNumber: import.meta.env.VITE_WHATSAPP ?? '51989855026',
   /** Plataforma de simulacros (paso 2 del flujo). */
   simulacrosUrl: import.meta.env.VITE_SIMULACROS_URL ?? 'https://banqueo.sinapsisedu.com/',
 } as const;

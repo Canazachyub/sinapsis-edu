@@ -64,7 +64,7 @@ const PRECONFIGURED_SHEET_ID = '1LQf-scklnpMCejgRQH2O6hHcdCBszjHh4ex5AeyEpvo';
 const PRECONFIGURED_DRIVE_FOLDER = '18KTajQWvgFJpvbzdchQJPf6elclJ4j-4';
 
 /** WhatsApp para pago manual (sin +, codigo de pais incluido). */
-const PRECONFIGURED_WHATSAPP = '51984300510';
+const PRECONFIGURED_WHATSAPP = '51989855026';
 
 
 // ╔═══════════════════════════════════════════════════════════════╗
@@ -615,7 +615,7 @@ function whatsappNumero_() {
   return String(getProperty_('WHATSAPP_NUMBER') || PRECONFIGURED_WHATSAPP || '').replace(/\D/g, '');
 }
 
-/** "+51 984 300 510" a partir del numero configurado. */
+/** "+51 989 855 026" a partir del numero configurado. */
 function whatsappDisplay_() {
   const n = whatsappNumero_();
   if (n.length === 11 && n.indexOf('51') === 0) {
@@ -673,7 +673,7 @@ function requireEditor_() {
  *   3. Inicializa las 4 hojas con headers y siembra Plataformas.
  *   4. Genera SESSION_SECRET aleatorio si falta.
  *   5. Configura ADMIN_EMAIL/NOTIFICACION_EMAIL con el correo activo.
- *   6. Defaults: WHATSAPP_NUMBER=51984300510, RATE_LIMIT_PER_HOUR=10.
+ *   6. Defaults: WHATSAPP_NUMBER=51989855026, RATE_LIMIT_PER_HOUR=10.
  *
  * Es idempotente: correr setup() varias veces no duplica nada.
  */
@@ -790,7 +790,7 @@ function setup() {
 
   // 5. Defaults
   if (!props.getProperty('WHATSAPP_NUMBER')) {
-    props.setProperty('WHATSAPP_NUMBER', PRECONFIGURED_WHATSAPP || '51984300510');
+    props.setProperty('WHATSAPP_NUMBER', PRECONFIGURED_WHATSAPP || '51989855026');
     added.push('WHATSAPP_NUMBER');
   } else {
     existing.push('WHATSAPP_NUMBER');
@@ -3190,7 +3190,7 @@ function createTestUser() {
       userId,
       nombre,
       correo,
-      '51984300510',
+      '51989855026',
       hash,
       salt,
       nowIso_(),

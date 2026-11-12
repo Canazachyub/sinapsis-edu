@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Eye, Handshake, HeartHandshake, Lightbulb, MessageCircle, ShieldCheck, Target, Trophy } from 'lucide-react';
+import { ArrowRight, Handshake, HeartHandshake, Lightbulb, MessageCircle, ShieldCheck, Trophy } from 'lucide-react';
 import { SectionHeader } from './SectionHeader';
 import { ScrollLink } from '@/components/ScrollLink';
 import { PROGRAMA, TOTAL_CURSOS_PROGRAMA } from '@/data/contenido';
@@ -75,29 +75,10 @@ export function Nosotros() {
         <SectionHeader
           eyebrow="Quiénes somos"
           title="Formación médica en línea, hecha en Tacna para todo el Perú"
-          lead="SINAPSIS EDU es un centro educativo en línea dedicado a la formación de profesionales en medicina humana, integrando conocimiento científico con habilidades prácticas."
+          lead="Un centro educativo en línea para estudiantes y médicos: banqueo, simulacros y cursos pensados para aprobar los exámenes nacionales."
         />
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2" data-reveal>
-          <article className="card p-7">
-            <Target className="h-6 w-6 text-jungle-600" aria-hidden />
-            <h3 className="mt-4 text-xl">Misión</h3>
-            <p className="mt-2 leading-relaxed text-muted">
-              Formar profesionales de la salud con conocimientos sólidos y habilidades prácticas,
-              comprometidos con la excelencia académica y el bienestar de la comunidad.
-            </p>
-          </article>
-          <article className="card p-7">
-            <Eye className="h-6 w-6 text-jungle-600" aria-hidden />
-            <h3 className="mt-4 text-xl">Visión</h3>
-            <p className="mt-2 leading-relaxed text-muted">
-              Ser reconocidos a nivel nacional e internacional como líderes en educación médica,
-              innovando continuamente en la enseñanza y promoviendo la investigación científica.
-            </p>
-          </article>
-        </div>
-
-        <ul className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-5" data-reveal>
+        <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-5" data-reveal>
           {VALORES.map(({ Icon, titulo, desc }) => (
             <li key={titulo} className="bg-white p-6">
               <Icon className="h-5 w-5 text-jungle-600" aria-hidden />
