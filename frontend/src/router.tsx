@@ -7,6 +7,9 @@ import { Gracias } from '@/pages/Gracias';
 import { Login } from '@/pages/Login';
 import { Portal } from '@/pages/Portal';
 import { Aula } from '@/pages/Aula';
+import { Terminos } from '@/pages/legal/Terminos';
+import { Privacidad } from '@/pages/legal/Privacidad';
+import { LibroReclamaciones } from '@/pages/legal/LibroReclamaciones';
 
 // HashRouter para que funcione en GitHub Pages sin reescritura de servidor.
 export function Router() {
@@ -21,6 +24,9 @@ export function Router() {
         <Route path="/login" element={<Login />} />
         <Route path="/portal" element={<Portal />} />
         <Route path="/aula/:slug" element={<Aula />} />
+        <Route path="/terminos" element={<Terminos />} />
+        <Route path="/privacidad" element={<Privacidad />} />
+        <Route path="/libro-de-reclamaciones" element={<LibroReclamaciones />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>

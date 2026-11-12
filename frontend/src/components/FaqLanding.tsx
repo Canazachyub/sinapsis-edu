@@ -10,15 +10,19 @@ interface QA {
 const FAQS: QA[] = [
   {
     q: '¿Cómo compro un acceso?',
-    a: 'Elige tu plataforma, completa tus datos, paga por Yape, Binance o transferencia y sube tu voucher. Cuando verifiquemos el pago te enviamos tus credenciales por correo.',
+    a: 'Elige tu plataforma, escribe tu nombre, correo, DNI y WhatsApp, y paga con Yape o tarjeta en la página segura de Mercado Pago. Al aprobarse el pago entras directo a tu Portal y te enviamos tu contraseña por correo.',
   },
   {
     q: '¿Qué métodos de pago aceptan?',
-    a: 'Yape (QR), Binance (USDT) y transferencia bancaria. También puedes coordinar el pago por WhatsApp si lo prefieres.',
+    a: 'Yape, tarjetas de crédito o débito (Visa, Mastercard y otras) y saldo de Mercado Pago, con activación al instante. Si prefieres Binance (USDT) o transferencia BCP, también puedes pagar y subir tu voucher.',
   },
   {
     q: '¿Cuánto tarda en activarse mi acceso?',
-    a: 'Normalmente lo verificamos dentro de las 24 horas hábiles tras recibir tu voucher. Te avisamos por correo apenas esté listo.',
+    a: 'Con Yape o tarjeta, al instante: apenas Mercado Pago aprueba el pago. Con voucher (Binance o transferencia) lo verificamos dentro de las 24 horas hábiles, normalmente en minutos.',
+  },
+  {
+    q: '¿Es seguro pagar con tarjeta?',
+    a: 'Sí. El pago se hace en la página de Mercado Pago, no en la nuestra: tus datos de tarjeta nunca pasan por nuestros servidores. No hay cobros automáticos ni suscripciones.',
   },
   {
     q: '¿Cuánto dura el acceso?',

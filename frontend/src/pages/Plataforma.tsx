@@ -31,7 +31,7 @@ const INFO: Record<string, PlataformaInfo> = {
       'Estadísticas de aciertos por área temática',
       'Banco actualizado con preguntas de años anteriores',
       'Modo repaso: solo tus preguntas fallidas',
-      'Acceso inmediato tras aprobación del pago',
+      'Acceso inmediato al pagar con tarjeta o Yape',
     ],
     incluye: [
       'Plataforma en línea, 24 h / 7 d',
@@ -40,7 +40,7 @@ const INFO: Record<string, PlataformaInfo> = {
       '30 días de acceso continuo',
     ],
     faq: [
-      { q: '¿Cuánto tiempo tengo acceso?', a: '30 días desde que el admin aprueba tu pago.' },
+      { q: '¿Cuánto tiempo tengo acceso?', a: '30 días desde que se aprueba tu pago. Con tarjeta o Yape es al instante.' },
       { q: '¿Se actualiza el banco de preguntas?', a: 'Sí, agregamos preguntas continuamente sin costo adicional.' },
       { q: '¿Funciona en celular?', a: 'Sí, la plataforma es completamente responsive.' },
     ],
@@ -438,7 +438,7 @@ export function Plataforma() {
 
               <div className="mt-3 flex items-center gap-2 text-xs text-jungle-light justify-center">
                 <Zap className="w-3.5 h-3.5 text-warning" />
-                Acceso inmediato tras verificación
+                Pago seguro con tarjeta o Yape · acceso inmediato
               </div>
             </div>
 

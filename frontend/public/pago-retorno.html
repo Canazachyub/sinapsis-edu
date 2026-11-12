@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Volviendo a SINAPSIS EDU…</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #F6F8F7; color: #0F1A18; font: 16px/1.5 Inter, system-ui, sans-serif; padding: 16px; }
+    .box { max-width: 360px; text-align: center; }
+    a { color: #1F5B52; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <p><strong>Volviendo a SINAPSIS EDU…</strong></p>
+    <p>Si no avanza en unos segundos, <a id="seguir" href="/#/gracias">toca aquí</a>.</p>
+  </div>
+  <script>
+    // Mercado Pago vuelve aquí (back_urls) con ?payment_id=…&status=…&external_reference=…
+    // Como la web usa HashRouter, pasamos esos datos a /#/gracias?… .
+    // Solo se reenvían valores con formato esperado; el backend vuelve a
+    // verificar el pago con Mercado Pago, así que nada de esto se usa como verdad.
+    (function () {
+      var q = new URLSearchParams(window.location.search);
+      var out = new URLSearchParams();
+      var ref = q.get('external_reference') || '';
+      var pid = q.get('payment_id') || q.get('collection_id') || '';
+      var st = q.get('status') || q.get('collection_status') || '';
+      if (/^C-\d{1,9}$/.test(ref)) out.set('id_compra', ref);
+      if (/^\d{1,20}$/.test(pid)) out.set('payment_id', pid);
+      if (/^[a-z_]{2,20}$/.test(st)) out.set('status', st);
+      var destino = '/#/gracias' + (out.toString() ? '?' + out.toString() : '');
+      document.getElementById('seguir').setAttribute('href', destino);
+      window.location.replace(destino);
+    })();
+  </script>
+</body>
+</html>

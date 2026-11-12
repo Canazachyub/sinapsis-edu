@@ -14,6 +14,8 @@ export interface ApiEnvelope<T = unknown> {
   message?: string;
   data?: T;
   error?: string;
+  /** Código de error de negocio (p. ej. pasarela: RECHAZADO, EN_PROCESO). */
+  code?: string;
 }
 
 const DEBUG_API = typeof window !== 'undefined' && import.meta.env.DEV;

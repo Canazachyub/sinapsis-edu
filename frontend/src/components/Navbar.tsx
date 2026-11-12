@@ -3,6 +3,7 @@ import { simulacroHref } from '@/config';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { ScrollLink } from './ScrollLink';
+import { useAuth } from '@/hooks/useAuth';
 
 const LINKS: Array<{ to: string; label: string }> = [
   { to: 'banqueo', label: 'Banqueo' },
@@ -20,6 +21,9 @@ interface Props {
 export function Navbar({ overlay = false }: Props) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const cuentaHref = isAuthenticated ? '/portal' : '/login';
+  const cuentaLabel = isAuthenticated ? 'Mi portal' : 'Ingresar';
 
   useEffect(() => {
     if (!overlay) return;
@@ -81,10 +85,10 @@ export function Navbar({ overlay = false }: Props) {
             Simulacros
           </a>
           <Link
-            to="/login"
+            to={cuentaHref}
             className={`text-[15px] font-semibold transition-colors ${dark ? 'text-white hover:text-lime-400' : 'text-ink hover:text-jungle-600'}`}
           >
-            Ingresar
+            {cuentaLabel}
           </Link>
           <ScrollLink
             to="plataformas"
@@ -141,7 +145,7 @@ export function Navbar({ overlay = false }: Props) {
             Simulacros
           </a>
           <div className="mt-auto grid grid-cols-2 gap-3 pt-6">
-            <Link to="/login" className="btn-secondary w-full">Ingresar</Link>
+            <Link to={cuentaHref} className="btn-secondary w-full">{cuentaLabel}</Link>
             <ScrollLink to="plataformas" className="btn-primary w-full cursor-pointer">Ver plataformas</ScrollLink>
           </div>
         </div>

@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { BookOpen, Clock, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import { ScrollLink } from './ScrollLink';
 import { CONTACTO, WHATSAPP } from '@/config/pago';
+import { EMPRESA } from '@/config/empresa';
 
 const FOOTER_PLATAFORMAS: Array<{ label: string; slug: string }> = [
   { label: 'Banco ENAM', slug: 'enam' },
@@ -32,7 +33,7 @@ export function Footer() {
           </p>
           <div className="mt-6">
             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-white/40">Medios de pago</div>
-            <div className="mt-2 text-sm text-white/80">Yape · Binance (USDT) · Transferencia BCP</div>
+            <div className="mt-2 text-sm text-white/80">Yape · Tarjeta (Mercado Pago) · Binance (USDT) · Transferencia BCP</div>
           </div>
         </div>
 
@@ -90,9 +91,17 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-white/10">
-        <div className="container-x flex flex-wrap justify-between gap-2 py-5 text-xs text-white/45">
-          <span>© {new Date().getFullYear()} SINAPSIS EDU · sinapsisedu.com</span>
-          <span>Hecho en Tacna, Perú</span>
+        <div className="container-x flex flex-col gap-4 py-5 text-xs text-white/45 md:flex-row md:items-center md:justify-between">
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link to="/terminos" className="py-1 transition-colors hover:text-lime-400">Términos y Condiciones</Link>
+            <Link to="/privacidad" className="py-1 transition-colors hover:text-lime-400">Política de Privacidad</Link>
+            <Link to="/libro-de-reclamaciones" className="inline-flex items-center gap-1.5 py-1 transition-colors hover:text-lime-400">
+              <BookOpen className="h-3.5 w-3.5" aria-hidden /> Libro de Reclamaciones
+            </Link>
+          </nav>
+          <span>
+            © {new Date().getFullYear()} {EMPRESA.nombreComercial}
+          </span>
         </div>
       </div>
     </footer>
