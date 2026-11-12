@@ -59,7 +59,7 @@ Se ejecutan desde el editor de Apps Script: se elige la función en el desplegab
 ### 5.1 Qué pasó y por qué
 - Se probaron dos pagos de S/ 1 desde el celular del dueño: uno con Yape y otro con su tarjeta BCP de débito. **Los dos fallaron.**
 - `ultimosPagosMP` devolvió **0 pagos**: Mercado Pago bloqueó antes de crear el pago.
-- **Causa:** la cuenta de vendedor (yubertc1@gmail.com) está registrada con **el mismo DNI y el mismo celular (989…)** con que se intentó pagar: el Yape de ese número y la tarjeta a nombre del mismo DNI. Además, en el navegador estaba abierta una cuenta de Mercado Pago del mismo dueño (can…@gmail). **Mercado Pago no deja que el vendedor se pague a sí mismo** y muestra un error genérico.
+- **Causa:** la cuenta de vendedor está registrada con **el mismo DNI y el mismo celular** con que se intentó pagar: el Yape de ese número y la tarjeta a nombre del mismo DNI. Además, en el navegador estaba abierta una cuenta de Mercado Pago del mismo dueño (can…@gmail). **Mercado Pago no deja que el vendedor se pague a sí mismo** y muestra un error genérico.
 - **Cambiar el correo del formulario no lo arregla**, porque Mercado Pago identifica al pagador por el Yape, la tarjeta y la sesión, no por ese correo.
 - Antes también ayudó a confundir que la app Yape estaba desactualizada y que el correo de la cuenta de vendedor no estaba validado. El correo ya se validó el mismo día. La sección "Seguridad" del perfil solo sugiere opciones extra (2FA, llave de acceso) y no bloquea cobros.
 
