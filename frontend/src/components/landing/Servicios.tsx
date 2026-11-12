@@ -2,6 +2,7 @@ import { ArrowRight, BarChart3, BookOpenCheck, CreditCard, FileText, ListChecks,
 import { SectionHeader } from './SectionHeader';
 import { ScrollLink } from '@/components/ScrollLink';
 import { PruebaPregunta } from './PruebaPregunta';
+import { BanqueoJuego } from './BanqueoJuego';
 import { simulacroHref } from '@/config';
 
 // ── Franja de exámenes ───────────────────────────────────────────
@@ -141,10 +142,17 @@ const CICLO: Array<{ Icon: LucideIcon; titulo: string; texto: string; Grafico: (
 ];
 
 const CIFRAS = [
-  { dato: '15 000+', texto: 'preguntas explicadas' },
   { dato: '6', texto: 'exámenes nacionales' },
+  { dato: 'Hasta 2026', texto: 'archivo de exámenes' },
   { dato: '1.er', texto: 'simulacro gratis' },
   { dato: '24/7', texto: 'en celular o PC' },
+];
+
+const JUEGO = [
+  { img: 'racha', t: 'Rachas de aciertos' },
+  { img: 'puntos', t: 'Puntos por rapidez' },
+  { img: 'cincuenta', t: 'Potenciadores 50/50' },
+  { img: 'celebra', t: 'Reta a tus amigos' },
 ];
 
 export function SeccionBanqueo() {
@@ -156,6 +164,20 @@ export function SeccionBanqueo() {
           title="Así se banquea en SINAPSIS"
           lead="Respondes, entiendes el porqué, ves en qué fallas y repasas solo eso. Cada vuelta te acerca a la nota que necesitas."
         />
+
+        {/* Lo más importante: de dónde salen las preguntas */}
+        <div className="mt-8 flex flex-col gap-4 rounded-2xl border-2 border-jungle-800 bg-jungle-50 p-5 sm:flex-row sm:items-center sm:gap-6 md:p-6" data-reveal>
+          <div className="tabular shrink-0 font-display text-[40px] font-extrabold leading-none text-jungle-800 md:text-[52px]">15 000+</div>
+          <div>
+            <p className="font-display text-lg font-bold text-ink md:text-xl">
+              preguntas explicadas, <span className="text-jungle-600">todas de exámenes ya tomados</span>
+            </p>
+            <p className="mt-1 text-[15px] text-muted">
+              Salen de nuestro archivo de exámenes reales (ENAM, ENCIB, Residentado, EsSalud, SERUMS), actualizado hasta 2026.
+              Practicas con lo que de verdad toman.
+            </p>
+          </div>
+        </div>
 
         {/* El ciclo en 4 gráficos */}
         <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -189,8 +211,33 @@ export function SeccionBanqueo() {
           ))}
         </ul>
 
-        {/* Evidencia: pruébalo tú mismo */}
-        <div className="mt-14" data-reveal>
+        {/* Modo juego tipo Quizizz: jugable aquí mismo */}
+        <div className="mt-16 grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
+          <div className="lg:col-span-5" data-reveal>
+            <p className="eyebrow">Modo juego</p>
+            <h3 className="mt-3 text-[28px] leading-tight md:text-[34px]">Banquear se siente como jugar</h3>
+            <p className="mt-3 text-[16px] leading-relaxed text-muted">
+              Como en Quizizz, pero con preguntas de tu examen: sumas puntos, cuidas tu racha y usas potenciadores.
+              Te enganchas y repasas más sin darte cuenta.
+            </p>
+            <ul className="mt-6 grid grid-cols-2 gap-3">
+              {JUEGO.map((j) => (
+                <li key={j.t} className="flex items-center gap-2.5 rounded-xl border border-line bg-paper px-3 py-2.5">
+                  <img src={`${import.meta.env.BASE_URL}images/juego/${j.img}.webp`} alt="" className="h-8 w-8 shrink-0" loading="lazy" />
+                  <span className="text-[14px] font-semibold leading-tight text-ink">{j.t}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 text-sm text-subtle">Pruébalo: elige una respuesta o usa el 50/50 →</p>
+          </div>
+          <div className="lg:col-span-7" data-reveal={120}>
+            <BanqueoJuego />
+          </div>
+        </div>
+
+        {/* Modo simulacro: pregunta real con justificación */}
+        <div className="mt-16" data-reveal>
+          <p className="eyebrow mb-4">Modo simulacro</p>
           <PruebaPregunta />
         </div>
 

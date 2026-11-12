@@ -72,8 +72,11 @@ export function Hero() {
             ))}
           </ul>
           <p className="mt-5 max-w-[560px] text-[17px] leading-relaxed text-white/75 md:text-lg">
-            Más de 15 000 preguntas explicadas, simulacros cronometrados y tus aciertos por curso.
-            Empieza con un simulacro gratis.
+            <strong className="font-semibold text-white">Más de 15 000 preguntas explicadas, todas de exámenes ya tomados</strong>:
+            nuestro archivo de exámenes está actualizado hasta 2026. Simulacros cronometrados y tus aciertos por curso.
+          </p>
+          <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-lime-400/40 bg-lime-400/10 px-3 py-1.5 text-[13px] font-semibold text-lime-400">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-lime-400" aria-hidden /> Archivo de exámenes actualizado a 2026
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
