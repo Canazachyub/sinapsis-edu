@@ -109,7 +109,7 @@ Lo que falta — son comandos que solo tú puedes correr:
 ```powershell
 cd "f:\PLATAFORMA MEDICINA PRO\portal-central\backend"
 npx clasp login
-# Abre tu navegador → loguéate con canazach12@gmail.com → autoriza clasp.
+# Abre tu navegador → loguéate con tu cuenta de Google → autoriza clasp.
 ```
 
 Si es la primera vez, tendrás que habilitar la API de Apps Script en

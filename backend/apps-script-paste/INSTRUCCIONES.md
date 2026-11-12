@@ -21,7 +21,7 @@ En esta carpeta `apps-script-paste/` tienes todo listo:
 
 ## Paso 1 — Crear el proyecto Apps Script
 
-1. Ve a https://script.google.com (logueado con **canazach12@gmail.com**).
+1. Ve a https://script.google.com (logueado con **tu cuenta de Google**).
 2. Click en **"Nuevo proyecto"** (esquina superior izquierda).
 3. Espera a que cargue. Verás un archivo `Código.gs` con la función `myFunction()` vacía.
 4. Cambia el nombre del proyecto: click en **"Proyecto sin título"** arriba y escribe **`PortalCentral_Backend`**.
@@ -68,7 +68,7 @@ Esto le dice a Apps Script qué permisos pedir (Sheets, Drive, Gmail, etc.).
 1. En el dropdown de funciones (arriba, junto al botón "Ejecutar"), elige **`setup`**.
 2. Click en **▶ Ejecutar**.
 3. Aparece un diálogo: **"Es necesario otorgar autorización"**. Click en **"Revisar permisos"**.
-4. Elige tu cuenta `canazach12@gmail.com`.
+4. Elige tu cuenta `tu cuenta de Google`.
 5. Verás "Google no ha verificado esta aplicación". Click en **"Configuración avanzada"** → **"Ir a PortalCentral_Backend (no seguro)"** → **"Permitir"**.
 6. Apps Script ejecuta `setup()`. Espera ~5 segundos.
 
@@ -104,7 +104,7 @@ Click en la URL del `spreadsheet` para verificar que las hojas se crearon bien.
 2. Click en el ícono de engranaje ⚙ junto a "Selecciona el tipo" → elige **"Aplicación web"**.
 3. Configuración:
    - **Descripción**: `MVP v1`
-   - **Ejecutar como**: `Yo (canazach12@gmail.com)`
+   - **Ejecutar como**: `Yo (tu cuenta de Google)`
    - **Quién tiene acceso**: `Cualquier persona`
 4. Click en **"Implementar"**.
 5. Te aparece una **URL del Web App** del estilo:
