@@ -46,6 +46,52 @@ function formatTiempo(s: number) {
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** Reloj circular que se vacía con el tiempo de la pregunta (solo en PC, donde sobra espacio). */
+function RelojCuentaAtras({ restante, total }: { restante: number; total: number }) {
+  const r = 70;
+  const c = 2 * Math.PI * r;
+  const frac = total > 0 ? Math.max(0, Math.min(1, restante / total)) : 0;
+  const color = frac > 0.33 ? '#1F5B52' : frac > 0.15 ? '#D97706' : '#DC2626';
+  // 12 marcas de reloj alrededor del aro
+  const marcas = Array.from({ length: 12 }, (_, i) => i * 30);
+  return (
+    <div className="relative hidden h-[180px] w-[180px] lg:block" aria-hidden>
+      <span
+        className="absolute inset-3 animate-ping rounded-full opacity-[0.07]"
+        style={{ backgroundColor: color, animationDuration: '2s' }}
+      />
+      <svg viewBox="0 0 180 180" className="relative h-full w-full">
+        <circle cx="90" cy="90" r="84" fill="#FFFFFF" stroke="#E2E8E6" strokeWidth="1.5" />
+        {marcas.map((deg) => (
+          <line
+            key={deg}
+            x1="90" y1="12" x2="90" y2={deg % 90 === 0 ? 22 : 18}
+            stroke="#8A9A96" strokeWidth={deg % 90 === 0 ? 2.5 : 1.5} strokeLinecap="round"
+            transform={`rotate(${deg} 90 90)`}
+          />
+        ))}
+        <circle cx="90" cy="90" r={r} fill="none" stroke="#EEF2F1" strokeWidth="9" />
+        <circle
+          cx="90" cy="90" r={r} fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c * (1 - frac)}
+          transform="rotate(-90 90 90)"
+          style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.4s' }}
+        />
+        {/* Aguja que gira con el tiempo */}
+        <line
+          x1="90" y1="90" x2="90" y2="38" stroke={color} strokeWidth="3" strokeLinecap="round"
+          transform={`rotate(${360 * (1 - frac)} 90 90)`}
+          style={{ transition: 'transform 1s linear' }}
+        />
+        <circle cx="90" cy="90" r="5" fill={color} />
+      </svg>
+      <div className="absolute inset-x-0 bottom-9 text-center">
+        <span className="tabular font-display text-lg font-extrabold" style={{ color }}>{formatTiempo(restante)}</span>
+      </div>
+    </div>
+  );
+}
+
 export function PruebaPregunta() {
   const preguntas = PREGUNTAS_MUESTRA;
   const { ref, inView } = useInView<HTMLDivElement>();
@@ -215,7 +261,8 @@ export function PruebaPregunta() {
           <div className="border-t border-line bg-paper/60 p-6 md:p-8 lg:border-l lg:border-t-0">
             {!respondida ? (
               <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
-                <p className="max-w-[280px] text-[15px] leading-relaxed text-muted">
+                <RelojCuentaAtras restante={restante} total={p.timeInSeconds} />
+                <p className="mt-6 max-w-[280px] text-[15px] leading-relaxed text-muted">
                   Tienes {p.timeInSeconds} segundos, como en el banco. Elige una alternativa para ver la
                   justificación.
                 </p>
