@@ -209,8 +209,8 @@ export function PagoVoucher({ slug, idPlataforma, monto, datos, detalleExtra, on
       <div>
         <h2 className="text-2xl">Pagar con voucher</h2>
         <p className="mt-1 text-[15px] text-muted">
-          Paga por tu cuenta, sube el comprobante y activamos tu acceso en menos de 24 h hábiles
-          (normalmente en minutos).
+          Paga por tu cuenta, sube el comprobante y activamos tu acceso
+          en cuanto lo verificamos.
         </p>
       </div>
 

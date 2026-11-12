@@ -38,7 +38,7 @@ const INFO: Record<string, PlataformaInfo> = {
       'Acceso inmediato al pagar con tarjeta o Yape',
     ],
     incluye: [
-      'Plataforma en línea, 24 h / 7 d',
+      'Plataforma en línea, disponible todo el día',
       'Actualización automática del banco de preguntas',
       'Soporte por WhatsApp',
       '30 días de acceso continuo',
@@ -582,7 +582,7 @@ export function Plataforma() {
             {/* WhatsApp */}
             <div className="bg-jungle/5 border border-jungle/10 rounded-2xl p-5 text-center">
               <div className="text-sm font-semibold mb-1">¿Tienes dudas?</div>
-              <div className="text-xs text-jungle-light mb-3">Escríbenos y te respondemos en minutos.</div>
+              <div className="text-xs text-jungle-light mb-3">Escríbenos por WhatsApp.</div>
               <WhatsAppButton
                 message={`Hola, tengo preguntas sobre ${data.nombre}.`}
                 label="Consultar ahora"

@@ -1,6 +1,6 @@
 /*
  * Texto base. Antes de pasar a producción conviene que lo revise un abogado
- * (en especial la política de devoluciones y la ley aplicable).
+ * (en especial la ley aplicable).
  */
 import { Link } from 'react-router-dom';
 import { EMPRESA } from '@/config/empresa';
@@ -53,7 +53,7 @@ export function Terminos() {
             tarjeta los recibe directamente Mercado Pago; nosotros no los vemos ni los guardamos.
           </li>
           <li>También puedes pagar por transferencia, Yape o Binance enviando tu comprobante (voucher). En ese caso
-            activamos el acceso después de verificar el pago, en un plazo máximo de 24 horas hábiles.</li>
+            activamos el acceso después de verificar el pago.</li>
           <li>Una compra pendiente de pago con tarjeta o Yape vence a los 30 minutos si no se completa.</li>
         </ul>
       </Seccion>
@@ -85,7 +85,7 @@ export function Terminos() {
       <Seccion titulo="7. Suspensión de la cuenta">
         <p>
           Si incumples la sección 6 o usas la plataforma de forma fraudulenta, podemos suspender o cancelar tu acceso
-          <strong> sin reembolso</strong>. Te avisaremos por correo indicando el motivo y podrás darnos tu versión.
+          <strong> sin reembolso</strong>.
           Esto no limita las acciones legales que correspondan por infracción de derechos de autor.
         </p>
       </Seccion>
@@ -100,21 +100,13 @@ export function Terminos() {
 
       <Seccion id="devoluciones" titulo="9. Devoluciones">
         <p>
-          Por tratarse de un servicio digital que se activa al instante, en general no hay devolución una vez que el
-          acceso está activo. Sí devolvemos el dinero en estos casos:
+          Por tratarse de un servicio digital que se activa al momento de aprobarse el pago, <strong>no se realizan
+          devoluciones</strong> una vez que el acceso ha sido activado.
         </p>
-        <ul>
-          <li><strong>Cobro duplicado</strong> o cobro de un monto distinto al publicado: siempre, por la diferencia o el cargo repetido.</li>
-          <li><strong>No recibiste el acceso</strong> por un problema nuestro y no lo resolvimos dentro de las 72 horas de tu aviso.</li>
-          <li><strong>Falla técnica</strong> atribuible a nosotros que impida usar la plataforma por más de 72 horas seguidas: devolvemos la parte proporcional o, si prefieres, sumamos esos días a tu acceso.</li>
-          <li><strong>Arrepentimiento</strong>: dentro de los 7 días calendario desde la compra, si todavía no usaste la plataforma (no resolviste preguntas ni simulacros ni viste clases).</li>
-        </ul>
         <p>
-          Para pedir una devolución escríbenos a <DatoEmpresa v={EMPRESA.correoContacto} /> o por WhatsApp con tu código
-          de compra. Respondemos en un máximo de 15 días hábiles. Si la aprobamos, la devolución se hace por el mismo
-          medio de pago; con tarjeta, el banco puede tardar en reflejarla.
+          Si detectas un error en el cobro, escríbenos a <DatoEmpresa v={EMPRESA.correoContacto} /> o por WhatsApp con tu
+          código de compra para revisarlo. Cuando se devuelve un pago, el acceso de esa compra se cierra.
         </p>
-        <p>Cuando se devuelve un pago, el acceso de esa compra se cierra.</p>
       </Seccion>
 
       <Seccion titulo="10. Disponibilidad y soporte">

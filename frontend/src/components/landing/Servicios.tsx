@@ -411,7 +411,7 @@ export function ComoFunciona() {
         <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-line bg-paper px-5 py-5 sm:flex-row sm:items-center sm:justify-between" data-reveal>
           <p className="flex items-start gap-3 text-sm text-muted">
             <FileText className="mt-0.5 h-5 w-5 shrink-0 text-jungle-600" aria-hidden />
-            <span>¿Prefieres Binance o transferencia BCP? También puedes pagar y subir tu voucher; lo activamos en menos de 24 h hábiles.</span>
+            <span>¿Prefieres Binance o transferencia BCP? También puedes pagar y subir tu voucher; lo activamos al verificarlo.</span>
           </p>
           <ScrollLink to="plataformas" className="btn-primary shrink-0 cursor-pointer">Ver plataformas</ScrollLink>
         </div>

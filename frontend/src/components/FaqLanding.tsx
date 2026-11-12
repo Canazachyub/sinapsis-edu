@@ -26,7 +26,7 @@ const FAQS: QA[] = [
   },
   {
     q: '¿Cuánto tarda en activarse mi acceso?',
-    a: 'Con Yape o tarjeta, al instante: apenas Mercado Pago aprueba el pago. Con voucher (Binance o transferencia) lo verificamos dentro de las 24 horas hábiles, normalmente en minutos.',
+    a: 'Con Yape o tarjeta, al instante: apenas Mercado Pago aprueba el pago. Con voucher (Binance o transferencia), en cuanto verificamos tu comprobante.',
   },
   {
     q: '¿Es seguro pagar con tarjeta?',

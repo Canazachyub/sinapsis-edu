@@ -32,7 +32,7 @@ function VoucherRecibido({ idCompra }: { idCompra: string | null }) {
       <ol className="divide-y divide-line rounded-2xl border border-line bg-white">
         <li className="flex gap-3 p-4 text-[15px]">
           <Clock className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden />
-          <span><strong>Hasta 24 h hábiles</strong> para validar tu pago (normalmente en minutos).</span>
+          <span>Activamos tu acceso <strong>en cuanto validamos tu pago</strong>.</span>
         </li>
         <li className="flex gap-3 p-4 text-[15px]">
           <Mail className="mt-0.5 h-5 w-5 shrink-0 text-jungle-600" aria-hidden />
