@@ -3,6 +3,7 @@ import { SectionHeader } from './SectionHeader';
 import { ScrollLink } from '@/components/ScrollLink';
 import { PruebaPregunta } from './PruebaPregunta';
 import { BanqueoJuego } from './BanqueoJuego';
+import { ArmaTuBanqueo } from './ArmaTuBanqueo';
 import { simulacroHref } from '@/config';
 
 // ── Franja de exámenes ───────────────────────────────────────────
@@ -234,6 +235,8 @@ export function SeccionBanqueo() {
             <BanqueoJuego />
           </div>
         </div>
+
+        <ArmaTuBanqueo />
 
         {/* Modo simulacro: pregunta real con justificación */}
         <div className="mt-16" data-reveal>
