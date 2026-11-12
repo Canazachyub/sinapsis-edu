@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { Check, RotateCcw, X } from 'lucide-react';
 
 /**
  * Réplica jugable del banqueo "modo juego" (tipo Quizizz) de banqueo.sinapsisedu.com:
- * mosaicos de colores, racha, puntos, tiempo y potenciadores. Usa las mismas imágenes.
+ * mosaicos de colores con letra A-D, racha, puntos, tiempo y potenciadores. Usa las mismas imágenes.
  */
 
 const IMG = (n: string) => `${import.meta.env.BASE_URL}images/juego/${n}.webp`;
 
 const TILES = [
-  { fig: 'fig-triangulo', color: '#1F5B52' },
-  { fig: 'fig-rombo', color: '#2563EB' },
-  { fig: 'fig-circulo', color: '#B45309' },
-  { fig: 'fig-cuadrado', color: '#7C3AED' },
+  { color: '#1F5B52' },
+  { color: '#2563EB' },
+  { color: '#B45309' },
+  { color: '#7C3AED' },
 ];
 
 const PREGUNTA = {
@@ -119,7 +119,13 @@ export function BanqueoJuego() {
                 }`}
                 style={{ backgroundColor: esCorrecta ? '#16A34A' : esMala ? '#DC2626' : t.color }}
               >
-                <img src={IMG(t.fig)} alt="" className="h-7 w-7" />
+                <span
+                  className="grid h-10 w-10 place-items-center rounded-full bg-white font-display text-[19px] font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.25)] sm:h-11 sm:w-11"
+                  style={{ color: esCorrecta ? '#16A34A' : esMala ? '#DC2626' : t.color }}
+                  aria-hidden
+                >
+                  {esCorrecta ? <Check className="h-6 w-6" strokeWidth={3.5} /> : esMala ? <X className="h-6 w-6" strokeWidth={3.5} /> : String.fromCharCode(65 + i)}
+                </span>
                 {op}
               </button>
             );
