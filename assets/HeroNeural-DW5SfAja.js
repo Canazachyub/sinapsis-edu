@@ -1,4 +1,4 @@
-import{r as ea,j as Vo}from"./index-DWSZmEdd.js";/**
+import{r as ea,j as Vo}from"./index-DHFosK5u.js";/**
  * @license
  * Copyright 2010-2024 Three.js Authors
  * SPDX-License-Identifier: MIT
