@@ -3049,6 +3049,37 @@ function testMPConfig() {
   return result;
 }
 
+/**
+ * EDITOR-ONLY: últimos pagos recibidos en Mercado Pago con el MOTIVO del
+ * rechazo (status_detail). Sirve para diagnosticar "No pudimos procesar tu pago".
+ * No imprime datos de tarjeta; el correo del pagador sale enmascarado.
+ */
+function ultimosPagosMP() {
+  requireEditor_();
+  const yo = mpRequest_('get', '/users/me');
+  const miId = yo.status === 200 ? yo.body.id : null;
+  const r = mpRequest_('get', '/v1/payments/search?sort=date_created&criteria=desc&limit=8');
+  const pagos = ((r.body && r.body.results) || []).map(function (p) {
+    return {
+      id: p.id, fecha: p.date_created, monto: p.transaction_amount,
+      estado: p.status, motivo: p.status_detail,
+      medio: p.payment_method_id + ' / ' + p.payment_type_id,
+      compra: p.external_reference,
+      pagadorEsElVendedor: !!(miId && p.payer && String(p.payer.id) === String(miId)),
+      pagador: p.payer && p.payer.email ? enmascararCorreo_(p.payer.email) : null
+    };
+  });
+  const b = yo.body || {};
+  const cuenta = {
+    id: miId, correo: b.email ? enmascararCorreo_(b.email) : null, pais: b.site_id,
+    tipo: b.user_type, estado: b.status && b.status.site_status,
+    puedeCobrar: b.status && b.status.sell, verificacion: b.status && b.status.confirmed_email,
+    identidad: b.identification ? b.identification.type : null
+  };
+  Logger.log(JSON.stringify({ cuenta: cuenta, http: r.status, pagos: pagos }, null, 2));
+  return pagos;
+}
+
 // ─── Editor: verificacion de llaves ──────────────────────────
 
 /**
