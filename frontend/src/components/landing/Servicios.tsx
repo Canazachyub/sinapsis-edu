@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, BookOpenCheck, CreditCard, FileText, MailCheck, MousePointerClick, RotateCcw, Timer, type LucideIcon } from 'lucide-react';
+import { ArrowRight, BarChart3, BookOpenCheck, CreditCard, FileText, ListChecks, MailCheck, MousePointerClick, RotateCcw, Sparkles, Timer, Trophy, type LucideIcon } from 'lucide-react';
 import { SectionHeader } from './SectionHeader';
 import { ScrollLink } from '@/components/ScrollLink';
 import { PruebaPregunta } from './PruebaPregunta';
@@ -194,20 +194,107 @@ export function SeccionBanqueo() {
           <PruebaPregunta />
         </div>
 
-        <div
-          className="mt-8 flex flex-col gap-5 rounded-2xl bg-jungle-900 p-6 text-white sm:flex-row sm:items-center sm:justify-between md:p-8"
-          data-reveal
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lime-400">Simulacro gratis</p>
-            <p className="mt-2 font-display text-xl font-bold !text-white md:text-2xl">
-              Rinde un simulacro completo, con el formato oficial.
-            </p>
-            <p className="mt-1 text-[15px] text-white/70">El primero de cada examen no tiene costo. Solo te registras.</p>
-          </div>
-          <a href={simulacroHref()!} className="btn-spark shrink-0 px-6">
-            Empezar gratis <ArrowRight className="h-4 w-4" aria-hidden />
+      </div>
+    </section>
+  );
+}
+
+// ── Simulacro gratis: sección protagonista ───────────────────────
+
+const SIM_EXAMENES: Array<{ slug: string; label: string }> = [
+  { slug: 'enam', label: 'ENAM' },
+  { slug: 'encib', label: 'ENCIB' },
+  { slug: 'rm', label: 'Residentado' },
+  { slug: 'encaps', label: 'SERUMS' },
+  { slug: 'essalud', label: 'EsSalud' },
+];
+
+const SIM_INCLUYE: Array<{ Icon: LucideIcon; texto: string }> = [
+  { Icon: ListChecks, texto: '100 preguntas con el formato oficial' },
+  { Icon: Timer, texto: 'Cronómetro con el tiempo real del examen' },
+  { Icon: Trophy, texto: 'Tu nota y tus aciertos por curso al terminar' },
+];
+
+export function SimulacroGratis() {
+  return (
+    <section id="simulacro-gratis" className="relative isolate overflow-hidden bg-jungle-900 text-white">
+      <div
+        className="absolute inset-0 -z-10 opacity-70"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 1px 1px, rgba(194,228,118,0.16) 1px, transparent 0), radial-gradient(800px 420px at 80% 30%, rgba(31,91,82,0.85), transparent 70%)',
+          backgroundSize: '26px 26px, auto',
+        }}
+        aria-hidden
+      />
+      <div className="container-x grid items-center gap-10 py-16 md:py-24 lg:grid-cols-12 lg:gap-12">
+        <div className="lg:col-span-6" data-reveal>
+          <span className="inline-flex items-center gap-2 rounded-full bg-lime-400 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] text-jungle-900">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden /> Gratis
+          </span>
+          <h2 className="mt-5 text-[32px] leading-[1.08] !text-white md:text-[44px]">
+            Rinde tu primer simulacro <span className="text-lime-400">sin pagar nada</span>
+          </h2>
+          <p className="mt-4 max-w-[520px] text-[17px] leading-relaxed text-white/75">
+            Mide tu nivel hoy con un examen completo, igual al real. Solo te registras y empiezas.
+          </p>
+
+          <ul className="mt-7 space-y-3">
+            {SIM_INCLUYE.map(({ Icon, texto }) => (
+              <li key={texto} className="flex items-center gap-3 text-[15.5px] text-white/90">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-lime-400/30 bg-lime-400/10 text-lime-400">
+                  <Icon className="h-[18px] w-[18px]" aria-hidden />
+                </span>
+                {texto}
+              </li>
+            ))}
+          </ul>
+
+          <a href={simulacroHref('enam', 'registro')!} className="btn-spark mt-8 w-full px-7 text-base hover:shadow-cta sm:w-auto">
+            Empezar mi simulacro gratis <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
           </a>
+
+          <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/50">O elige tu examen</p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {SIM_EXAMENES.map((e) => {
+                const href = simulacroHref(e.slug, 'registro');
+                return href ? (
+                  <li key={e.slug}>
+                    <a
+                      href={href}
+                      className="inline-flex min-h-[40px] items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white transition-colors hover:border-lime-400 hover:text-lime-400"
+                    >
+                      {e.label}
+                    </a>
+                  </li>
+                ) : null;
+              })}
+            </ul>
+          </div>
+        </div>
+
+        <div className="relative lg:col-span-6" data-reveal={120}>
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-jungle-800 shadow-mock-dark">
+            <img
+              src={`${import.meta.env.BASE_URL}images/flujo/simulacro-gratis.webp`}
+              alt=""
+              width={800}
+              height={600}
+              loading="lazy"
+              decoding="async"
+              className="aspect-[4/3] h-full w-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          </div>
+          {/* Resultado de ejemplo flotando sobre la imagen */}
+          <div className="absolute -bottom-5 left-4 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-ink shadow-mock-dark sm:left-8">
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-correct/10 font-display text-lg font-extrabold text-correct">16</span>
+            <div className="leading-tight">
+              <div className="text-[13px] font-bold">Nota de ejemplo</div>
+              <div className="text-[12px] text-muted">82 de 100 correctas · 1 h 48 min</div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
