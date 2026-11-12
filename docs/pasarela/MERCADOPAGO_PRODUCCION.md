@@ -12,7 +12,7 @@ Pendiente: un pago real de S/ 1 hecho por **otra persona**. Ver la sección 5.
 | Web | `https://sinapsisedu.com`, en GitHub Pages. Se publica con cada push a `main` (`.github/workflows/deploy.yml`). |
 | Banqueo / simulacros | `https://banqueo.sinapsisedu.com`, desde el repo `Canazachyub/simulaencib`. La dirección vieja `canazachyub.github.io/simulaencib/` redirige sola con un 301. |
 | Servidor | Apps Script, implementación `AKfycby6vGh6…/exec`, **versión 22**. |
-| Mercado Pago | Credenciales de **producción** de la app `3333654853480580` (App-Checkout-Pro), cuenta de vendedor **yubertc1@gmail.com**. |
+| Mercado Pago | Credenciales de **producción** de la app `3333654853480580` (App-Checkout-Pro), cuenta de vendedor **del dueño** (correo personal, no se publica aquí). |
 | Hoja | `PLATAFORMA CENTRAL`. Usuarios, Compras y Pagos se reiniciaron el 2026-11-12; los datos anteriores están en las pestañas `Copia de …`. |
 
 ## 2. Cómo es el pago
